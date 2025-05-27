@@ -15,9 +15,12 @@ const api = axios.create({
 api.interceptors.request.use(
   async (config) => {
     console.log('Making request to:', config.url);
-    const token = await AsyncStorage.getItem('userToken');
+    const token = await AsyncStorage.getItem('auth_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('Authorization header set:', config.headers.Authorization);
+    } else {
+      console.log('No auth token found in storage');
     }
     return config;
   },
@@ -70,7 +73,7 @@ export const signup = async (userData) => {
     };
 
     console.log('Sending signup data:', signupData);
-    const response = await api.post('/auth/signup', signupData);
+    const response = await api.post('/user/auth/signup', signupData);
     return response;
   } catch (error) {
     console.error('Signup error:', error);

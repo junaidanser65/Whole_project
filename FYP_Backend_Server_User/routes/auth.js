@@ -74,9 +74,13 @@ router.post('/signup', validateSignupInput, async (req, res) => {
     
     // Generate JWT token
     const token = jwt.sign(
-      { id: result.insertId, email },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN }
+      { 
+        id: result.insertId, 
+        email,
+        role: 'user'  // Add role to token
+      },
+      process.env.JWT_SECRET || 'fiesta_vendor_app_secret_key',
+      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
     );
     
     res.status(201).json({
@@ -138,11 +142,15 @@ router.post('/login', async (req, res) => {
       });
     }
     
-    // Generate JWT token
+    // Generate JWT token with role
     const token = jwt.sign(
-      { id: user.id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN }
+      { 
+        id: user.id, 
+        email: user.email,
+        role: 'user'  // Add role to token
+      },
+      process.env.JWT_SECRET || 'fiesta_vendor_app_secret_key',
+      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
     );
     
     res.json({

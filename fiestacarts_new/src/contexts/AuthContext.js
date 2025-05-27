@@ -50,7 +50,7 @@ export function AuthProvider({ children }) {
       const response = await apiLogin(email, password);
       
       // Store token and user data
-      await AsyncStorage.setItem('userToken', response.token);
+      await AsyncStorage.setItem('auth_token', response.token);
       await AsyncStorage.setItem('userData', JSON.stringify(response.user));
       
       setUser(response.user);
@@ -67,7 +67,7 @@ export function AuthProvider({ children }) {
       const response = await apiSignup(userData);
       
       // Store token and user data
-      await AsyncStorage.setItem('userToken', response.token);
+      await AsyncStorage.setItem('auth_token', response.token);
       await AsyncStorage.setItem('userData', JSON.stringify(response.user));
       
       setUser(response.user);
@@ -80,20 +80,20 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      const token = await AsyncStorage.getItem('userToken');
+      const token = await AsyncStorage.getItem('auth_token');
       if (token) {
         await apiLogout(token);
       }
       
       // Clear stored data
-      await AsyncStorage.removeItem('userToken');
+      await AsyncStorage.removeItem('auth_token');
       await AsyncStorage.removeItem('userData');
       
       setUser(null);
     } catch (error) {
       console.error('Error during logout:', error);
       // Still clear local data even if server logout fails
-      await AsyncStorage.removeItem('userToken');
+      await AsyncStorage.removeItem('auth_token');
       await AsyncStorage.removeItem('userData');
       setUser(null);
     }

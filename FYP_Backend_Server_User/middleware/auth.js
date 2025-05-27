@@ -27,7 +27,19 @@ const verifyToken = async (req, res, next) => {
       return next();
     }
     
-    // Fallback: Check if vendor exists
+    // If no role in token, check both tables
+    // Check if user exists first
+    const [users] = await pool.execute(
+      'SELECT id, email FROM users WHERE id = ?',
+      [decoded.id]
+    );
+    
+    if (users.length > 0) {
+      req.user = { id: users[0].id, email: users[0].email, role: 'user' };
+      return next();
+    }
+    
+    // Then check if vendor exists
     const [vendors] = await pool.execute(
       'SELECT id, email FROM vendors WHERE id = ?',
       [decoded.id]
@@ -38,10 +50,10 @@ const verifyToken = async (req, res, next) => {
       return next();
     }
     
-    // No vendor found with this ID
+    // No user or vendor found with this ID
     return res.status(401).json({
       success: false,
-      message: 'Invalid token. Vendor not found'
+      message: 'Invalid token. User not found'
     });
     
   } catch (error) {

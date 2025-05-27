@@ -211,10 +211,10 @@ router.patch('/:bookingId/status', verifyToken, async (req, res) => {
       });
     }
 
-    // Check if booking exists and belongs to the vendor
+    // Check if booking exists and belongs to either the user or vendor
     const [bookings] = await pool.execute(
-      'SELECT * FROM bookings WHERE id = ? AND vendor_id = ?',
-      [bookingId, req.user.id]
+      'SELECT * FROM bookings WHERE id = ? AND (user_id = ? OR vendor_id = ?)',
+      [bookingId, req.user.id, req.user.id]
     );
 
     if (bookings.length === 0) {
