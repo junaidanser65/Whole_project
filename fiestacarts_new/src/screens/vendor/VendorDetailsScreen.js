@@ -4,7 +4,6 @@ import { Button, Icon, Card } from '@rneui/themed';
 import { colors, spacing, typography } from '../../styles/theme';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useAuth } from '../../contexts/AuthContext';
-import { supabase } from '../../lib/supabase';
 import ImageGallery from '../../components/vendor/ImageGallery';
 import AvailabilityCalendar from '../../components/vendor/AvailabilityCalendar';
 import PricingCalculator from '../../components/vendor/PricingCalculator';
