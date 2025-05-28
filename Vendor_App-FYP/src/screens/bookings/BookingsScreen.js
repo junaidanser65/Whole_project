@@ -199,6 +199,13 @@ const BookingsScreen = ({ navigation }) => {
         </View>
       </View>
 
+      <View style={styles.addressContainer}>
+        <Icon name="location-on" type="material" size={16} color="#636E72" />
+        <RNText style={styles.addressText} numberOfLines={2}>
+          {booking.address || 'No address provided'}
+        </RNText>
+      </View>
+
       {booking.status === 'pending' && (
         <View style={styles.actionButtons}>
           <Button
@@ -467,6 +474,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#636E72',
     marginTop: 10,
+  },
+  addressContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  addressText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#636E72',
+    marginLeft: 8,
   },
 });
 

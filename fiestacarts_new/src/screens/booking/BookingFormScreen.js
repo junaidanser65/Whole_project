@@ -27,6 +27,7 @@ export default function BookingFormScreen({ route, navigation }) {
     time: getInitialTime(),
     guests: 1,
     notes: '',
+    address: '',
   });
 
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -105,6 +106,11 @@ export default function BookingFormScreen({ route, navigation }) {
       return;
     }
 
+    if (!formData.address.trim()) {
+      Alert.alert('Required', 'Please enter your delivery address');
+      return;
+    }
+
     const currentTotal = calculateTotal();
     setShowConfirmModal(true);
     animateModal(modalScaleAnim, true);
@@ -128,6 +134,7 @@ export default function BookingFormScreen({ route, navigation }) {
           quantity: formData.guests
         })),
         special_instructions: formData.notes,
+        address: formData.address,
         total_amount: calculateTotal()
       };
 
@@ -394,6 +401,20 @@ export default function BookingFormScreen({ route, navigation }) {
               ${calculateTotal().toLocaleString()}
             </Text>
           </View>
+        </View>
+
+        {/* Special Requests */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Address</Text>
+          <Input
+            multiline
+            numberOfLines={3}
+            placeholder="Enter your address..."
+            value={formData.address}
+            onChangeText={(text) => setFormData(prev => ({ ...prev, address: text }))}
+            containerStyle={styles.notesContainer}
+            inputStyle={styles.notesInput}
+          />
         </View>
 
         {/* Special Requests */}

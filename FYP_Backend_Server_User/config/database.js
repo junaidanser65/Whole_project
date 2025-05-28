@@ -104,6 +104,7 @@ async function initDatabase() {
         status ENUM('pending', 'confirmed', 'cancelled', 'completed') DEFAULT 'pending',
         total_amount DECIMAL(10,2) NOT NULL,
         special_instructions TEXT,
+        address TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,

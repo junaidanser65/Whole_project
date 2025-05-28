@@ -6,14 +6,14 @@ const { verifyToken } = require('../middleware/auth');
 // Create a new booking
 router.post('/', verifyToken, async (req, res) => {
   try {
-    const { vendor_id, booking_date, booking_time, menu_items, special_instructions } = req.body;
+    const { vendor_id, booking_date, booking_time, menu_items, special_instructions, address } = req.body;
     const user_id = req.user.id;
 
     // Validate input
-    if (!vendor_id || !booking_date || !booking_time || !menu_items || menu_items.length === 0) {
+    if (!vendor_id || !booking_date || !booking_time || !menu_items || menu_items.length === 0 || !address) {
       return res.status(400).json({
         success: false,
-        message: 'Vendor ID, booking date, time, and menu items are required'
+        message: 'Vendor ID, booking date, time, menu items, and address are required'
       });
     }
 
@@ -64,8 +64,8 @@ router.post('/', verifyToken, async (req, res) => {
     try {
       // Create booking
       const [bookingResult] = await connection.execute(
-        'INSERT INTO bookings (user_id, vendor_id, booking_date, booking_time, total_amount, special_instructions) VALUES (?, ?, ?, ?, ?, ?)',
-        [user_id, vendor_id, booking_date, booking_time, total_amount, special_instructions]
+        'INSERT INTO bookings (user_id, vendor_id, booking_date, booking_time, total_amount, special_instructions, address) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [user_id, vendor_id, booking_date, booking_time, total_amount, special_instructions, address]
       );
 
       const booking_id = bookingResult.insertId;
