@@ -1,21 +1,110 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Modal, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Modal, ActivityIndicator, TextInput, Alert } from 'react-native';
 import { Button, Card, Icon } from '@rneui/themed';
 import { colors, spacing, typography } from '../../styles/theme';
 import { useBooking } from '../../contexts/BookingContext';
 import BackButton from '../../components/common/BackButton';
-import { getUserBookings } from '../../api/apiService';
+import { getUserBookings, submitReview, checkBookingReview } from '../../api/apiService';
+
+const StarRating = ({ rating, onRatingChange }) => {
+  return (
+    <View style={styles.starContainer}>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <TouchableOpacity
+          key={star}
+          onPress={() => onRatingChange(star)}
+          style={styles.starButton}
+        >
+          <Icon
+            name={star <= rating ? "star" : "star-border"}
+            size={30}
+            color={star <= rating ? colors.primary : colors.textLight}
+          />
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+};
+
+const ReviewModal = React.memo(({ visible, onClose, onSubmit, isSubmitting }) => {
+  const [rating, setRating] = useState(1);
+  const [comment, setComment] = useState('');
+
+  const handleSubmit = () => {
+    onSubmit(rating, comment);
+  };
+
+  const handleClose = () => {
+    setRating(1);
+    setComment('');
+    onClose();
+  };
+
+  return (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={visible}
+      onRequestClose={handleClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Write a Review</Text>
+            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+              <Icon name="close" size={24} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalBody}>
+            <View style={styles.reviewSection}>
+              <Text style={styles.reviewLabel}>Rating</Text>
+              <StarRating
+                rating={rating}
+                onRatingChange={setRating}
+              />
+            </View>
+
+            <View style={styles.reviewSection}>
+              <Text style={styles.reviewLabel}>Your Review</Text>
+              <TextInput
+                style={styles.reviewInput}
+                multiline
+                numberOfLines={4}
+                placeholder="Share your experience..."
+                value={comment}
+                onChangeText={setComment}
+              />
+            </View>
+          </ScrollView>
+
+          <View style={styles.modalFooter}>
+            <Button
+              title={isSubmitting ? "Submitting..." : "Submit Review"}
+              onPress={handleSubmit}
+              disabled={isSubmitting || rating === 0}
+              buttonStyle={styles.submitReviewButton}
+              titleStyle={styles.submitReviewButtonText}
+            />
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+});
 
 export default function BookingHistoryScreen({ route, navigation }) {
   const [activeTab, setActiveTab] = useState('upcoming');
   const [bookings, setBookings] = useState([]);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isReviewModalVisible, setIsReviewModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [reviewedBookings, setReviewedBookings] = useState(new Set());
 
   useEffect(() => {
-    // Set initial tab when screen mounts or route params change
     if (route.params?.initialTab) {
       setActiveTab(route.params.initialTab);
     }
@@ -36,6 +125,19 @@ export default function BookingHistoryScreen({ route, navigation }) {
 
       console.log('Fetched bookings:', response.bookings);
       setBookings(response.bookings || []);
+
+      // Check review status for completed bookings
+      const completedBookings = response.bookings.filter(booking => booking.status === 'completed');
+      for (const booking of completedBookings) {
+        try {
+          const reviewResponse = await checkBookingReview(booking.id);
+          if (reviewResponse.hasReview) {
+            setReviewedBookings(prev => new Set([...prev, booking.id]));
+          }
+        } catch (error) {
+          console.error('Error checking review status:', error);
+        }
+      }
     } catch (error) {
       console.error('Error fetching bookings:', error);
       setError('Failed to load bookings. Please try again.');
@@ -55,17 +157,45 @@ export default function BookingHistoryScreen({ route, navigation }) {
   };
 
   const formatTime = (timeString) => {
-    const time = new Date(timeString);
-    return time.toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
+    try {
+      // If timeString is in HH:mm:ss format, convert it to HH:mm
+      if (/^\d{2}:\d{2}:\d{2}$/.test(timeString)) {
+        const [hours, minutes] = timeString.split(':');
+        const time = new Date();
+        time.setHours(parseInt(hours, 10));
+        time.setMinutes(parseInt(minutes, 10));
+        return time.toLocaleTimeString([], { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: true 
+        });
+      }
+
+      // If it's a full datetime string, extract the time part
+      const time = new Date(timeString);
+      if (isNaN(time.getTime())) {
+        console.error('Invalid time string:', timeString);
+        return 'Invalid time';
+      }
+      
+      return time.toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+      });
+    } catch (error) {
+      console.error('Error formatting time:', error);
+      return 'Invalid time';
+    }
   };
 
   const getFilteredBookings = () => {
     const now = new Date();
+    now.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
+
     return bookings.filter(booking => {
       const bookingDate = new Date(booking.booking_date);
+      bookingDate.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
       
       if (activeTab === 'upcoming') {
         // Show future bookings that are pending or confirmed
@@ -122,6 +252,40 @@ export default function BookingHistoryScreen({ route, navigation }) {
   const handleViewDetails = (booking) => {
     setSelectedBooking(booking);
     setIsModalVisible(true);
+  };
+
+  const handleOpenReviewModal = (booking) => {
+    setSelectedBooking(booking);
+    setIsReviewModalVisible(true);
+  };
+
+  const handleSubmitReview = async (rating, comment) => {
+    try {
+      setIsSubmittingReview(true);
+      const response = await submitReview(selectedBooking.id, {
+        rating,
+        comment
+      });
+      
+      if (response && response.success) {
+        setReviewedBookings(prev => new Set([...prev, selectedBooking.id]));
+        Alert.alert(
+          'Success',
+          'Review submitted successfully',
+          [{ text: 'OK', onPress: () => setIsReviewModalVisible(false) }]
+        );
+      } else {
+        throw new Error(response?.message || 'Failed to submit review');
+      }
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      Alert.alert(
+        'Error',
+        error.message || 'Failed to submit review. Please try again.'
+      );
+    } finally {
+      setIsSubmittingReview(false);
+    }
   };
 
   const BookingDetailsModal = ({ booking, visible, onClose }) => {
@@ -261,6 +425,24 @@ export default function BookingHistoryScreen({ route, navigation }) {
         </Text>
       </View>
 
+      {booking.status === 'completed' && (
+        <Button
+          title={reviewedBookings.has(booking.id) ? "Already Reviewed" : "Write a Review"}
+          buttonStyle={[
+            styles.reviewButton,
+            reviewedBookings.has(booking.id) && styles.reviewedButton
+          ]}
+          titleStyle={styles.reviewButtonText}
+          onPress={() => {
+            if (!reviewedBookings.has(booking.id)) {
+              setSelectedBooking(booking);
+              setIsReviewModalVisible(true);
+            }
+          }}
+          disabled={reviewedBookings.has(booking.id)}
+        />
+      )}
+
       <Button
         title="View Details"
         type="outline"
@@ -349,6 +531,13 @@ export default function BookingHistoryScreen({ route, navigation }) {
           setIsModalVisible(false);
           setSelectedBooking(null);
         }}
+      />
+
+      <ReviewModal
+        visible={isReviewModalVisible}
+        onClose={() => setIsReviewModalVisible(false)}
+        onSubmit={handleSubmitReview}
+        isSubmitting={isSubmittingReview}
       />
     </View>
   );
@@ -645,5 +834,54 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
     borderRadius: 8,
     paddingVertical: spacing.sm,
+  },
+  reviewButton: {
+    marginTop: spacing.md,
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  reviewedButton: {
+    backgroundColor: colors.textLight,
+  },
+  reviewButtonText: {
+    ...typography.button,
+    color: colors.white,
+  },
+  reviewSection: {
+    marginBottom: spacing.md,
+  },
+  reviewLabel: {
+    ...typography.caption,
+    color: colors.textLight,
+    marginBottom: spacing.xs,
+  },
+  starContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+  },
+  starButton: {
+    padding: spacing.xs,
+  },
+  reviewInput: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: spacing.sm,
+    minHeight: 100,
+    textAlignVertical: 'top',
+    ...typography.body,
+  },
+  submitReviewButton: {
+    backgroundColor: colors.primary,
+    borderRadius: 8,
+    paddingVertical: spacing.sm,
+  },
+  submitReviewButtonText: {
+    ...typography.button,
+    color: colors.white,
   },
 }); 

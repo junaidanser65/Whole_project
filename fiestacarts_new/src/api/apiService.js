@@ -383,4 +383,36 @@ export const confirmBooking = async (bookingId) => {
   }
 };
 
+export const submitReview = async (bookingId, reviewData) => {
+  try {
+    const response = await api.post('/reviews', {
+      booking_id: bookingId,
+      rating: reviewData.rating,
+      comment: reviewData.comment
+    });
+    return response;
+  } catch (error) {
+    console.error('Submit review error:', error);
+    throw error.response?.data || error;
+  }
+};
+
+export const getVendorReviews = async (vendorId) => {
+  try {
+    const response = await api.get(`/reviews/vendor/${vendorId}`);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const checkBookingReview = async (bookingId) => {
+  try {
+    const response = await api.get(`/reviews/booking/${bookingId}`);
+    return response;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
 export default api; 

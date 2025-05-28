@@ -736,7 +736,6 @@ const styles = StyleSheet.create({
 });
 
 export default DashboardScreen;
-
 // import React, { useEffect } from "react";
 // import { View, Text } from "react-native";
 // import { useAuth } from "../../contexts/AuthContext";
@@ -760,3 +759,4 @@ export default DashboardScreen;
 // };
 
 // export default DashboardScreen;
+

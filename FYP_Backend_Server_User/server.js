@@ -12,6 +12,7 @@ const vendorMenuRoutes = require('./routes/vendor/menu');
 const vendorsRoutes = require('./routes/vendors');
 const bookingRoutes = require('./routes/bookings');
 const availabilityRoutes = require('./routes/availability');
+const reviewRoutes = require('./routes/reviews');
 const db = require('./config/database');
 const http = require('http');
 const WebSocket = require('ws');
@@ -44,6 +45,7 @@ app.use('/api/vendor/menu', vendorMenuRoutes);
 app.use('/api/vendors', vendorsRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/availability', availabilityRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // Test route
 app.get('/', (req, res) => {
