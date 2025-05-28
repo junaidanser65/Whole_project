@@ -203,39 +203,125 @@ router.patch('/:bookingId/status', verifyToken, async (req, res) => {
   try {
     const { bookingId } = req.params;
     const { status } = req.body;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    console.log('=== Booking Status Update Request ===');
+    console.log('Request details:', {
+      bookingId,
+      status,
+      userId,
+      userRole,
+      headers: req.headers,
+      body: req.body,
+      user: req.user
+    });
 
     if (!['pending', 'confirmed', 'cancelled', 'completed'].includes(status)) {
+      console.log('Invalid status provided:', status);
       return res.status(400).json({
         success: false,
         message: 'Invalid status'
       });
     }
 
-    // Check if booking exists and belongs to either the user or vendor
+    // First get the booking to check ownership
+    console.log('Fetching booking from database:', bookingId);
     const [bookings] = await pool.execute(
-      'SELECT * FROM bookings WHERE id = ? AND (user_id = ? OR vendor_id = ?)',
-      [bookingId, req.user.id, req.user.id]
+      'SELECT * FROM bookings WHERE id = ?',
+      [bookingId]
     );
 
+    console.log('Database query result:', {
+      found: bookings.length > 0,
+      booking: bookings[0] || null,
+      query: 'SELECT * FROM bookings WHERE id = ?',
+      params: [bookingId]
+    });
+
     if (bookings.length === 0) {
+      console.log('Booking not found in database:', bookingId);
       return res.status(404).json({
         success: false,
         message: 'Booking not found'
       });
     }
 
+    const booking = bookings[0];
+    console.log('Found booking details:', {
+      id: booking.id,
+      user_id: booking.user_id,
+      vendor_id: booking.vendor_id,
+      current_status: booking.status,
+      requested_status: status
+    });
+
+    // Check if user has permission to update this booking
+    const hasPermission = userRole === 'vendor' ? 
+      booking.vendor_id === userId : 
+      booking.user_id === userId;
+
+    console.log('Permission check details:', {
+      userRole,
+      userId,
+      bookingUserId: booking.user_id,
+      bookingVendorId: booking.vendor_id,
+      hasPermission,
+      isVendor: userRole === 'vendor',
+      isUser: userRole === 'user',
+      matchesVendor: booking.vendor_id === userId,
+      matchesUser: booking.user_id === userId
+    });
+
+    if (!hasPermission) {
+      console.log('Permission denied:', {
+        reason: userRole === 'vendor' ? 
+          'User is vendor but booking belongs to different vendor' : 
+          'User is not the owner of this booking',
+        userRole,
+        userId,
+        bookingUserId: booking.user_id,
+        bookingVendorId: booking.vendor_id
+      });
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to update this booking'
+      });
+    }
+
     // Update booking status
-    await pool.execute(
+    console.log('Updating booking status in database:', {
+      bookingId,
+      newStatus: status,
+      currentStatus: booking.status
+    });
+
+    const [updateResult] = await pool.execute(
       'UPDATE bookings SET status = ? WHERE id = ?',
       [status, bookingId]
     );
+
+    console.log('Database update result:', {
+      affectedRows: updateResult.affectedRows,
+      changedRows: updateResult.changedRows,
+      message: updateResult.message
+    });
+
+    console.log('Booking status updated successfully');
 
     res.json({
       success: true,
       message: 'Booking status updated successfully'
     });
   } catch (error) {
-    console.error('Update booking status error:', error);
+    console.error('Update booking status error:', {
+      error: error.message,
+      stack: error.stack,
+      code: error.code,
+      errno: error.errno,
+      sqlState: error.sqlState,
+      sqlMessage: error.sqlMessage
+    });
     res.status(500).json({
       success: false,
       message: 'Error updating booking status',

@@ -36,14 +36,26 @@ export default function PaymentScreen({ route, navigation }) {
   const handlePayment = async () => {
     try {
       setIsProcessing(true);
+      console.log('Starting payment process for bookings:', bookings);
 
       // Process each booking
       const processedBookings = await Promise.all(bookings.map(async (booking) => {
         try {
+          console.log('Processing booking:', {
+            id: booking.id,
+            currentStatus: booking.status,
+            vendor: booking.vendor
+          });
+
           // Update booking status in the database
           const statusData = {
             status: 'completed'
           };
+
+          console.log('Updating booking status:', {
+            bookingId: booking.id,
+            statusData
+          });
 
           await updateBookingStatus(booking.id, statusData);
 
@@ -52,14 +64,23 @@ export default function PaymentScreen({ route, navigation }) {
             status: 'completed'
           };
 
+          console.log('Booking updated successfully:', updatedBooking);
+
           // Update booking in the context
           updateBooking(updatedBooking);
           return updatedBooking;
         } catch (error) {
-          console.error(`Error updating booking ${booking.id}:`, error);
+          console.error('Error processing booking:', {
+            bookingId: booking.id,
+            error: error.message,
+            response: error.response?.data,
+            status: error.response?.status
+          });
           throw new Error(`Failed to update booking ${booking.id}: ${error.message}`);
         }
       }));
+
+      console.log('All bookings processed successfully:', processedBookings);
 
       // Navigate to success screen
       navigation.navigate('PaymentSuccess', {
@@ -67,7 +88,12 @@ export default function PaymentScreen({ route, navigation }) {
         bookings: processedBookings,
       });
     } catch (error) {
-      console.error('Payment error:', error);
+      console.error('Payment error:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        bookings
+      });
       Alert.alert(
         'Error',
         'Failed to process payment. Please try again.'
