@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -7,11 +7,14 @@ import {
   Animated,
   ScrollView,
   Text as RNText,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Text, SearchBar, Icon, Button } from 'react-native-elements';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useBookings } from '../../contexts/BookingsContext';
+import { getVendorBookings, updateBookingStatus } from '../../services/bookingService';
+import { useAuth } from '../../contexts/AuthContext';
 
 const BOOKING_FILTERS = [
   { id: 'all', label: 'All Bookings' },
@@ -22,19 +25,96 @@ const BOOKING_FILTERS = [
 ];
 
 const BookingsScreen = ({ navigation }) => {
+  const { user } = useAuth();
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const fadeAnim = new Animated.Value(0);
-  const { bookings } = useBookings();
+
+  const fetchBookings = async () => {
+    try {
+      setLoading(true);
+      const response = await getVendorBookings(user.id);
+      setBookings(response.bookings);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+      Alert.alert('Error', 'Failed to fetch bookings. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchBookings();
+  }, []);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchBookings();
+    setRefreshing(false);
+  };
+
+  const handleStatusUpdate = async (bookingId, newStatus) => {
+    try {
+      await updateBookingStatus(bookingId, newStatus);
+      // Update local state
+      setBookings(prevBookings =>
+        prevBookings.map(booking =>
+          booking.id === bookingId
+            ? { ...booking, status: newStatus }
+            : booking
+        )
+      );
+      Alert.alert('Success', `Booking ${newStatus} successfully`);
+    } catch (error) {
+      console.error('Error updating booking status:', error);
+      Alert.alert('Error', 'Failed to update booking status. Please try again.');
+    }
+  };
+
+  const confirmStatusUpdate = (bookingId, newStatus) => {
+    Alert.alert(
+      'Confirm Action',
+      `Are you sure you want to ${newStatus} this booking?`,
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Yes',
+          onPress: () => handleStatusUpdate(bookingId, newStatus),
+        },
+      ]
+    );
+  };
 
   const filteredBookings = bookings.filter((booking) => {
     const matchesFilter =
       selectedFilter === 'all' || booking.status === selectedFilter;
     const matchesSearch =
-      booking.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      booking.eventType.toLowerCase().includes(searchQuery.toLowerCase());
+      booking.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      booking.special_instructions?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch;
   });
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  const formatTime = (timeString) => {
+    return new Date(`2000-01-01T${timeString}`).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
 
   const getStatusStyles = (status) => {
     const styles = {
@@ -65,24 +145,32 @@ const BookingsScreen = ({ navigation }) => {
   const BookingCard = ({ booking }) => (
     <TouchableOpacity
       style={styles.bookingCard}
-      onPress={() => navigation.navigate('BookingDetails', { bookingId: booking.id })}
+      onPress={() => {
+        console.log('Navigating to BookingDetails with booking:', booking);
+        navigation.navigate('BookingDetails', { 
+          bookingId: booking.id,
+          bookingData: booking 
+        });
+      }}
     >
       <View style={styles.bookingHeader}>
         <View style={styles.customerInfo}>
           <View style={styles.avatarContainer}>
-            <RNText style={styles.avatarText}>{booking.customerName[0]}</RNText>
+            <RNText style={styles.avatarText}>
+              {booking.customer_name?.[0] || '?'}
+            </RNText>
           </View>
           <View style={styles.bookingInfo}>
-            <RNText style={styles.customerName}>{booking.customerName}</RNText>
-            <RNText style={styles.eventType}>{booking.eventType}</RNText>
+            <RNText style={styles.customerName}>{booking.user_name}</RNText>
+            <RNText style={styles.eventType}>Order #{booking.id}</RNText>
           </View>
         </View>
         <View style={[
-          styles.statusBadge, 
+          styles.statusBadge,
           getStatusStyles(booking.status).badge
         ]}>
           <RNText style={[
-            styles.statusText, 
+            styles.statusText,
             getStatusStyles(booking.status).text
           ]}>
             {booking.status.toUpperCase()}
@@ -93,37 +181,50 @@ const BookingsScreen = ({ navigation }) => {
       <View style={styles.bookingDetails}>
         <View style={styles.detailItem}>
           <Icon name="event" type="material" size={16} color="#636E72" />
-          <RNText style={styles.detailText}>{booking.date}</RNText>
+          <RNText style={styles.detailText}>
+            {formatDate(booking.booking_date)}
+          </RNText>
         </View>
         <View style={styles.detailItem}>
           <Icon name="schedule" type="material" size={16} color="#636E72" />
-          <RNText style={styles.detailText}>{booking.time}</RNText>
+          <RNText style={styles.detailText}>
+            {formatTime(booking.booking_time)}
+          </RNText>
         </View>
         <View style={styles.detailItem}>
-          <Icon name="people" type="material" size={16} color="#636E72" />
-          <RNText style={styles.detailText}>{booking.guests} guests</RNText>
+          <Icon name="attach-money" type="material" size={16} color="#636E72" />
+          <RNText style={styles.detailText}>
+            ${booking.total_amount}
+          </RNText>
         </View>
       </View>
 
-      <View style={styles.bookingFooter}>
-        <RNText style={styles.amount}>{booking.amount}</RNText>
-        {/* <Button
-          title="View Details"
-          type="clear"
-          icon={
-            <Icon
-              name="chevron-right"
-              type="material"
-              size={20}
-              color="#ff4500"
-            />
-          }
-          iconRight
-          titleStyle={styles.viewDetailsText}
-        /> */}
-      </View>
+      {booking.status === 'pending' && (
+        <View style={styles.actionButtons}>
+          <Button
+            title="Accept"
+            type="solid"
+            buttonStyle={[styles.actionButton, styles.acceptButton]}
+            onPress={() => confirmStatusUpdate(booking.id, 'confirmed')}
+          />
+          <Button
+            title="Reject"
+            type="solid"
+            buttonStyle={[styles.actionButton, styles.rejectButton]}
+            onPress={() => confirmStatusUpdate(booking.id, 'cancelled')}
+          />
+        </View>
+      )}
     </TouchableOpacity>
   );
+
+  if (loading && !refreshing) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#ff4500" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -177,8 +278,16 @@ const BookingsScreen = ({ navigation }) => {
       <FlatList
         data={filteredBookings}
         renderItem={({ item }) => <BookingCard booking={item} />}
-        keyExtractor={item => item.id}
+        keyExtractor={item => item.id.toString()}
         contentContainerStyle={styles.bookingsList}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyContainer}>
+            <Icon name="event-busy" size={50} color="#636E72" />
+            <Text style={styles.emptyText}>No bookings found</Text>
+          </View>
+        )}
       />
     </SafeAreaView>
   );
@@ -323,6 +432,41 @@ const styles = StyleSheet.create({
   },
   viewDetailsText: {
     color: '#ff4500',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#E0E0E0',
+  },
+  actionButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 8,
+    minWidth: 100,
+  },
+  acceptButton: {
+    backgroundColor: '#4CAF50',
+  },
+  rejectButton: {
+    backgroundColor: '#F44336',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#636E72',
+    marginTop: 10,
   },
 });
 

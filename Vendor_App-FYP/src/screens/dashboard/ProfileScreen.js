@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView, Alert, Animated } from 'react-native';
+import { StyleSheet, View, ScrollView, Alert, Animated, Switch } from 'react-native';
 import { Text, Avatar, ListItem, Icon, Button } from 'react-native-elements';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -44,6 +44,7 @@ const ProfileScreen = ({ navigation }) => {
   const { user, logout, loading } = useAuth();
   const [pressedItem, setPressedItem] = useState(null);
   const scaleAnim = new Animated.Value(1);
+  const [isAvailable, setIsAvailable] = useState(user?.isAvailable || false);
 
   const handleLogout = async () => {
     Alert.alert(
@@ -142,6 +143,19 @@ const ProfileScreen = ({ navigation }) => {
                 <Text style={styles.statNumber}>2</Text>
                 <Text style={styles.statLabel}>Reviews</Text>
               </View>
+            </View>
+            <View style={styles.availabilityContainer}>
+              <Text style={styles.availabilityText}>
+                {isAvailable ? 'Available' : 'Unavailable'}
+              </Text>
+              <Switch
+                trackColor={{ false: '#767577', true: '#81b0ff' }}
+                thumbColor={isAvailable ? '#ff4500' : '#f4f3f4'}
+                ios_backgroundColor="#3e3e3e"
+                onValueChange={() => setIsAvailable(previousState => !previousState)}
+                value={isAvailable}
+                style={styles.switch}
+              />
             </View>
           </View>
         </LinearGradient>
@@ -363,6 +377,24 @@ const styles = StyleSheet.create({
     color: "#ff4500",
     fontSize: 16,
     fontWeight: "600",
+  },
+  availabilityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: '#F0F3F5',
+    borderRadius: 10,
+    marginTop: 20,
+  },
+  availabilityText: {
+    fontSize: 16,
+    color: '#2D3436',
+    fontWeight: '500',
+  },
+  switch: {
+    transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }],
   },
 });
 

@@ -9,12 +9,14 @@ import {
   Alert,
   Animated,
   Text as RNText,
+  Switch,
 } from 'react-native';
 import { Input, Button, Avatar, Icon } from 'react-native-elements';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
+import { uploadImageToCloudinary } from '../../services/cloudinaryService';
 
 const EditProfileScreen = ({ navigation }) => {
   const { user } = useAuth();
@@ -32,6 +34,7 @@ const EditProfileScreen = ({ navigation }) => {
   });
   const [errors, setErrors] = useState({});
   const fadeAnim = new Animated.Value(0);
+  const [isAvailable, setIsAvailable] = useState(user?.isAvailable || false);
 
   React.useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -48,21 +51,48 @@ const EditProfileScreen = ({ navigation }) => {
         Alert.alert('Permission needed', 'Please grant camera roll permissions to change your profile picture.');
         return;
       }
-
+  
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 1,
+        quality: 0.7,
       });
-
-      if (!result.canceled) {
-        setProfileImage(result.assets[0].uri);
+  
+      if (!result.canceled && result.assets[0].uri) {
+        try {
+          setLoading(true);
+          const uri = result.assets[0].uri;
+          
+          // Set the local image first for immediate feedback
+          setProfileImage(uri);
+          
+          // Upload to Cloudinary
+          const uploadResult = await uploadImageToCloudinary(uri);
+          if (uploadResult && uploadResult.imageUrl) {
+            setProfileImage(uploadResult.imageUrl);
+          } else {
+            throw new Error('Failed to get upload URL');
+          }
+        } catch (uploadError) {
+          console.error('Upload error:', uploadError);
+          Alert.alert(
+            'Upload Failed',
+            'Failed to upload image to server. Please try again.',
+            [{ text: 'OK' }]
+          );
+          // Revert to previous image if upload fails
+          setProfileImage(user?.avatar || 'https://randomuser.me/api/portraits/men/1.jpg');
+        } finally {
+          setLoading(false);
+        }
       }
     } catch (error) {
+      console.error('Image picker error:', error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
+      setLoading(false);
     }
-  };
+  };  
 
   const validateForm = () => {
     let newErrors = {};
@@ -80,6 +110,10 @@ const EditProfileScreen = ({ navigation }) => {
     setLoading(true);
     try {
       // TODO: Implement the actual profile update logic with Supabase
+      const updatedProfile = {
+        ...formData,
+        isAvailable,
+      };
       await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
       Alert.alert('Success', 'Profile updated successfully', [
         { text: 'OK', onPress: () => navigation.goBack() }
@@ -149,6 +183,23 @@ const EditProfileScreen = ({ navigation }) => {
             </LinearGradient>
           </Animated.View>
           <Animated.View style={[styles.form, { opacity: fadeAnim }]}>
+            <View style={styles.formSection}>
+              <RNText style={styles.sectionTitle}>Availability Status</RNText>
+              <View style={styles.availabilityContainer}>
+                <RNText style={styles.availabilityText}>
+                  {isAvailable ? 'Available' : 'Unavailable'}
+                </RNText>
+                <Switch
+                  trackColor={{ false: '#767577', true: '#81b0ff' }}
+                  thumbColor={isAvailable ? '#ff4500' : '#f4f3f4'}
+                  ios_backgroundColor="#3e3e3e"
+                  onValueChange={() => setIsAvailable(previousState => !previousState)}
+                  value={isAvailable}
+                  style={styles.switch}
+                />
+              </View>
+            </View>
+
             <View style={styles.formSection}>
               <RNText style={styles.sectionTitle}>Personal Information</RNText>
               {renderInput(
@@ -334,6 +385,24 @@ const styles = StyleSheet.create({
     backgroundColor: "#ff4500",
     paddingVertical: 12,
     borderRadius: 12,
+  },
+  availabilityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: '#F0F3F5',
+    borderRadius: 10,
+    marginBottom: 15,
+  },
+  availabilityText: {
+    fontSize: 16,
+    color: '#2D3436',
+    fontWeight: '500',
+  },
+  switch: {
+    transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }],
   },
 });
 

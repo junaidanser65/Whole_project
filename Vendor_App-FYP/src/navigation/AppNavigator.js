@@ -4,6 +4,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Icon } from 'react-native-elements';
 import { useAuth } from '../contexts/AuthContext';
 import { BookingsProvider } from '../contexts/BookingsContext';
+import TimingsScreen from '../screens/timing/TimingsScreen';
 
 // Auth Screens
 import WelcomeScreen from '../screens/auth/WelcomeScreen';
@@ -25,6 +26,7 @@ import NotificationsScreen from '../screens/profile/NotificationsScreen';
 import HelpSupportScreen from '../screens/profile/HelpSupportScreen';
 import PrivacyPolicyScreen from '../screens/profile/PrivacyPolicyScreen';
 import EditProfileScreen from '../screens/profile/EditProfileScreen';
+import BookingDetails from '../screens/bookings/BookingDetails';
 
 // Money Management Screens
 import AddBalanceScreen from '../screens/money-management/AddBalanceScreen';
@@ -38,7 +40,6 @@ import CustomersListScreen from '../screens/details/CustomersListScreen';
 import CustomerDetailsScreen from '../screens/details/CustomerDetailsScreen';
 import RatingsReviewsScreen from '../screens/details/RatingsReviewsScreen';
 import AllActivitiesScreen from '../screens/details/AllActivitiesScreen';
-import BookingDetailsScreen from '../screens/details/BookingDetailsScreen';
 import PaymentDetailsScreen from '../screens/details/PaymentDetailsScreen';
 import ReviewDetailsScreen from '../screens/details/ReviewDetailsScreen';
 import ChatScreen from '../screens/chat/ChatScreen';
@@ -127,6 +128,17 @@ const ProfileStackNavigator = () => {
           headerTintColor: "#2D3436",
         }}
       />
+      <ProfileStack.Screen
+        name="BookingDetails"
+        component={BookingDetails}
+        options={{
+          title: "Booking Details",
+          headerStyle: {
+            backgroundColor: "#F5F6FA",
+          },
+          headerTintColor: "#2D3436",
+        }}
+      />
     </ProfileStack.Navigator>
   );
 };
@@ -145,7 +157,11 @@ const MainTabNavigator = () => {
             iconName = focused ? 'restaurant-menu' : 'restaurant-menu';
           } else if (route.name === 'Bookings') {
             iconName = focused ? 'event' : 'event';
-          } else if (route.name === 'Profile') {
+          } 
+          else if (route.name === 'Timings') {
+            iconName = focused ? 'schedule' : 'schedule';
+          }
+          else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
           }
 
@@ -158,6 +174,7 @@ const MainTabNavigator = () => {
       <Tab.Screen name="Dashboard" component={DashboardScreen} />
       <Tab.Screen name="Menu" component={MenuScreen} />
       <Tab.Screen name="Bookings" component={BookingsScreen} />
+      <Tab.Screen name="Timings" component={TimingsScreen} />
       <Tab.Screen name="Profile" component={ProfileStackNavigator} />
     </Tab.Navigator>
   );
@@ -205,7 +222,7 @@ const AppNavigator = () => {
             <Stack.Screen name="CustomerDetails" component={CustomerDetailsScreen} />
             <Stack.Screen name="RatingsReviews" component={RatingsReviewsScreen} />
             <Stack.Screen name="AllActivities" component={AllActivitiesScreen} />
-            <Stack.Screen name="BookingDetails" component={BookingDetailsScreen} />
+            <Stack.Screen name = "BookingDetails" component={BookingDetails}/> 
             <Stack.Screen name="PaymentDetails" component={PaymentDetailsScreen} />
             <Stack.Screen name="ReviewDetails" component={ReviewDetailsScreen} />
             <Stack.Screen name="Chat" component={ChatScreen} options={{ headerShown: false }} />
