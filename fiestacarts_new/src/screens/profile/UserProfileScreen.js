@@ -48,9 +48,28 @@ export default function UserProfileScreen({ navigation }) {
   };
 
   const getProfileCompletion = () => {
-    const requiredFields = ['first_name', 'last_name', 'avatar_url'];
-    const completedFields = requiredFields.filter(field => user[field]);
-    return Math.round((completedFields.length / requiredFields.length) * 100);
+    const requiredFields = [
+      { field: 'name', weight: 2 },
+      { field: 'phone_number', weight: 1 },
+      { field: 'address', weight: 1 },
+      { field: 'avatar_url', weight: 1 }
+    ];
+
+    const totalWeight = requiredFields.reduce((sum, field) => sum + field.weight, 0);
+    const completedWeight = requiredFields.reduce((sum, field) => {
+      const value = user[field.field];
+      return sum + (value ? field.weight : 0);
+    }, 0);
+
+    return Math.round((completedWeight / totalWeight) * 100);
+  };
+
+  const getProfileStatus = () => {
+    const completion = getProfileCompletion();
+    if (completion === 0) return 'Complete Your Profile';
+    if (completion < 50) return 'Profile Incomplete';
+    if (completion < 100) return 'Almost Complete';
+    return 'Profile Complete';
   };
 
   return (
@@ -73,7 +92,7 @@ export default function UserProfileScreen({ navigation }) {
             </Avatar>
             <View style={styles.profileInfo}>
               <Text style={styles.name}>
-                {user?.first_name ? `${user.first_name} ${user.last_name}` : 'Complete Your Profile'}
+                {user?.name || getProfileStatus()}
               </Text>
               <Text style={styles.email}>{user?.email}</Text>
             </View>

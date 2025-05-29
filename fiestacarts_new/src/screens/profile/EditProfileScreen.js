@@ -4,14 +4,16 @@ import { Button, Input, Icon, Avatar } from '@rneui/themed';
 import * as ImagePicker from 'expo-image-picker';
 import { colors, spacing, typography } from '../../styles/theme';
 import { useAuth } from '../../contexts/AuthContext';
+import { uploadImageToCloudinary } from '../../services/cloudinaryService';
 
 export default function EditProfileScreen({ navigation }) {
   const { user, updateProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    first_name: user?.first_name || '',
-    last_name: user?.last_name || '',
+    name: user?.name || '',
     email: user?.email || '',
+    phone_number: user?.phone_number || '',
+    address: user?.address || '',
     avatar_url: user?.avatar_url || null,
   });
 
@@ -34,22 +36,13 @@ export default function EditProfileScreen({ navigation }) {
       if (!result.canceled) {
         setLoading(true);
         try {
-          const filePath = `${user.id}/${new Date().getTime()}.jpg`;
-          const { error: uploadError } = await supabase.storage
-            .from('avatars')
-            .upload(filePath, {
-              uri: result.assets[0].uri,
-              type: 'image/jpeg',
-              name: 'avatar.jpg',
-            });
-
-          if (uploadError) throw uploadError;
-
-          const { data: { publicUrl } } = supabase.storage
-            .from('avatars')
-            .getPublicUrl(filePath);
-
-          setFormData(prev => ({ ...prev, avatar_url: publicUrl }));
+          const uploadResult = await uploadImageToCloudinary(result.assets[0].uri);
+          
+          if (uploadResult.success) {
+            setFormData(prev => ({ ...prev, avatar_url: uploadResult.imageUrl }));
+          } else {
+            throw new Error(uploadResult.error || 'Failed to upload image');
+          }
         } catch (error) {
           Alert.alert('Error', 'Failed to upload image');
           console.error('Upload error:', error);
@@ -64,7 +57,7 @@ export default function EditProfileScreen({ navigation }) {
   };
 
   const handleSave = async () => {
-    if (!formData.first_name || !formData.last_name) {
+    if (!formData.name) {
       Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
@@ -72,8 +65,9 @@ export default function EditProfileScreen({ navigation }) {
     setLoading(true);
     try {
       await updateProfile({
-        first_name: formData.first_name,
-        last_name: formData.last_name,
+        name: formData.name,
+        phone_number: formData.phone_number,
+        address: formData.address,
         avatar_url: formData.avatar_url,
       });
       navigation.goBack();
@@ -120,25 +114,14 @@ export default function EditProfileScreen({ navigation }) {
         <View style={styles.formContainer}>
           <Text style={styles.sectionTitle}>Personal Information</Text>
           <Input
-            label="First Name"
-            value={formData.first_name}
-            onChangeText={(text) => setFormData(prev => ({ ...prev, first_name: text }))}
+            label="Full Name"
+            value={formData.name}
+            onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
             containerStyle={styles.inputContainer}
             inputContainerStyle={styles.input}
             labelStyle={styles.inputLabel}
             autoCapitalize="words"
-            placeholder="Enter your first name"
-          />
-
-          <Input
-            label="Last Name"
-            value={formData.last_name}
-            onChangeText={(text) => setFormData(prev => ({ ...prev, last_name: text }))}
-            containerStyle={styles.inputContainer}
-            inputContainerStyle={styles.input}
-            labelStyle={styles.inputLabel}
-            autoCapitalize="words"
-            placeholder="Enter your last name"
+            placeholder="Enter your full name"
           />
 
           <Input
@@ -150,6 +133,29 @@ export default function EditProfileScreen({ navigation }) {
             labelStyle={styles.inputLabel}
             inputStyle={styles.disabledText}
             rightIcon={<Icon name="lock" size={20} color={colors.textLight} />}
+          />
+
+          <Input
+            label="Phone Number"
+            value={formData.phone_number}
+            onChangeText={(text) => setFormData(prev => ({ ...prev, phone_number: text }))}
+            containerStyle={styles.inputContainer}
+            inputContainerStyle={styles.input}
+            labelStyle={styles.inputLabel}
+            keyboardType="phone-pad"
+            placeholder="Enter your phone number"
+          />
+
+          <Input
+            label="Address"
+            value={formData.address}
+            onChangeText={(text) => setFormData(prev => ({ ...prev, address: text }))}
+            containerStyle={styles.inputContainer}
+            inputContainerStyle={styles.input}
+            labelStyle={styles.inputLabel}
+            multiline
+            numberOfLines={3}
+            placeholder="Enter your address"
           />
         </View>
 

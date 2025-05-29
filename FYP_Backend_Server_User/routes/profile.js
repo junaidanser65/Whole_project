@@ -381,4 +381,81 @@ router.post('/test/location-update', async (req, res) => {
   }
 });
 
+// Update user profile
+router.put('/update', verifyToken, async (req, res) => {
+  try {
+    // Check if user has the correct role
+    if (req.user.role !== 'user') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. User privileges required'
+      });
+    }
+
+    const userId = req.user.id;
+    const { name, phone_number, address, avatar_url } = req.body;
+    
+    console.log('Updating user profile:', {
+      userId,
+      userRole: req.user.role,
+      name,
+      phone_number,
+      address,
+      avatar_url
+    });
+
+    // Validate required fields
+    if (!name) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name is required'
+      });
+    }
+
+    // First check if user exists
+    const [users] = await pool.execute(
+      'SELECT id FROM users WHERE id = ?',
+      [userId]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Update user profile
+    const [result] = await pool.execute(
+      'UPDATE users SET name = ?, phone_number = ?, address = ?, avatar_url = ? WHERE id = ?',
+      [name.trim(), phone_number || null, address || null, avatar_url || null, userId]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to update user profile'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Profile updated successfully'
+    });
+  } catch (error) {
+    console.error('Update user profile error:', {
+      message: error.message,
+      stack: error.stack,
+      userId: req.user?.id,
+      userRole: req.user?.role,
+      body: req.body
+    });
+    res.status(500).json({
+      success: false,
+      message: 'Error updating user profile',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 module.exports = router;

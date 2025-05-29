@@ -93,7 +93,15 @@ export const logout = async () => {
 
 // User endpoints
 export const updateProfile = async (userData) => {
-  return api.put('/users/profile', userData);
+  try {
+    console.log('Updating profile with data:', userData);
+    const response = await api.put('/user/profile/update', userData);
+    console.log('Profile update response:', response);
+    return response;
+  } catch (error) {
+    console.error('Update profile error:', error);
+    throw error;
+  }
 };
 
 export const updatePassword = async (currentPassword, newPassword) => {

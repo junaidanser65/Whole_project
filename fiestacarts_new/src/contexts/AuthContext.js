@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { login as apiLogin, signup as apiSignup, logout as apiLogout } from '../api/apiService';
+import { login as apiLogin, signup as apiSignup, logout as apiLogout, updateProfile as apiUpdateProfile } from '../api/apiService';
 import * as WebBrowser from 'expo-web-browser';
 import { Platform } from 'react-native';
 import { Alert } from 'react-native';
@@ -99,6 +99,23 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const updateProfile = async (profileData) => {
+    try {
+      setError(null);
+      const response = await apiUpdateProfile(profileData);
+      
+      // Update local user data
+      const updatedUser = { ...user, ...profileData };
+      await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      
+      return response;
+    } catch (error) {
+      setError(error.message);
+      throw error;
+    }
+  };
+
   const value = {
     user,
     loading,
@@ -106,6 +123,7 @@ export function AuthProvider({ children }) {
     login,
     signup,
     logout,
+    updateProfile,
   };
 
   return (

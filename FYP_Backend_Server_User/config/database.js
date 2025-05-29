@@ -88,6 +88,7 @@ async function initDatabase() {
         password VARCHAR(255) NOT NULL,
         phone_number VARCHAR(20),
         address TEXT,
+        avatar_url VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
