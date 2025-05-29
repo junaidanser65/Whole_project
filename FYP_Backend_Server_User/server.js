@@ -134,6 +134,35 @@ wss.on('connection', (ws, req) => {
           }));
           break;
 
+        case 'location_removed':
+          console.log('[WebSocket] Location removal received:', data);
+          if (!data.vendorId) {
+            console.error('[WebSocket] Invalid location removal format:', data);
+            ws.send(JSON.stringify({ 
+              type: 'error',
+              message: 'Invalid location removal format'
+            }));
+            break;
+          }
+
+          // Broadcast location removal to all connected clients
+          const locationRemoval = {
+            type: 'location_removed',
+            vendorId: data.vendorId,
+            timestamp: Date.now()
+          };
+          
+          const removalBroadcastCount = broadcastToAll(locationRemoval);
+          console.log(`[WebSocket] Location removal broadcasted to ${removalBroadcastCount} clients`);
+          
+          // Send confirmation to the sender
+          ws.send(JSON.stringify({ 
+            type: 'location_removal_confirmation',
+            vendorId: data.vendorId,
+            broadcastCount: removalBroadcastCount
+          }));
+          break;
+
         case 'ping':
           console.log('[WebSocket] Ping received, sending pong');
           ws.send(JSON.stringify({ type: 'pong' }));

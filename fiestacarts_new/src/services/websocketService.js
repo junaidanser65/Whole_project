@@ -58,6 +58,11 @@ class WebSocketService {
               this.notifySubscribers('location_update', data);
               break;
               
+            case 'location_removed':
+              console.log('[WebSocket] Location removal received:', data);
+              this.notifySubscribers('location_removed', data);
+              break;
+              
             case 'pong':
               console.log('[WebSocket] Received pong response');
               break;

@@ -115,6 +115,39 @@ router.put('/profile', verifyToken, verifyVendor, async (req, res) => {
   }
 });
 
+// Get vendor locations
+router.get('/locations', verifyToken, verifyVendor, async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    console.log('[Get Locations] Getting locations for vendor ID:', vendorId);
+    
+    // Get vendor locations
+    const [locations] = await pool.execute(
+      'SELECT id, address, latitude, longitude FROM vendor_locations WHERE vendor_id = ?',
+      [vendorId]
+    );
+    
+    console.log(`[Get Locations] Found ${locations.length} locations for vendor`);
+    
+    res.json({
+      success: true,
+      locations: locations || []
+    });
+  } catch (error) {
+    console.error('[Get Locations] Error:', error);
+    console.error('[Get Locations] Error details:', {
+      message: error.message,
+      stack: error.stack,
+      vendorId: req.user?.id
+    });
+    res.status(500).json({
+      success: false,
+      message: 'Error retrieving vendor locations',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 // Add vendor location
 router.post('/locations', verifyToken, verifyVendor, async (req, res) => {
   try {
@@ -209,6 +242,7 @@ router.delete('/locations/:id', verifyToken, verifyVendor, async (req, res) => {
   try {
     const vendorId = req.user.id;
     const locationId = req.params.id;
+    console.log('[Delete Location] Starting deletion for vendor ID:', vendorId);
     
     // Check if location exists and belongs to this vendor
     const [locations] = await pool.execute(
@@ -238,6 +272,155 @@ router.delete('/locations/:id', verifyToken, verifyVendor, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting vendor location',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Update vendor location in real-time
+router.post('/location/update', verifyToken, verifyVendor, async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    const { latitude, longitude } = req.body;
+    
+    // Validate input
+    if (!latitude || !longitude) {
+      return res.status(400).json({
+        success: false,
+        message: 'Latitude and longitude are required'
+      });
+    }
+    
+    // Check if vendor has an existing location
+    const [existingLocations] = await pool.execute(
+      'SELECT id FROM vendor_locations WHERE vendor_id = ?',
+      [vendorId]
+    );
+    
+    let locationId;
+    if (existingLocations.length > 0) {
+      // Update existing location
+      locationId = existingLocations[0].id;
+      await pool.execute(
+        'UPDATE vendor_locations SET latitude = ?, longitude = ?, updated_at = NOW() WHERE id = ?',
+        [latitude, longitude, locationId]
+      );
+    } else {
+      // Create new location if none exists
+      const [result] = await pool.execute(
+        'INSERT INTO vendor_locations (vendor_id, latitude, longitude) VALUES (?, ?, ?)',
+        [vendorId, latitude, longitude]
+      );
+      locationId = result.insertId;
+    }
+    
+    // Get the updated location data
+    const [updatedLocation] = await pool.execute(
+      'SELECT * FROM vendor_locations WHERE id = ?',
+      [locationId]
+    );
+    
+    // Broadcast location update to all connected clients
+    const locationUpdate = {
+      type: 'location_update',
+      vendorId: String(vendorId), // Convert to string for consistency
+      location: {
+        latitude: parseFloat(latitude),
+        longitude: parseFloat(longitude)
+      },
+      timestamp: new Date().toISOString()
+    };
+    
+    // Get WebSocket server instance
+    const { wss } = require('../../server');
+    
+    // Broadcast to all connected clients
+    let broadcastCount = 0;
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify(locationUpdate));
+        broadcastCount++;
+      }
+    });
+    
+    console.log(`[Location Update] Broadcasted to ${broadcastCount} clients`);
+    
+    res.json({
+      success: true,
+      message: 'Location updated successfully',
+      location: updatedLocation[0],
+      broadcastCount
+    });
+  } catch (error) {
+    console.error('Update location error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating vendor location',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
+// Delete all vendor locations
+router.delete('/locations', verifyToken, verifyVendor, async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    console.log(`[Delete Locations] Starting deletion for vendor ID: ${vendorId}`);
+    
+    // Check existing locations
+    const [existingLocations] = await pool.execute(
+      'SELECT id FROM vendor_locations WHERE vendor_id = ?',
+      [vendorId]
+    );
+    console.log(`[Delete Locations] Found ${existingLocations.length} existing locations for vendor`);
+    
+    // Delete all locations for this vendor
+    console.log('[Delete Locations] Executing delete query...');
+    const [deleteResult] = await pool.execute(
+      'DELETE FROM vendor_locations WHERE vendor_id = ?',
+      [vendorId]
+    );
+    console.log(`[Delete Locations] Deleted ${deleteResult.affectedRows} locations`);
+    
+    // Get WebSocket server instance
+    const { wss } = require('../../server');
+    console.log(`[Delete Locations] WebSocket server found, current clients: ${wss.clients.size}`);
+    
+    // Broadcast location removal to all connected clients
+    const locationRemoval = {
+      type: 'location_removed',
+      vendorId: String(vendorId),
+      timestamp: new Date().toISOString()
+    };
+    console.log('[Delete Locations] Prepared location removal broadcast:', locationRemoval);
+    
+    // Broadcast to all connected clients
+    let broadcastCount = 0;
+    wss.clients.forEach((client) => {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify(locationRemoval));
+        broadcastCount++;
+      }
+    });
+    
+    console.log(`[Delete Locations] Broadcasted to ${broadcastCount} clients`);
+    
+    res.json({
+      success: true,
+      message: 'All vendor locations deleted successfully',
+      broadcastCount,
+      deletedCount: deleteResult.affectedRows
+    });
+  } catch (error) {
+    console.error('[Delete Locations] Error:', error);
+    console.error('[Delete Locations] Error details:', {
+      message: error.message,
+      stack: error.stack,
+      vendorId: req.user?.id
+    });
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting vendor locations',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }

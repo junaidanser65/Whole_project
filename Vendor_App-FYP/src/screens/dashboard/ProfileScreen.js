@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, ScrollView, Alert, Animated, Switch } from 'react-native';
 import { Text, Avatar, ListItem, Icon, Button } from 'react-native-elements';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../contexts/AuthContext';
+import { locationService } from '../../services/locationService';
+import { websocketService } from '../../services/websocketService';
 
 const menuItems = [
   {
@@ -45,6 +47,40 @@ const ProfileScreen = ({ navigation }) => {
   const [pressedItem, setPressedItem] = useState(null);
   const scaleAnim = new Animated.Value(1);
   const [isAvailable, setIsAvailable] = useState(user?.isAvailable || false);
+
+  // Initialize WebSocket connection
+  useEffect(() => {
+    websocketService.connect();
+    return () => {
+      websocketService.disconnect();
+    };
+  }, []);
+
+  // Handle availability toggle
+  const handleAvailabilityToggle = async (value) => {
+    try {
+      if (value) {
+        // Start location tracking when becoming available
+        const success = await locationService.startLocationUpdates(user.id);
+        if (!success) {
+          Alert.alert(
+            'Location Permission Required',
+            'Please enable location services to make yourself available.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+      } else {
+        // Stop location tracking when becoming unavailable
+        await locationService.stopLocationUpdates();
+      }
+      
+      setIsAvailable(value);
+    } catch (error) {
+      console.error('Error toggling availability:', error);
+      Alert.alert('Error', 'Failed to update availability status');
+    }
+  };
 
   const handleLogout = async () => {
     Alert.alert(
@@ -152,7 +188,7 @@ const ProfileScreen = ({ navigation }) => {
                 trackColor={{ false: '#767577', true: '#81b0ff' }}
                 thumbColor={isAvailable ? '#ff4500' : '#f4f3f4'}
                 ios_backgroundColor="#3e3e3e"
-                onValueChange={() => setIsAvailable(previousState => !previousState)}
+                onValueChange={handleAvailabilityToggle}
                 value={isAvailable}
                 style={styles.switch}
               />
