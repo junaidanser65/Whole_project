@@ -195,10 +195,44 @@ export default function FullMapScreen({ route, navigation }) {
     }
   };
 
+  // Handle WebSocket location removal
+  const handleLocationRemoved = (data) => {
+    console.log('Received location removal:', data);
+    
+    if (!data.vendorId) {
+      console.warn('Invalid location removal data:', data);
+      return;
+    }
+
+    // Remove vendor from vendorsWithLocations
+    setVendorsWithLocations(prevVendors => 
+      prevVendors.filter(vendor => String(vendor.id) !== String(data.vendorId))
+    );
+
+    // Remove vendor from filteredVendors
+    setFilteredVendors(prevVendors => 
+      prevVendors.filter(vendor => String(vendor.id) !== String(data.vendorId))
+    );
+
+    // Remove marker from map safely
+    if (mapRef) {
+      const marker = markersRef.current[data.vendorId];
+      if (marker) {
+        try {
+          // Clean up the marker reference
+          delete markersRef.current[data.vendorId];
+        } catch (error) {
+          console.warn('Error removing marker:', error);
+        }
+      }
+    }
+  };
+
   // Connect to WebSocket when component mounts
   useEffect(() => {
     console.log('[FullMap] Setting up WebSocket connection');
-    const unsubscribe = websocketService.subscribe('location_update', handleLocationUpdate);
+    const unsubscribeLocationUpdate = websocketService.subscribe('location_update', handleLocationUpdate);
+    const unsubscribeLocationRemoved = websocketService.subscribe('location_removed', handleLocationRemoved);
     
     // Register with WebSocket server
     websocketService.send({
@@ -208,7 +242,8 @@ export default function FullMapScreen({ route, navigation }) {
 
     return () => {
       console.log('[FullMap] Cleaning up WebSocket connection');
-      unsubscribe();
+      unsubscribeLocationUpdate();
+      unsubscribeLocationRemoved();
     };
   }, []);
 

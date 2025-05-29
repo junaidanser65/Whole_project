@@ -6,9 +6,13 @@ const pool = require('../config/database');
 router.get('/', async (req, res) => {
   try {
     const [vendors] = await pool.execute(`
-      SELECT v.*
+      SELECT v.*,
+        COALESCE(AVG(r.rating), 0) as rating,
+        COUNT(r.id) as reviews_count
       FROM vendors v
+      LEFT JOIN reviews r ON v.id = r.vendor_id
       WHERE v.is_active = true
+      GROUP BY v.id
       ORDER BY v.created_at DESC
     `);
 
@@ -21,8 +25,8 @@ router.get('/', async (req, res) => {
       return {
         ...vendor,
         locations: vendorLocations,
-        rating: 0, // Default rating
-        reviews_count: 0 // Default review count
+        rating: parseFloat(vendor.rating), // Keep as number
+        reviews_count: parseInt(vendor.reviews_count)
       };
     });
 
@@ -44,9 +48,13 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const [vendors] = await pool.execute(`
-      SELECT v.*
+      SELECT v.*,
+        COALESCE(AVG(r.rating), 0) as rating,
+        COUNT(r.id) as reviews_count
       FROM vendors v
+      LEFT JOIN reviews r ON v.id = r.vendor_id
       WHERE v.id = ? AND v.is_active = true
+      GROUP BY v.id
     `, [req.params.id]);
 
     if (vendors.length === 0) {
@@ -65,8 +73,8 @@ router.get('/:id', async (req, res) => {
     const vendor = {
       ...vendors[0],
       locations,
-      rating: 0, // Default rating
-      reviews_count: 0 // Default review count
+      rating: parseFloat(vendors[0].rating), // Keep as number
+      reviews_count: parseInt(vendors[0].reviews_count)
     };
 
     res.json({
