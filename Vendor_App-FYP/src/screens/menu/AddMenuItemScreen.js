@@ -168,7 +168,7 @@ const AddMenuItemScreen = ({ navigation }) => {
           },
           {
             text: "Go to Menu",
-            onPress: () => navigation.navigate("Menu"),
+            onPress: () => navigation.navigate("MainApp", { screen: "Menu" }),
           },
         ]);
       } catch (error) {

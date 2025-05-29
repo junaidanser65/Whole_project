@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -15,20 +15,54 @@ import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { uploadImageToCloudinary } from '../../services/cloudinaryService';
-import { updateProfile } from '../../services/api';
+import { updateProfile, apiClient } from '../../services/api';
 
-const EditProfileScreen = ({ navigation }) => {
+const EditProfileScreen = ({ navigation, route }) => {
   const { user, updateUser } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [profileImage, setProfileImage] = useState(user?.profile_image || 'https://randomuser.me/api/portraits/men/1.jpg');  const [formData, setFormData] = useState({
+  const [profileImage, setProfileImage] = useState(
+    user?.profile_image || 'https://cdn-icons-png.flaticon.com/512/1077/1077114.png'
+  );
+  const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
     business_name: user?.business_name || '',
     phone_number: user?.phone_number || '',
     address: user?.address || '',
     profile_image: user?.profile_image || profileImage,
-  });const [errors, setErrors] = useState({});
+  });
+  const [errors, setErrors] = useState({});
   const fadeAnim = React.useRef(new Animated.Value(1)).current;
+
+  // Add useEffect to fetch profile data
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        if (user?.id) {
+          console.log('Fetching profile for user ID:', user.id);
+          const { profile } = await apiClient.getProfileById(user.id);
+          console.log('Profile data received:', profile);
+          
+          if (profile) {
+            setProfileImage(profile.profile_image || profileImage);
+            setFormData(prev => ({
+              ...prev,
+              name: profile.name || prev.name,
+              email: profile.email || prev.email,
+              business_name: profile.business_name || prev.business_name,
+              phone_number: profile.phone_number || prev.phone_number,
+              address: profile.address || prev.address,
+              profile_image: profile.profile_image || prev.profile_image
+            }));
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+      }
+    };
+
+    fetchProfile();
+  }, [user?.id]);
 
   React.useEffect(() => {
     // Start with form already visible
@@ -119,7 +153,8 @@ const EditProfileScreen = ({ navigation }) => {
     }
 
     setLoading(true);
-    try {      // Ensure we have the latest profile image
+    try {
+      // Ensure we have the latest profile image
       const currentProfileImage = formData.profile_image || profileImage;
       
       const profileData = {
@@ -144,7 +179,9 @@ const EditProfileScreen = ({ navigation }) => {
 
       const response = await updateProfile(profileData);
 
-      console.log('Profile update response:', response);      if (response.success) {
+      console.log('Profile update response:', response);
+      
+      if (response.success) {
         // Update local user context if available
         if (updateUser) {
           // Ensure we're updating the user context with the latest data
@@ -155,6 +192,11 @@ const EditProfileScreen = ({ navigation }) => {
           };
           console.log('Updating user context with:', updatedUser);
           await updateUser(updatedUser);
+        }
+        
+        // Call the onProfileUpdate callback if it exists
+        if (route.params?.onProfileUpdate) {
+          route.params.onProfileUpdate();
         }
         
         // Add a small delay to ensure state updates are processed

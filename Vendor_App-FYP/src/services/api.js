@@ -155,23 +155,45 @@ export const apiClient = {
   },
 
   // Get vendor profile by ID
-  // getProfileById: async (id) => {
-  //   const headers = await getAuthHeaders();
-  //   const response = await fetch(`${API_URL}/profile/${id}`, {
-  //     headers,
-  //   });
-  //   const data = await handleResponse(response);
-
-  //   // return full response: profile
-  //   return { profile: data.profile };
-  // },
-
-  // In apiClient
   getProfileById: async (id) => {
-    const headers = await getAuthHeaders();
-    const response = await fetch(`${API_URL}/vendor/profile/${id}`, { headers });
-    const data = await handleResponse(response);
-    return { profile: data.profile };
+    try {
+      const headers = await getAuthHeaders();
+      console.log('Fetching profile for ID:', id);
+      console.log('Using headers:', headers);
+      console.log('API URL:', `${API_URL}/vendor/profile/profile/${id}`);
+      
+      const response = await fetch(`${API_URL}/vendor/profile/profile/${id}`, { 
+        headers,
+        method: 'GET'
+      });
+      
+      console.log('Profile response status:', response.status);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Profile fetch error response:', errorData);
+        throw new Error(errorData.message || 'Failed to fetch profile');
+      }
+      
+      const data = await response.json();
+      console.log('Profile response data:', data);
+      
+      if (!data.success) {
+        console.error('Profile fetch unsuccessful:', data);
+        throw new Error(data.message || 'Failed to fetch profile');
+      }
+      
+      if (!data.profile) {
+        console.error('No profile data in response:', data);
+        throw new Error('No profile data received');
+      }
+      
+      console.log('Successfully parsed profile data:', data.profile);
+      return { profile: data.profile };
+    } catch (error) {
+      console.error('Get profile by ID error:', error);
+      throw error;
+    }
   },
 
   // Update user profile

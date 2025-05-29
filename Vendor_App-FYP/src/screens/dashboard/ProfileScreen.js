@@ -6,6 +6,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../contexts/AuthContext';
 import { locationService } from '../../services/locationService';
 import { websocketService } from '../../services/websocketService';
+import { apiClient } from '../../services/api';
+import { useFocusEffect } from '@react-navigation/native';
 
 const menuItems = [
   {
@@ -47,6 +49,51 @@ const ProfileScreen = ({ navigation }) => {
   const [pressedItem, setPressedItem] = useState(null);
   const scaleAnim = new Animated.Value(1);
   const [isAvailable, setIsAvailable] = useState(user?.isAvailable || false);
+  const [profileData, setProfileData] = useState(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+
+  // Fetch profile data
+  const fetchProfile = async () => {
+    try {
+      if (user?.id) {
+        console.log('Fetching profile for user ID:', user.id);
+        const { profile } = await apiClient.getProfileById(user.id);
+        console.log('Raw profile data received:', profile);
+        console.log('Profile image URL:', profile?.profile_image);
+        setProfileData(profile);
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      Alert.alert('Error', 'Failed to load profile data');
+    } finally {
+      setLoadingProfile(false);
+    }
+  };
+
+  // Use useFocusEffect to refresh data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('Profile screen focused, refreshing data...');
+      fetchProfile();
+    }, [user?.id])
+  );
+
+  // Initial profile fetch
+  useEffect(() => {
+    fetchProfile();
+  }, [user?.id]);
+
+  // Add debug logging for profile data changes
+  useEffect(() => {
+    console.log('Profile data updated:', profileData);
+    console.log('Current profile image URL:', profileData?.profile_image);
+  }, [profileData]);
+
+  // Add debug logging
+  useEffect(() => {
+    console.log('User data in ProfileScreen:', user);
+    console.log('Profile image URL:', user?.profile_image);
+  }, [user]);
 
   // Initialize WebSocket connection
   useEffect(() => {
@@ -113,7 +160,12 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const handleEditProfile = () => {
-    navigation.navigate('EditProfile');
+    navigation.navigate('EditProfile', {
+      onProfileUpdate: () => {
+        // This will trigger a refresh when returning from EditProfile
+        fetchProfile();
+      }
+    });
   };
 
   const handlePressIn = (index) => {
@@ -144,12 +196,14 @@ const ProfileScreen = ({ navigation }) => {
               <Avatar
                 size={100}
                 rounded
-                source={{
-                  uri:
-                    user?.avatar ||
-                    "https://randomuser.me/api/portraits/men/1.jpg",
-                }}
+                source={
+                  profileData?.profile_image
+                    ? { uri: profileData.profile_image }
+                    : undefined
+                }
+                icon={!profileData?.profile_image ? { name: 'store', type: 'material' } : undefined}
                 containerStyle={styles.avatar}
+                onPress={() => console.log('Avatar pressed, current image URL:', profileData?.profile_image)}
               >
                 <Avatar.Accessory
                   size={25}
@@ -159,10 +213,10 @@ const ProfileScreen = ({ navigation }) => {
               </Avatar>
             </View>
             <Text h3 style={styles.name}>
-              {user?.name || "User"}
+              {profileData?.name || user?.name || "User"}
             </Text>
             <Text style={styles.email}>
-              {user?.email || "email@example.com"}
+              {profileData?.email || user?.email || "email@example.com"}
             </Text>
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
