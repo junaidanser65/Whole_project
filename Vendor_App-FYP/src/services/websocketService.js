@@ -10,7 +10,7 @@ class WebSocketService {
   connect() {
     try {
       // Replace with your WebSocket server URL
-      this.ws = new WebSocket('ws://192.168.106.240:5000/ws');
+      this.ws = new WebSocket('ws://192.168.38.240:5000/ws');
 
       this.ws.onopen = () => {
         console.log('WebSocket connected');

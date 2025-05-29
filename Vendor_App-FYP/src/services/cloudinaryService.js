@@ -7,6 +7,13 @@ const UPLOAD_PRESET = 'menuuuu';
 
 export const uploadImageToCloudinary = async (imageUri) => {
   try {
+    console.log('Starting image upload to Cloudinary...');
+    
+    // Validate input
+    if (!imageUri) {
+      throw new Error('No image URI provided');
+    }
+
     // Convert image to base64
     const base64 = await FileSystem.readAsStringAsync(imageUri, {
       encoding: FileSystem.EncodingType.Base64,
@@ -14,9 +21,11 @@ export const uploadImageToCloudinary = async (imageUri) => {
 
     // Create form data
     const formData = new FormData();
-    formData.append('file', `data:image/jpg;base64,${base64}`);
+    formData.append('file', `data:image/jpeg;base64,${base64}`);
     formData.append('upload_preset', UPLOAD_PRESET);
 
+    console.log('Uploading to Cloudinary...');
+    
     // Upload to Cloudinary
     const response = await fetch(CLOUDINARY_URL, {
       method: 'POST',
@@ -25,6 +34,10 @@ export const uploadImageToCloudinary = async (imageUri) => {
         'Content-Type': 'multipart/form-data',
       },
     });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
     const data = await response.json();
 
@@ -43,4 +56,4 @@ export const uploadImageToCloudinary = async (imageUri) => {
       error: error.message || 'Failed to upload image',
     };
   }
-}; 
+};

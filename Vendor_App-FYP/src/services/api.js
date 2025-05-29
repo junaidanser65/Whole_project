@@ -5,7 +5,7 @@ import axios from "axios";
 // 192.168.18.8
 // const API_URL = "http://localhost:5000/api";
 // const API_URL = "http://192.168.18.8:5000/api";
-const API_URL = "http://192.168.106.240:5000/api";//ushna /  hamza bhai ke mobile ka
+const API_URL = "http://192.168.38.240:5000/api";//ushna /  hamza bhai ke mobile ka
 // const API_URL = "http://192.168.72.42:5000/api";//mere mobile ka
 
 // Helper function to handle API responses
@@ -177,11 +177,64 @@ export const apiClient = {
   // Update user profile
   updateProfile: async (userData) => {
     const headers = await getAuthHeaders();
-    const response = await fetch(`${API_URL}/vendor/profile`, {
+    const response = await fetch(`${API_URL}/vendor/profile/profile`, {
       method: "PUT",
       headers,
       body: JSON.stringify(userData),
     });
     return handleResponse(response);
   },
+};
+
+export const updateProfile = async (profileData) => {
+  try {    const token = await AsyncStorage.getItem("auth_token");
+
+    // Ensure all required fields are present and not undefined
+    if (!profileData.name || !profileData.business_name || !profileData.phone_number) {
+      return {
+        success: false,
+        error: 'Missing required fields'
+      };
+    }
+
+    const requestData = {
+      name: profileData.name.trim(),
+      business_name: profileData.business_name.trim(),
+      phone_number: profileData.phone_number.trim(),
+      address: profileData.address?.trim() || '',
+      profile_image: profileData.profile_image || null
+    };
+
+    console.log('Sending profile update request:', requestData);
+    
+    const response = await axios({
+      method: 'PUT',
+      url: `${API_URL}/vendor/profile/profile`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      data: requestData
+    });
+
+    console.log('Profile update response:', response.data);
+
+    if (response.status === 200) {
+      return {
+        success: true,
+        data: response.data
+      };
+    }
+
+    return {
+      success: false,
+      error: 'Failed to update profile'
+    };
+  } catch (error) {
+    console.error('Profile update error:', error.response?.data || error.message);
+    return {
+      success: false,
+      error: error.response?.data?.message || 'Failed to update profile'
+    };
+  }
 };

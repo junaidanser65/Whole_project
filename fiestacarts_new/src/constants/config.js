@@ -1,8 +1,8 @@
 // API Configuration
-export const API_URL = 'http://192.168.106.240:5000/api';
+export const API_URL = 'http://192.168.38.240:5000/api';
 
 // WebSocket Configuration
-export const WS_URL = 'ws://192.168.106.240:5000/ws';
+export const WS_URL = 'ws://192.168.38.240:5000/ws';
 
 // Map Configuration
 export const DEFAULT_MAP_REGION = {

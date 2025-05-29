@@ -8,42 +8,32 @@ import {
   TouchableOpacity,
   Alert,
   Animated,
-  Text as RNText,
-  Switch,
 } from 'react-native';
-import { Input, Button, Avatar, Icon } from 'react-native-elements';
+import { Text, Input, Button, Avatar, Icon } from 'react-native-elements';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { uploadImageToCloudinary } from '../../services/cloudinaryService';
+import { updateProfile } from '../../services/api';
 
 const EditProfileScreen = ({ navigation }) => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [profileImage, setProfileImage] = useState(user?.avatar || 'https://randomuser.me/api/portraits/men/1.jpg');
-  const [formData, setFormData] = useState({
-    firstName: user?.first_name || '',
-    lastName: user?.last_name || '',
+  const [profileImage, setProfileImage] = useState(user?.profile_image || 'https://randomuser.me/api/portraits/men/1.jpg');  const [formData, setFormData] = useState({
+    name: user?.name || '',
     email: user?.email || '',
-    phone: user?.phone || '',
+    business_name: user?.business_name || '',
+    phone_number: user?.phone_number || '',
     address: user?.address || '',
-    city: user?.city || '',
-    state: user?.state || '',
-    zipCode: user?.zip_code || '',
-  });
-  const [errors, setErrors] = useState({});
-  const fadeAnim = new Animated.Value(0);
-  const [isAvailable, setIsAvailable] = useState(user?.isAvailable || false);
+    profile_image: user?.profile_image || profileImage,
+  });const [errors, setErrors] = useState({});
+  const fadeAnim = React.useRef(new Animated.Value(1)).current;
 
   React.useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 500,
-      useNativeDriver: true,
-    }).start();
+    // Start with form already visible
+    fadeAnim.setValue(1);
   }, []);
-
   const pickImage = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -51,75 +41,134 @@ const EditProfileScreen = ({ navigation }) => {
         Alert.alert('Permission needed', 'Please grant camera roll permissions to change your profile picture.');
         return;
       }
-  
+
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.7,
+        quality: 0.8, // Slightly reduced quality for better performance
       });
-  
-      if (!result.canceled && result.assets[0].uri) {
+
+      console.log('Image picker result:', result);      if (!result.canceled && result.assets[0]) {
+        setLoading(true);
         try {
-          setLoading(true);
-          const uri = result.assets[0].uri;
-          
-          // Set the local image first for immediate feedback
-          setProfileImage(uri);
-          
           // Upload to Cloudinary
-          const uploadResult = await uploadImageToCloudinary(uri);
-          if (uploadResult && uploadResult.imageUrl) {
-            setProfileImage(uploadResult.imageUrl);
+          const uploadResult = await uploadImageToCloudinary(result.assets[0].uri);
+          console.log('Cloudinary upload result:', uploadResult);
+
+          if (uploadResult.success) {
+            const newImageUrl = uploadResult.imageUrl;
+            setProfileImage(newImageUrl);
+            // Store the Cloudinary URL to be saved with other profile data
+            setFormData(prev => ({ 
+              ...prev, 
+              profile_image: newImageUrl 
+            }));
+            
+            // Update the user context immediately with the new image
+            if (updateUser) {
+              await updateUser({
+                ...user,
+                profile_image: newImageUrl
+              });
+            }
           } else {
-            throw new Error('Failed to get upload URL');
+            Alert.alert('Error', 'Failed to upload image. Please try again.');
           }
         } catch (uploadError) {
-          console.error('Upload error:', uploadError);
-          Alert.alert(
-            'Upload Failed',
-            'Failed to upload image to server. Please try again.',
-            [{ text: 'OK' }]
-          );
-          // Revert to previous image if upload fails
-          setProfileImage(user?.avatar || 'https://randomuser.me/api/portraits/men/1.jpg');
-        } finally {
-          setLoading(false);
+          console.error('Image upload error:', uploadError);
+          Alert.alert('Error', 'Failed to upload image to cloud storage.');
         }
+        fadeAnim.setValue(1);
       }
     } catch (error) {
       console.error('Image picker error:', error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
+    } finally {
       setLoading(false);
     }
-  };  
-
-  const validateForm = () => {
+  };  const validateForm = () => {
     let newErrors = {};
-    if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
-    if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
-    if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
-    // Add more validations as needed
+    
+    // Required field validations
+    if (!formData.name.trim()) newErrors.name = 'Name is required';
+    if (!formData.email.trim()) newErrors.email = 'Email is required';
+    if (!formData.phone_number.trim()) newErrors.phone_number = 'Phone number is required';
+    if (!formData.business_name.trim()) newErrors.business_name = 'Business name is required';
+    
+    // Phone number format validation
+    if (formData.phone_number.trim() && !/^\+?\d{10,12}$/.test(formData.phone_number.trim())) {
+      newErrors.phone_number = 'Please enter a valid phone number';
+    }
+
+    // Email format validation
+    if (formData.email.trim() && !/\S+@\S+\.\S+/.test(formData.email.trim())) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
   const handleSave = async () => {
-    if (!validateForm()) return;
+    if (loading) return; // Prevent multiple submissions while loading
+
+    // Validate form before submission
+    if (!validateForm()) {
+      Alert.alert('Required Fields', 'Please fill in all required fields.');
+      return;
+    }
 
     setLoading(true);
-    try {
-      // TODO: Implement the actual profile update logic with Supabase
-      const updatedProfile = {
-        ...formData,
-        isAvailable,
+    try {      // Ensure we have the latest profile image
+      const currentProfileImage = formData.profile_image || profileImage;
+      
+      const profileData = {
+        name: formData.name?.trim() || '',
+        business_name: formData.business_name?.trim() || '',
+        phone_number: formData.phone_number?.trim() || '',
+        address: formData.address?.trim() || '',
+        profile_image: currentProfileImage
       };
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      Alert.alert('Success', 'Profile updated successfully', [
-        { text: 'OK', onPress: () => navigation.goBack() }
-      ]);
+
+      // Check for empty required fields before submission
+      const requiredFields = ['name', 'business_name', 'phone_number', 'address'];
+      const emptyFields = requiredFields.filter(field => !profileData[field]);
+      
+      if (emptyFields.length > 0) {
+        Alert.alert('Required Fields', `Please fill in: ${emptyFields.join(', ')}`);
+        setLoading(false);
+        return;
+      }
+
+      console.log('Submitting form data:', profileData);
+
+      const response = await updateProfile(profileData);
+
+      console.log('Profile update response:', response);      if (response.success) {
+        // Update local user context if available
+        if (updateUser) {
+          // Ensure we're updating the user context with the latest data
+          const updatedUser = {
+            ...user,
+            ...profileData,
+            profile_image: profileData.profile_image // Explicitly set profile image
+          };
+          console.log('Updating user context with:', updatedUser);
+          await updateUser(updatedUser);
+        }
+        
+        // Add a small delay to ensure state updates are processed
+        setTimeout(() => {
+          Alert.alert('Success', 'Profile updated successfully');
+          navigation.goBack();
+        }, 100);
+      } else {
+        const errorMessage = response.error || response.message || 'Failed to update profile';
+        Alert.alert('Error', errorMessage);
+      }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update profile. Please try again.');
+      console.error('Profile update error:', error);
+      Alert.alert('Error', error.message || 'Failed to save profile changes. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -179,40 +228,22 @@ const EditProfileScreen = ({ navigation }) => {
               </TouchableOpacity>
 
               {/* Change Photo Text */}
-              <RNText style={styles.changePhotoText}>Tap to change photo</RNText>
+              <Text style={styles.changePhotoText}>Tap to change photo</Text>
             </LinearGradient>
           </Animated.View>
-          <Animated.View style={[styles.form, { opacity: fadeAnim }]}>
-            <View style={styles.formSection}>
-              <RNText style={styles.sectionTitle}>Availability Status</RNText>
-              <View style={styles.availabilityContainer}>
-                <RNText style={styles.availabilityText}>
-                  {isAvailable ? 'Available' : 'Unavailable'}
-                </RNText>
-                <Switch
-                  trackColor={{ false: '#767577', true: '#81b0ff' }}
-                  thumbColor={isAvailable ? '#ff4500' : '#f4f3f4'}
-                  ios_backgroundColor="#3e3e3e"
-                  onValueChange={() => setIsAvailable(previousState => !previousState)}
-                  value={isAvailable}
-                  style={styles.switch}
-                />
-              </View>
-            </View>
-
-            <View style={styles.formSection}>
-              <RNText style={styles.sectionTitle}>Personal Information</RNText>
+          <Animated.View style={[styles.form, { opacity: fadeAnim }]}>            <View style={styles.formSection}>
+              <Text style={styles.sectionTitle}>Business Information</Text>
               {renderInput(
-                "First Name",
-                formData.firstName,
-                (text) => setFormData({ ...formData, firstName: text }),
+                "Full Name",
+                formData.name,
+                (text) => setFormData({ ...formData, name: text }),
                 "person"
               )}
               {renderInput(
-                "Last Name",
-                formData.lastName,
-                (text) => setFormData({ ...formData, lastName: text }),
-                "person"
+                "Business Name",
+                formData.business_name,
+                (text) => setFormData({ ...formData, business_name: text }),
+                "business"
               )}
               {renderInput(
                 "Email",
@@ -224,39 +255,20 @@ const EditProfileScreen = ({ navigation }) => {
               )}
               {renderInput(
                 "Phone Number",
-                formData.phone,
-                (text) => setFormData({ ...formData, phone: text }),
+                formData.phone_number,
+                (text) => setFormData({ ...formData, phone_number: text }),
                 "phone",
                 "phone-pad"
               )}
             </View>
 
             <View style={styles.formSection}>
-              <RNText style={styles.sectionTitle}>Address</RNText>
+              <Text style={styles.sectionTitle}>Location</Text>
               {renderInput(
-                "Address",
+                "Business Address",
                 formData.address,
                 (text) => setFormData({ ...formData, address: text }),
                 "home"
-              )}
-              {renderInput(
-                "City",
-                formData.city,
-                (text) => setFormData({ ...formData, city: text }),
-                "location-city"
-              )}
-              {renderInput(
-                "State",
-                formData.state,
-                (text) => setFormData({ ...formData, state: text }),
-                "place"
-              )}
-              {renderInput(
-                "ZIP Code",
-                formData.zipCode,
-                (text) => setFormData({ ...formData, zipCode: text }),
-                "markunread-mailbox",
-                "numeric"
               )}
             </View>
           </Animated.View>
@@ -314,7 +326,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   avatarContainer: {
-    marginBottom: 10,
+    marginBottom: 20,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -385,24 +397,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#ff4500",
     paddingVertical: 12,
     borderRadius: 12,
-  },
-  availabilityContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    backgroundColor: '#F0F3F5',
-    borderRadius: 10,
-    marginBottom: 15,
-  },
-  availabilityText: {
-    fontSize: 16,
-    color: '#2D3436',
-    fontWeight: '500',
-  },
-  switch: {
-    transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }],
   },
 });
 
