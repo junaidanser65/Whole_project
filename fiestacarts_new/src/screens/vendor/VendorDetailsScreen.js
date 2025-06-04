@@ -12,7 +12,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import ErrorMessage from '../../components/common/ErrorMessage';
 import { useFavorites } from '../../contexts/FavoritesContext';
 import BackButton from '../../components/common/BackButton';
-import { getVendorMenu, getPublicVendorAvailability } from '../../api/apiService';
+import { getVendorMenu, getPublicVendorAvailability, createConversation } from '../../api/apiService';
 
 // Mock data - replace with API call later
 const MOCK_VENDOR = {
@@ -385,6 +385,30 @@ const VendorDetailsScreen = ({ route, navigation }) => {
     }
   };
 
+  const handleChat = async () => {
+    try {
+      // Create or get existing conversation
+      const response = await createConversation(vendor.id);
+      
+      if (!response.success) {
+        Alert.alert('Error', 'Failed to start conversation');
+        return;
+      }
+
+      // Navigate to chat with the conversation ID
+      navigation.navigate('Chat', {
+        screen: 'ChatDetails',
+        params: {
+          conversationId: response.conversation.id,
+          vendorName: vendor.name,
+        }
+      });
+    } catch (error) {
+      console.error('Error creating conversation:', error);
+      Alert.alert('Error', 'Failed to start conversation');
+    }
+  };
+
   const handleServiceSelection = (services, total) => {
     setSelectedServices(services);
     setTotalPrice(total);
@@ -459,6 +483,17 @@ const VendorDetailsScreen = ({ route, navigation }) => {
               ]}>
                 {loading ? 'Updating...' : (isFavorite(vendor.id) ? 'Saved' : 'Save')}
               </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.chatButton}
+              onPress={handleChat}
+            >
+              <Icon
+                name="chat"
+                color={colors.primary}
+                size={24}
+              />
+              <Text style={styles.chatButtonText}>Chat</Text>
             </TouchableOpacity>
             <ShareButton onPress={handleShare} />
           </View>
@@ -570,6 +605,22 @@ const styles = StyleSheet.create({
   },
   favoriteButtonTextActive: {
     color: colors.error,
+  },
+  chatButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    backgroundColor: colors.background,
+  },
+  chatButtonText: {
+    ...typography.body,
+    color: colors.primary,
+    marginLeft: spacing.xs,
+    fontSize: 14,
   },
   section: {
     marginHorizontal: spacing.md,

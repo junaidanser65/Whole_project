@@ -49,6 +49,9 @@ import AddMenuItemScreen from '../screens/menu/AddMenuItemScreen';
 import MenuItemDetailsScreen from '../screens/menu/MenuItemDetailsScreen';
 import EditMenuItemScreen from '../screens/menu/EditMenuItemScreen';
 
+// Chat Screens
+import ChatDetailsScreen from '../screens/chat/ChatDetailsScreen';
+
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 const ProfileStack = createNativeStackNavigator();
@@ -157,11 +160,11 @@ const MainTabNavigator = () => {
             iconName = focused ? 'restaurant-menu' : 'restaurant-menu';
           } else if (route.name === 'Bookings') {
             iconName = focused ? 'event' : 'event';
-          } 
-          else if (route.name === 'Timings') {
+          } else if (route.name === 'Timings') {
             iconName = focused ? 'schedule' : 'schedule';
-          }
-          else if (route.name === 'Profile') {
+          } else if (route.name === 'Chat') {
+            iconName = focused ? 'chat' : 'chat-bubble-outline';
+          } else if (route.name === 'Profile') {
             iconName = focused ? 'person' : 'person-outline';
           }
 
@@ -175,6 +178,7 @@ const MainTabNavigator = () => {
       <Tab.Screen name="Menu" component={MenuScreen} />
       <Tab.Screen name="Bookings" component={BookingsScreen} />
       <Tab.Screen name="Timings" component={TimingsScreen} />
+      <Tab.Screen name="Chat" component={ChatScreen} />
       <Tab.Screen name="Profile" component={ProfileStackNavigator} />
     </Tab.Navigator>
   );
@@ -186,84 +190,66 @@ const AppNavigator = () => {
   return (
     <BookingsProvider>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {/* {!user ? (
-          // Auth Stack
-          <> */}
-            <Stack.Screen name="Welcome" component={WelcomeScreen} />
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Signup" component={SignupScreen} />
-          {/* </>
-        ) : (
-          // Main App Stack
-          <> */}
-            { <Stack.Screen name="MainApp" component={MainTabNavigator} /> }
-            {/* <Stack.Screen 
-              name="VendorDetails" 
-              component={VendorDetailsScreen}
-              options={{ headerShown: true }}
-            />
-            <Stack.Screen 
-              name="ContactVendor" 
-              component={ContactVendorScreen}
-              options={{ 
-                title: 'Contact Vendor',
-                headerStyle: {
-                  backgroundColor: '#F5F6FA',
-                },
-                headerTintColor: '#2D3436',
-              }}
-            /> */} 
-            <Stack.Screen name="AddBalance" component={AddBalanceScreen} />
-            <Stack.Screen name="SendMoney" component={SendMoneyScreen} />
-            <Stack.Screen name="ReceiveMoney" component={ReceiveMoneyScreen} />
-            <Stack.Screen name="RevenueDetails" component={RevenueDetailsScreen} />
-            <Stack.Screen name="BookingsList" component={BookingsListScreen} />
-            <Stack.Screen name="CustomersList" component={CustomersListScreen} />
-            <Stack.Screen name="CustomerDetails" component={CustomerDetailsScreen} />
-            <Stack.Screen name="RatingsReviews" component={RatingsReviewsScreen} />
-            <Stack.Screen name="AllActivities" component={AllActivitiesScreen} />
-            <Stack.Screen name = "BookingDetails" component={BookingDetails}/> 
-            <Stack.Screen name="PaymentDetails" component={PaymentDetailsScreen} />
-            <Stack.Screen name="ReviewDetails" component={ReviewDetailsScreen} />
-            <Stack.Screen name="Chat" component={ChatScreen} options={{ headerShown: false }} />
-            <Stack.Screen 
-              name="AddMenuItem" 
-              component={AddMenuItemScreen}
-              options={{
-                headerShown: true,
-                title: 'Add Menu Item',
-                headerStyle: {
-                  backgroundColor: '#F8F9FA',
-                },
-                headerTintColor: '#2D3436',
-              }}
-            />
-            <Stack.Screen 
-              name="MenuItemDetails" 
-              component={MenuItemDetailsScreen}
-              options={{
-                headerShown: true,
-                title: 'Menu Item Details',
-                headerStyle: {
-                  backgroundColor: '#F8F9FA',
-                },
-                headerTintColor: '#2D3436',
-              }}
-            />
-            <Stack.Screen 
-              name="EditMenuItem" 
-              component={EditMenuItemScreen}
-              options={{
-                headerShown: true,
-                title: 'Edit Menu Item',
-                headerStyle: {
-                  backgroundColor: '#F8F9FA',
-                },
-                headerTintColor: '#2D3436',
-              }}
-            />
-          {/* </>
-        // )} */}
+        <Stack.Screen name="Welcome" component={WelcomeScreen} />
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="Signup" component={SignupScreen} />
+        <Stack.Screen name="MainApp" component={MainTabNavigator} />
+        <Stack.Screen name="AddBalance" component={AddBalanceScreen} />
+        <Stack.Screen name="SendMoney" component={SendMoneyScreen} />
+        <Stack.Screen name="ReceiveMoney" component={ReceiveMoneyScreen} />
+        <Stack.Screen name="RevenueDetails" component={RevenueDetailsScreen} />
+        <Stack.Screen name="BookingsList" component={BookingsListScreen} />
+        <Stack.Screen name="CustomersList" component={CustomersListScreen} />
+        <Stack.Screen name="CustomerDetails" component={CustomerDetailsScreen} />
+        <Stack.Screen name="RatingsReviews" component={RatingsReviewsScreen} />
+        <Stack.Screen name="AllActivities" component={AllActivitiesScreen} />
+        <Stack.Screen name="BookingDetails" component={BookingDetails} />
+        <Stack.Screen name="PaymentDetails" component={PaymentDetailsScreen} />
+        <Stack.Screen name="ReviewDetails" component={ReviewDetailsScreen} />
+        <Stack.Screen 
+          name="ChatDetails" 
+          component={ChatDetailsScreen} 
+          options={{ 
+            headerShown: false,
+            presentation: 'modal'
+          }} 
+        />
+        <Stack.Screen 
+          name="AddMenuItem" 
+          component={AddMenuItemScreen}
+          options={{
+            headerShown: true,
+            title: 'Add Menu Item',
+            headerStyle: {
+              backgroundColor: '#F8F9FA',
+            },
+            headerTintColor: '#2D3436',
+          }}
+        />
+        <Stack.Screen 
+          name="MenuItemDetails" 
+          component={MenuItemDetailsScreen}
+          options={{
+            headerShown: true,
+            title: 'Menu Item Details',
+            headerStyle: {
+              backgroundColor: '#F8F9FA',
+            },
+            headerTintColor: '#2D3436',
+          }}
+        />
+        <Stack.Screen 
+          name="EditMenuItem" 
+          component={EditMenuItemScreen}
+          options={{
+            headerShown: true,
+            title: 'Edit Menu Item',
+            headerStyle: {
+              backgroundColor: '#F8F9FA',
+            },
+            headerTintColor: '#2D3436',
+          }}
+        />
       </Stack.Navigator>
     </BookingsProvider>
   );

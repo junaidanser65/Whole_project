@@ -116,6 +116,10 @@ const DashboardScreen = ({ navigation }) => {
     navigation.navigate("ReceiveMoney");
   };
 
+  const handleChat = () => {
+    navigation.navigate('Chat');
+  };
+
   const handleStatCardPress = (type) => {
     switch (type) {
       case "revenue":
@@ -248,6 +252,17 @@ const DashboardScreen = ({ navigation }) => {
                   color="#fff"
                 />
                 <Text style={styles.actionText}>Receive</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.actionButton}
+                onPress={handleChat}
+              >
+                <Ionicons
+                  name="chatbubble-outline"
+                  size={24}
+                  color="#fff"
+                />
+                <Text style={styles.actionText}>Chat</Text>
               </TouchableOpacity>
             </View>
           </LinearGradient>
@@ -505,14 +520,20 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-around",
     marginTop: 16,
+    paddingHorizontal: 20,
   },
   actionButton: {
     alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   actionText: {
     color: "#ffffff",
     marginTop: 8,
     fontSize: 12,
+    fontWeight: '500',
   },
   statsContainer: {
     padding: 10,

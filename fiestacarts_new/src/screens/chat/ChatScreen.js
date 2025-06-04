@@ -12,8 +12,10 @@ import {
   Platform,
 } from 'react-native';
 import { Text, Icon } from '@rneui/themed';
+import { colors, spacing, typography } from '../../styles/theme';
 import { useAuth } from '../../contexts/AuthContext';
-import { getVendorConversations } from '../../services/api';
+import { getConversations, getVendorConversations } from '../../api/apiService';
+import ErrorMessage from '../../components/common/ErrorMessage';
 import { formatDistanceToNow } from 'date-fns';
 
 export default function ChatScreen({ navigation }) {
@@ -26,7 +28,9 @@ export default function ChatScreen({ navigation }) {
   const fetchConversations = async () => {
     try {
       setError(null);
-      const response = await getVendorConversations();
+      const response = user.role === 'vendor' 
+        ? await getVendorConversations()
+        : await getConversations();
 
       if (response.success) {
         setConversations(response.conversations);
@@ -54,12 +58,14 @@ export default function ChatScreen({ navigation }) {
   const handleConversationPress = (conversation) => {
     navigation.navigate('ChatDetails', {
       conversationId: conversation.id,
-      userName: conversation.user_name,
-      userImage: conversation.user_image,
+      vendorName: user.role === 'vendor' ? conversation.user_name : conversation.vendor_name,
+      vendorImage: user.role === 'vendor' ? conversation.user_image : conversation.vendor_image,
     });
   };
 
   const renderConversation = ({ item }) => {
+    const name = user.role === 'vendor' ? item.user_name : item.vendor_name;
+    const image = user.role === 'vendor' ? item.user_image : item.vendor_image;
     const unreadCount = item.unread_count || 0;
 
     return (
@@ -68,14 +74,10 @@ export default function ChatScreen({ navigation }) {
         onPress={() => handleConversationPress(item)}
       >
         <View style={styles.avatarContainer}>
-          {item.user_image ? (
-            <Image source={{ uri: item.user_image }} style={styles.avatar} />
+          {image ? (
+            <Image source={{ uri: image }} style={styles.avatar} />
           ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarText}>
-                {item.user_name?.charAt(0).toUpperCase() || 'U'}
-              </Text>
-            </View>
+            <Icon name="person" type="material" size={24} color={colors.primary} />
           )}
           {unreadCount > 0 && (
             <View style={styles.unreadBadge}>
@@ -85,19 +87,19 @@ export default function ChatScreen({ navigation }) {
         </View>
         <View style={styles.conversationInfo}>
           <View style={styles.nameTimeContainer}>
-            <Text style={styles.name}>{item.user_name}</Text>
+            <Text style={styles.name}>{name}</Text>
             {item.last_message_at && (
               <Text style={styles.time}>
                 {formatDistanceToNow(new Date(item.last_message_at), { addSuffix: true })}
-      </Text>
+              </Text>
             )}
           </View>
           <Text style={styles.lastMessage} numberOfLines={1}>
             {item.last_message || 'No messages yet'}
-      </Text>
-    </View>
+          </Text>
+        </View>
       </TouchableOpacity>
-  );
+    );
   };
 
   if (loading) {
@@ -105,11 +107,11 @@ export default function ChatScreen({ navigation }) {
       <SafeAreaView style={styles.safeArea}>
         <StatusBar
           barStyle="dark-content"
-          backgroundColor="#fff"
+          backgroundColor={colors.white}
           translucent={true}
         />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#ff4500" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -120,15 +122,11 @@ export default function ChatScreen({ navigation }) {
       <SafeAreaView style={styles.safeArea}>
         <StatusBar
           barStyle="dark-content"
-          backgroundColor="#fff"
+          backgroundColor={colors.white}
           translucent={true}
         />
         <View style={styles.errorContainer}>
-          <Icon name="error-outline" type="material" size={48} color="#ff4500" />
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchConversations}>
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
+          <ErrorMessage message={error} onRetry={fetchConversations} />
         </View>
       </SafeAreaView>
     );
@@ -138,12 +136,12 @@ export default function ChatScreen({ navigation }) {
     <SafeAreaView style={styles.safeArea}>
       <StatusBar
         barStyle="dark-content"
-        backgroundColor="#fff"
+        backgroundColor={colors.white}
         translucent={true}
-              />
+      />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Messages</Text>
-              </View>
+      </View>
       <View style={styles.container}>
         <FlatList
           data={conversations}
@@ -154,15 +152,15 @@ export default function ChatScreen({ navigation }) {
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={["#ff4500"]}
+              colors={[colors.primary]}
             />
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Icon name="chat" type="material" size={48} color="#666" />
+              <Icon name="chat" type="material" size={48} color={colors.textLight} />
               <Text style={styles.emptyText}>No conversations yet</Text>
               <Text style={styles.emptySubText}>
-                Start chatting with users to see them here
+                Start chatting with {user.role === 'vendor' ? 'users' : 'vendors'} to see them here
               </Text>
             </View>
           }
@@ -175,80 +173,61 @@ export default function ChatScreen({ navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.white,
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   header: {
-    padding: 16,
+    padding: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    backgroundColor: '#fff',
+    borderBottomColor: colors.border,
+    backgroundColor: colors.white,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    ...typography.h2,
+    color: colors.text,
     textAlign: 'center',
   },
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    color: '#333',
-    textAlign: 'center',
-    marginTop: 16,
-    marginBottom: 24,
-  },
-  retryButton: {
-    backgroundColor: '#ff4500',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  retryButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    backgroundColor: colors.background,
+    padding: spacing.lg,
   },
   listContainer: {
-    padding: 8,
-    paddingBottom: 32,
+    padding: spacing.sm,
+    paddingBottom: spacing.xl,
   },
   conversationItem: {
     flexDirection: 'row',
-    padding: 16,
-    backgroundColor: '#fff',
+    padding: spacing.md,
+    backgroundColor: colors.white,
     borderRadius: 12,
-    marginBottom: 8,
+    marginBottom: spacing.sm,
     elevation: 2,
-    shadowColor: '#000',
+    shadowColor: colors.shadow,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
   },
   avatarContainer: {
     position: 'relative',
-    marginRight: 16,
+    marginRight: spacing.md,
     width: 50,
     height: 50,
     justifyContent: 'center',
@@ -259,24 +238,11 @@ const styles = StyleSheet.create({
     height: 50,
     borderRadius: 25,
   },
-  avatarPlaceholder: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#ff4500',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatarText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
   unreadBadge: {
     position: 'absolute',
     top: -5,
     right: -5,
-    backgroundColor: '#ff4500',
+    backgroundColor: colors.primary,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -285,7 +251,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   unreadCount: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 12,
     fontWeight: 'bold',
   },
@@ -297,42 +263,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   name: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    ...typography.subtitle,
+    color: colors.text,
     flex: 1,
-    marginRight: 8,
+    marginRight: spacing.sm,
   },
   time: {
-    fontSize: 12,
-    color: '#666',
+    ...typography.caption,
+    color: colors.textLight,
   },
   lastMessage: {
+    ...typography.body,
+    color: colors.textLight,
     fontSize: 14,
-    color: '#666',
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
-    marginTop: 32,
+    padding: spacing.xl,
+    marginTop: spacing.xl,
   },
   emptyText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#666',
-    marginTop: 16,
+    ...typography.h3,
+    color: colors.textLight,
+    marginTop: spacing.md,
     textAlign: 'center',
   },
   emptySubText: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
+    ...typography.body,
+    color: colors.textLight,
+    marginTop: spacing.xs,
     textAlign: 'center',
     opacity: 0.8,
   },
-});
+}); 

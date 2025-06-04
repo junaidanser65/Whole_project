@@ -37,6 +37,8 @@ import VendorSearchScreen from '../screens/vendor/VendorSearchScreen';
 import AddReviewScreen from '../screens/vendor/AddReviewScreen';
 import EditReviewScreen from '../screens/vendor/EditReviewScreen';
 import BookingSuccess from '../screens/booking/BookingSuccess';
+import ChatScreen from '../screens/chat/ChatScreen';
+import ChatDetailsScreen from '../screens/chat/ChatDetailsScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -176,6 +178,17 @@ const ProfileStack = () => (
   </Stack.Navigator>
 );
 
+const ChatStack = () => (
+  <Stack.Navigator 
+    screenOptions={{ 
+      headerShown: false,
+    }}
+  >
+    <Stack.Screen name="ChatMain" component={ChatScreen} />
+    <Stack.Screen name="ChatDetails" component={ChatDetailsScreen} />
+  </Stack.Navigator>
+);
+
 const MainTabs = () => {
   return (
     <Tab.Navigator
@@ -189,6 +202,8 @@ const MainTabs = () => {
             iconName = 'person';
           } else if (route.name === 'Bookings') {
             iconName = 'shopping-cart';
+          } else if (route.name === 'Chat') {
+            iconName = 'chat';
           }
 
           return <Icon name={iconName} size={size} color={color} />;
@@ -203,6 +218,7 @@ const MainTabs = () => {
     >
       <Tab.Screen name="Dashboard" component={DashboardStack} />
       <Tab.Screen name="Bookings" component={BookingsStack} />
+      <Tab.Screen name="Chat" component={ChatStack} />
       <Tab.Screen name="Profile" component={ProfileStack} />
     </Tab.Navigator>
   );

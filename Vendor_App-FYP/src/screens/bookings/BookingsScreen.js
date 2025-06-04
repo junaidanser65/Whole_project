@@ -149,8 +149,8 @@ const BookingsScreen = ({ navigation }) => {
         console.log('Navigating to BookingDetails with booking:', booking);
         navigation.navigate('BookingDetails', { 
           bookingId: booking.id,
-          bookingData: booking 
-        });
+          bookingData: booking 
+        });
       }}
     >
       <View style={styles.bookingHeader}>
@@ -222,6 +222,17 @@ const BookingsScreen = ({ navigation }) => {
           />
         </View>
       )}
+      <TouchableOpacity 
+        style={styles.chatButton}
+        onPress={() => navigation.navigate('ChatDetails', { 
+          conversationId: null, // null indicates new conversation
+          userId: booking.user_id,
+          userName: booking.user_name,
+          userImage: booking.user_image || null
+        })}
+      >
+        <Icon name="chat" type="material" size={24} color="#ff4500" />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
@@ -488,6 +499,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#636E72',
     marginLeft: 8,
+  },
+  chatButton: {
+    position: 'absolute',
+    bottom: 15,
+    right: 15,
+    backgroundColor: '#FFF',
+    borderRadius: 25,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
 });
 

@@ -5,7 +5,7 @@ import axios from "axios";
 // 192.168.18.8
 // const API_URL = "http://localhost:5000/api";
 // const API_URL = "http://192.168.18.8:5000/api";
-const API_URL = "http://192.168.38.240:5000/api";//ushna /  hamza bhai ke mobile ka
+export const API_URL = "http://192.168.38.240:5000/api";//ushna /  hamza bhai ke mobile ka
 // const API_URL = "http://192.168.72.42:5000/api";//mere mobile ka
 
 // Helper function to handle API responses
@@ -258,5 +258,67 @@ export const updateProfile = async (profileData) => {
       success: false,
       error: error.response?.data?.message || 'Failed to update profile'
     };
+  }
+};
+
+// Chat related API functions
+export const getVendorConversations = async () => {
+  try {
+    const token = await AsyncStorage.getItem("auth_token");
+    const response = await axios({
+      method: 'GET',
+      url: `${API_URL}/vendor/chat/vendor/conversations`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching vendor conversations:', error);
+    throw error;
+  }
+};
+
+export const getMessages = async (conversationId) => {
+  try {
+    const token = await AsyncStorage.getItem("auth_token");
+    const response = await axios({
+      method: 'GET',
+      url: `${API_URL}/vendor/chat/messages/${conversationId}`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    throw error;
+  }
+};
+
+export const sendMessage = async (conversationId, message) => {
+  try {
+    const token = await AsyncStorage.getItem("auth_token");
+    const response = await axios({
+      method: 'POST',
+      url: `${API_URL}/vendor/chat/messages`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      data: {
+        conversationId,
+        message
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error sending message:', error);
+    throw error;
   }
 };

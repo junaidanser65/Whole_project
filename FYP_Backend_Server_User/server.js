@@ -5,6 +5,7 @@ const cors = require('cors');
 const userAuthRoutes = require('./routes/auth');
 const userProfileRoutes = require('./routes/profile');
 const userMenuRoutes = require('./routes/menu');
+const chatRoutes = require('./routes/chat');
 // Vendor routes
 const vendorAuthRoutes = require('./routes/vendor/auth');
 const vendorProfileRoutes = require('./routes/vendor/profile');
@@ -37,11 +38,13 @@ app.get('/test', (req, res) => {
 app.use('/api/user/auth', userAuthRoutes);
 app.use('/api/user/profile', userProfileRoutes);
 app.use('/api/user/menu', userMenuRoutes);
+app.use('/api/user/chat', chatRoutes);
 
 // Vendor Routes
 app.use('/api/vendor/auth', vendorAuthRoutes);
 app.use('/api/vendor/profile', vendorProfileRoutes);
 app.use('/api/vendor/menu', vendorMenuRoutes);
+app.use('/api/vendor/chat', chatRoutes);
 app.use('/api/vendors', vendorsRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/availability', availabilityRoutes);

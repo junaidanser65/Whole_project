@@ -423,4 +423,58 @@ export const checkBookingReview = async (bookingId) => {
   }
 };
 
+// Chat related functions
+export const getConversations = async () => {
+  try {
+    const response = await api.get('/user/chat/conversations');
+    return response;
+  } catch (error) {
+    console.error('Get conversations error:', error);
+    throw error;
+  }
+};
+
+export const getVendorConversations = async () => {
+  try {
+    const response = await api.get('/vendor/chat/conversations');
+    return response;
+  } catch (error) {
+    console.error('Get vendor conversations error:', error);
+    throw error;
+  }
+};
+
+export const getMessages = async (conversationId) => {
+  try {
+    const response = await api.get(`/user/chat/messages/${conversationId}`);
+    return response;
+  } catch (error) {
+    console.error('Get messages error:', error);
+    throw error;
+  }
+};
+
+export const createConversation = async (vendorId) => {
+  try {
+    const response = await api.post('/user/chat/conversations', { vendorId });
+    return response;
+  } catch (error) {
+    console.error('Create conversation error:', error);
+    throw error;
+  }
+};
+
+export const sendMessage = async (conversationId, message) => {
+  try {
+    const response = await api.post('/user/chat/messages', {
+      conversationId,
+      message
+    });
+    return response;
+  } catch (error) {
+    console.error('Send message error:', error);
+    throw error;
+  }
+};
+
 export default api; 
