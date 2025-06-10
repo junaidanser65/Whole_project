@@ -17,6 +17,7 @@ import SignupScreen from '../screens/auth/SignupScreen';
 import DashboardScreen from '../screens/dashboard/DashboardScreen';
 import ProfileScreen from '../screens/dashboard/ProfileScreen';
 import MenuScreen from '../screens/menu/MenuScreen';
+import AllActivitiesScreen from '../screens/details/AllActivitiesScreen';
 // import ContactVendorScreen from '../screens/vendor/ContactVendorScreen';
 
 // Profile Screens
@@ -39,7 +40,6 @@ import BookingsListScreen from '../screens/details/BookingsListScreen';
 import CustomersListScreen from '../screens/details/CustomersListScreen';
 import CustomerDetailsScreen from '../screens/details/CustomerDetailsScreen';
 import RatingsReviewsScreen from '../screens/details/RatingsReviewsScreen';
-import AllActivitiesScreen from '../screens/details/AllActivitiesScreen';
 import PaymentDetailsScreen from '../screens/details/PaymentDetailsScreen';
 import ReviewDetailsScreen from '../screens/details/ReviewDetailsScreen';
 import ChatScreen from '../screens/chat/ChatScreen';
@@ -55,6 +55,7 @@ import ChatDetailsScreen from '../screens/chat/ChatDetailsScreen';
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 const ProfileStack = createNativeStackNavigator();
+const DashboardStack = createNativeStackNavigator();
 
 const ProfileStackNavigator = () => {
   return (
@@ -146,6 +147,16 @@ const ProfileStackNavigator = () => {
   );
 };
 
+const DashboardStackNavigator = () => {
+  return (
+    <DashboardStack.Navigator screenOptions={{ headerShown: false }}>
+      <DashboardStack.Screen name="DashboardMain" component={DashboardScreen} />
+      <DashboardStack.Screen name="RevenueDetails" component={RevenueDetailsScreen} />
+      <DashboardStack.Screen name="AllActivities" component={AllActivitiesScreen} />
+    </DashboardStack.Navigator>
+  );
+};
+
 const MainTabNavigator = () => {
   return (
     <Tab.Navigator
@@ -174,7 +185,7 @@ const MainTabNavigator = () => {
         tabBarInactiveTintColor: 'gray',
       })}
     >
-      <Tab.Screen name="Dashboard" component={DashboardScreen} />
+      <Tab.Screen name="Dashboard" component={DashboardStackNavigator} />
       <Tab.Screen name="Menu" component={MenuScreen} />
       <Tab.Screen name="Bookings" component={BookingsScreen} />
       <Tab.Screen name="Timings" component={TimingsScreen} />
@@ -197,7 +208,6 @@ const AppNavigator = () => {
         <Stack.Screen name="AddBalance" component={AddBalanceScreen} />
         <Stack.Screen name="SendMoney" component={SendMoneyScreen} />
         <Stack.Screen name="ReceiveMoney" component={ReceiveMoneyScreen} />
-        <Stack.Screen name="RevenueDetails" component={RevenueDetailsScreen} />
         <Stack.Screen name="BookingsList" component={BookingsListScreen} />
         <Stack.Screen name="CustomersList" component={CustomersListScreen} />
         <Stack.Screen name="CustomerDetails" component={CustomerDetailsScreen} />

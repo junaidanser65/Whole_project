@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,19 +8,30 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   RefreshControl,
+  ActivityIndicator,
 } from "react-native";
 import { LineChart } from "react-native-chart-kit";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../../contexts/AuthContext";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useEffect } from "react";
 import { useProfile } from "../../contexts/ProfileContext";
+import { getTotalBalance, getTodayRevenue, getNewBookings, getTotalCustomers, getAverageRating, getWeeklyRevenue, getMonthlyRevenue, getRecentActivities } from "../../services/api";
 
 const DashboardScreen = ({ navigation }) => {
   const { width, height } = useWindowDimensions();
   const [refreshing, setRefreshing] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState("monthly");
+  const [totalBalance, setTotalBalance] = useState(0);
+  const [todayRevenue, setTodayRevenue] = useState(0);
+  const [newBookings, setNewBookings] = useState(0);
+  const [totalCustomers, setTotalCustomers] = useState(0);
+  const [averageRating, setAverageRating] = useState(0);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(true);
+  const [isLoadingRevenue, setIsLoadingRevenue] = useState(true);
+  const [isLoadingBookings, setIsLoadingBookings] = useState(true);
+  const [isLoadingCustomers, setIsLoadingCustomers] = useState(true);
+  const [isLoadingRating, setIsLoadingRating] = useState(true);
   const isSmallDevice = width < 375;
   // const { user, loading } = useAuth();
   // const { profile, loadingProfile, errorProfile } = useProfile();
@@ -32,6 +43,182 @@ const DashboardScreen = ({ navigation }) => {
 
   const { user, loading } = useAuth();
   const { profile, loadingProfile } = useProfile(); // ✅ use profile
+
+  const [weeklyData, setWeeklyData] = useState({
+    labels: [],
+    datasets: [
+      {
+        data: Array(7).fill(0),
+        color: (opacity = 1) => `rgba(255, 107, 107, ${opacity})`,
+        strokeWidth: 2,
+      },
+    ],
+  });
+
+  const [monthlyData, setMonthlyData] = useState({
+    labels: [],
+    datasets: [
+      {
+        data: Array(6).fill(0),
+        color: (opacity = 1) => `rgba(255, 107, 107, ${opacity})`,
+        strokeWidth: 2,
+      },
+    ],
+  });
+
+  const [isLoadingChart, setIsLoadingChart] = useState(true);
+  const [recentActivities, setRecentActivities] = useState({
+    pendingBooking: null,
+    latestPayment: null,
+    latestReview: null
+  });
+  const [isLoadingActivities, setIsLoadingActivities] = useState(true);
+
+  const fetchTotalBalance = async () => {
+    try {
+      setIsLoadingBalance(true);
+      const response = await getTotalBalance();
+      if (response.success) {
+        setTotalBalance(response.total_balance || 0);
+      } else {
+        setTotalBalance(0);
+      }
+    } catch (error) {
+      console.error('Error fetching total balance:', error);
+      setTotalBalance(0);
+    } finally {
+      setIsLoadingBalance(false);
+    }
+  };
+
+  const fetchTodayRevenue = async () => {
+    try {
+      setIsLoadingRevenue(true);
+      const response = await getTodayRevenue();
+      if (response.success) {
+        setTodayRevenue(response.today_revenue || 0);
+      } else {
+        setTodayRevenue(0);
+      }
+    } catch (error) {
+      console.error('Error fetching today\'s revenue:', error);
+      setTodayRevenue(0);
+    } finally {
+      setIsLoadingRevenue(false);
+    }
+  };
+
+  const fetchNewBookings = async () => {
+    try {
+      setIsLoadingBookings(true);
+      const response = await getNewBookings();
+      if (response.success) {
+        setNewBookings(response.new_bookings || 0);
+      } else {
+        setNewBookings(0);
+      }
+    } catch (error) {
+      console.error('Error fetching new bookings:', error);
+      setNewBookings(0);
+    } finally {
+      setIsLoadingBookings(false);
+    }
+  };
+
+  const fetchTotalCustomers = async () => {
+    try {
+      setIsLoadingCustomers(true);
+      const response = await getTotalCustomers();
+      if (response.success) {
+        setTotalCustomers(response.total_customers || 0);
+      } else {
+        setTotalCustomers(0);
+      }
+    } catch (error) {
+      console.error('Error fetching total customers:', error);
+      setTotalCustomers(0);
+    } finally {
+      setIsLoadingCustomers(false);
+    }
+  };
+
+  const fetchAverageRating = async () => {
+    try {
+      setIsLoadingRating(true);
+      const response = await getAverageRating();
+      if (response.success) {
+        setAverageRating(response.average_rating || 0);
+      } else {
+        setAverageRating(0);
+      }
+    } catch (error) {
+      console.error('Error fetching average rating:', error);
+      setAverageRating(0);
+    } finally {
+      setIsLoadingRating(false);
+    }
+  };
+
+  const fetchWeeklyRevenue = async () => {
+    try {
+      const response = await getWeeklyRevenue();
+      if (response.success) {
+        setWeeklyData(prev => ({
+          labels: response.labels,
+          datasets: [{
+            ...prev.datasets[0],
+            data: response.data
+          }]
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching weekly revenue:', error);
+    }
+  };
+
+  const fetchMonthlyRevenue = async () => {
+    try {
+      const response = await getMonthlyRevenue();
+      if (response.success) {
+        setMonthlyData(prev => ({
+          labels: response.labels,
+          datasets: [{
+            ...prev.datasets[0],
+            data: response.data
+          }]
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching monthly revenue:', error);
+    } finally {
+      setIsLoadingChart(false);
+    }
+  };
+
+  const fetchRecentActivities = async () => {
+    try {
+      setIsLoadingActivities(true);
+      const response = await getRecentActivities();
+      if (response.success) {
+        setRecentActivities(response.activities);
+      }
+    } catch (error) {
+      console.error('Error fetching recent activities:', error);
+    } finally {
+      setIsLoadingActivities(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTotalBalance();
+    fetchTodayRevenue();
+    fetchNewBookings();
+    fetchTotalCustomers();
+    fetchAverageRating();
+    fetchWeeklyRevenue();
+    fetchMonthlyRevenue();
+    fetchRecentActivities();
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -52,30 +239,6 @@ const DashboardScreen = ({ navigation }) => {
     .map((n) => n[0])
     .join("")
     .toUpperCase();
-
-  const weeklyData = {
-    labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-    datasets: [
-      {
-        data: [2100, 2400, 1800, 3200, 2900, 3800, 3100],
-        color: (opacity = 1) => `rgba(255, 107, 107, ${opacity})`,
-        strokeWidth: 2,
-      },
-    ],
-  };
-
-  const monthlyData = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-    datasets: [
-      {
-        data: [15000, 18000, 21000, 19000, 24000, 28000],
-        color: (opacity = 1) => `rgba(255, 107, 107, ${opacity})`,
-        strokeWidth: 2,
-      },
-    ],
-  };
-
-  const chartData = selectedPeriod === "weekly" ? weeklyData : monthlyData;
 
   const chartConfig = {
     backgroundColor: "#ffffff",
@@ -100,8 +263,16 @@ const DashboardScreen = ({ navigation }) => {
 
   const onRefresh = React.useCallback(() => {
     setRefreshing(true);
-    // Simulate data refresh
-    setTimeout(() => setRefreshing(false), 2000);
+    Promise.all([
+      fetchTotalBalance(),
+      fetchTodayRevenue(),
+      fetchNewBookings(),
+      fetchTotalCustomers(),
+      fetchAverageRating(),
+      fetchWeeklyRevenue(),
+      fetchMonthlyRevenue(),
+      fetchRecentActivities()
+    ]).finally(() => setRefreshing(false));
   }, []);
 
   // const handleAddBalance = () => {
@@ -120,13 +291,22 @@ const DashboardScreen = ({ navigation }) => {
     navigation.navigate('Chat');
   };
 
+  const handleViewRevenue = () => {
+    navigation.navigate('MainApp', {
+      screen: 'Dashboard',
+      params: {
+        screen: 'RevenueDetails'
+      }
+    });
+  };
+
   const handleStatCardPress = (type) => {
     switch (type) {
       case "revenue":
-        navigation.navigate("RevenueDetails");
+        handleViewRevenue();
         break;
       case "bookings":
-        navigation.navigate("BookingsList");
+        navigation.navigate("Bookings", { initialTab: 'pending' });
         break;
       case "customers":
         navigation.navigate("CustomersList");
@@ -193,6 +373,21 @@ const DashboardScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
+  // Helper function to format time ago
+  const getTimeAgo = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days} day${days === 1 ? '' : 's'} ago`;
+    if (hours > 0) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+    if (minutes > 0) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+    return 'Just now';
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
@@ -212,7 +407,13 @@ const DashboardScreen = ({ navigation }) => {
             <View style={styles.balanceHeader}>
               <View>
                 <Text style={styles.balanceLabel}>Total Balance</Text>
-                <Text style={styles.balanceAmount}>$28,458.00</Text>
+                {isLoadingBalance ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.balanceAmount}>
+                    ${Number(totalBalance).toFixed(2)}
+                  </Text>
+                )}
               </View>
               <TouchableOpacity
                 style={styles.avatarContainer}
@@ -275,7 +476,7 @@ const DashboardScreen = ({ navigation }) => {
             <StatCard
               icon="wallet-outline"
               label="Today's Revenue"
-              value="$1,458"
+              value={isLoadingRevenue ? "..." : `$${Number(todayRevenue).toFixed(2)}`}
               trend={12.5}
               color="#ff4500"
               type="revenue"
@@ -283,7 +484,7 @@ const DashboardScreen = ({ navigation }) => {
             <StatCard
               icon="calendar-outline"
               label="New Bookings"
-              value="8"
+              value={isLoadingBookings ? "..." : newBookings.toString()}
               trend={-5.2}
               color="#4834d4"
               type="bookings"
@@ -291,7 +492,7 @@ const DashboardScreen = ({ navigation }) => {
             <StatCard
               icon="people-outline"
               label="Total Customers"
-              value="248"
+              value={isLoadingCustomers ? "..." : totalCustomers.toString()}
               trend={8.1}
               color="#20bf6b"
               type="customers"
@@ -299,7 +500,7 @@ const DashboardScreen = ({ navigation }) => {
             <StatCard
               icon="star-outline"
               label="Avg Rating"
-              value="4.8"
+              value={isLoadingRating ? "..." : averageRating.toString()}
               trend={2.3}
               color="#f39c12"
               type="ratings"
@@ -316,7 +517,10 @@ const DashboardScreen = ({ navigation }) => {
             </View>
             <View style={styles.periodSelector}>
               <TouchableOpacity
-                onPress={() => setSelectedPeriod("weekly")}
+                onPress={() => {
+                  setSelectedPeriod("weekly");
+                  fetchWeeklyRevenue();
+                }}
                 style={[
                   styles.periodButton,
                   selectedPeriod === "weekly" && styles.periodButtonActive,
@@ -333,7 +537,10 @@ const DashboardScreen = ({ navigation }) => {
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
-                onPress={() => setSelectedPeriod("monthly")}
+                onPress={() => {
+                  setSelectedPeriod("monthly");
+                  fetchMonthlyRevenue();
+                }}
                 style={[
                   styles.periodButton,
                   selectedPeriod === "monthly" && styles.periodButtonActive,
@@ -351,8 +558,11 @@ const DashboardScreen = ({ navigation }) => {
               </TouchableOpacity>
             </View>
           </View>
+          {isLoadingChart ? (
+            <ActivityIndicator size="large" color="#ff4500" style={styles.chartLoader} />
+          ) : (
           <LineChart
-            data={chartData}
+              data={selectedPeriod === "weekly" ? weeklyData : monthlyData}
             width={width - 50}
             height={180}
             chartConfig={{
@@ -366,6 +576,7 @@ const DashboardScreen = ({ navigation }) => {
             bezier
             style={styles.chart}
           />
+          )}
         </View>
 
         {/* Recent Activity */}
@@ -381,45 +592,77 @@ const DashboardScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
+          {isLoadingActivities ? (
+            <ActivityIndicator size="large" color="#ff4500" style={styles.activityLoader} />
+          ) : (
+            <>
+              {recentActivities.pendingBooking && (
           <ActivityItem
             type="booking"
             title="New Booking Request"
-            description="Wedding Reception - Sarah Johnson"
-            time="2 hours ago"
-            amount="$2,500"
+                  description={`${recentActivities.pendingBooking.user_name} - ${new Date(recentActivities.pendingBooking.booking_date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}`}
+                  time={getTimeAgo(recentActivities.pendingBooking.created_at)}
+                  amount={`$${recentActivities.pendingBooking.total_amount}`}
             onPress={() =>
-              navigation.navigate("BookingDetails", {
-                bookingId: "1",
-                title: "Wedding Reception - Sarah Johnson",
+                    navigation.navigate("Bookings", { 
+                      initialTab: 'pending',
+                      bookingId: recentActivities.pendingBooking.id 
               })
             }
           />
+              )}
+
+              {recentActivities.latestPayment && (
           <ActivityItem
             type="payment"
             title="Payment Received"
-            description="Corporate Event - Tech Corp"
-            time="5 hours ago"
-            amount="$1,800"
+                  description={`${recentActivities.latestPayment.user_name} - ${new Date(recentActivities.latestPayment.booking_date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}`}
+                  time={getTimeAgo(recentActivities.latestPayment.updated_at)}
+                  amount={`$${recentActivities.latestPayment.total_amount}`}
             onPress={() =>
-              navigation.navigate("PaymentDetails", {
-                paymentId: "1",
-                title: "Corporate Event - Tech Corp",
+                    navigation.navigate("Bookings", { 
+                      initialTab: 'completed',
+                      bookingId: recentActivities.latestPayment.id 
               })
             }
           />
+              )}
+
+              {recentActivities.latestReview && (
           <ActivityItem
             type="review"
             title="New Review"
-            description="Birthday Party - John Smith"
-            time="Yesterday"
-            rating={4.5}
+                  description={`${recentActivities.latestReview.user_name} - ${new Date(recentActivities.latestReview.booking_date).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}`}
+                  time={getTimeAgo(recentActivities.latestReview.created_at)}
+                  rating={recentActivities.latestReview.rating}
             onPress={() =>
               navigation.navigate("ReviewDetails", {
-                reviewId: "1",
-                title: "Birthday Party - John Smith",
+                      reviewId: recentActivities.latestReview.id,
+                      title: `Review - ${recentActivities.latestReview.user_name}`,
               })
             }
           />
+              )}
+
+              {!recentActivities.pendingBooking && 
+               !recentActivities.latestPayment && 
+               !recentActivities.latestReview && (
+                <Text style={styles.noActivitiesText}>No recent activities</Text>
+              )}
+            </>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -753,6 +996,20 @@ const styles = StyleSheet.create({
   statGradient: {
     padding: 16,
     borderRadius: 16,
+  },
+  chartLoader: {
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  activityLoader: {
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  noActivitiesText: {
+    textAlign: 'center',
+    color: '#636E72',
+    fontSize: 16,
+    marginTop: 20,
   },
 });
 

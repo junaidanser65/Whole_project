@@ -5,7 +5,7 @@ import axios from "axios";
 // 192.168.18.8
 // const API_URL = "http://localhost:5000/api";
 // const API_URL = "http://192.168.18.8:5000/api";
-export const API_URL = "http://192.168.38.240:5000/api";//ushna /  hamza bhai ke mobile ka
+export const API_URL = "http://192.168.142.240:5000/api";//ushna /  hamza bhai ke mobile ka
 // const API_URL = "http://192.168.72.42:5000/api";//mere mobile ka
 
 // Helper function to handle API responses
@@ -319,6 +319,186 @@ export const sendMessage = async (conversationId, message) => {
     return response.data;
   } catch (error) {
     console.error('Error sending message:', error);
+    throw error;
+  }
+};
+
+// Get total balance for vendor
+export const getTotalBalance = async () => {
+  try {
+    const token = await AsyncStorage.getItem("auth_token");
+    const response = await axios({
+      method: 'GET',
+      url: `${API_URL}/bookings/vendor/total-balance`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching total balance:', error);
+    throw error;
+  }
+};
+
+// Get today's revenue for vendor
+export const getTodayRevenue = async () => {
+  try {
+    const token = await AsyncStorage.getItem("auth_token");
+    const response = await axios({
+      method: 'GET',
+      url: `${API_URL}/bookings/vendor/today-revenue`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching today\'s revenue:', error);
+    throw error;
+  }
+};
+
+// Get new bookings count for vendor
+export const getNewBookings = async () => {
+  try {
+    const token = await AsyncStorage.getItem("auth_token");
+    const response = await axios({
+      method: 'GET',
+      url: `${API_URL}/bookings/vendor/new-bookings`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching new bookings count:', error);
+    throw error;
+  }
+};
+
+// Get total customers for vendor
+export const getTotalCustomers = async () => {
+  try {
+    const token = await AsyncStorage.getItem("auth_token");
+    const response = await axios({
+      method: 'GET',
+      url: `${API_URL}/bookings/vendor/total-customers`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching total customers:', error);
+    throw error;
+  }
+};
+
+// Get average rating for vendor
+export const getAverageRating = async () => {
+  try {
+    const token = await AsyncStorage.getItem("auth_token");
+    const response = await axios({
+      method: 'GET',
+      url: `${API_URL}/bookings/vendor/average-rating`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching average rating:', error);
+    throw error;
+  }
+};
+
+// Get weekly revenue data for vendor
+export const getWeeklyRevenue = async () => {
+  try {
+    const token = await AsyncStorage.getItem("auth_token");
+    const response = await axios({
+      method: 'GET',
+      url: `${API_URL}/bookings/vendor/weekly-revenue`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching weekly revenue:', error);
+    throw error;
+  }
+};
+
+// Get monthly revenue data for vendor
+export const getMonthlyRevenue = async () => {
+  try {
+    const token = await AsyncStorage.getItem("auth_token");
+    const response = await axios({
+      method: 'GET',
+      url: `${API_URL}/bookings/vendor/monthly-revenue`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching monthly revenue:', error);
+    throw error;
+  }
+};
+
+// Get recent activities for vendor
+export const getRecentActivities = async () => {
+  try {
+    const token = await AsyncStorage.getItem("auth_token");
+    const response = await axios({
+      method: 'GET',
+      url: `${API_URL}/bookings/vendor/recent-activities`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching recent activities:', error);
+    throw error;
+  }
+};
+
+// Get all reviews for vendor
+export const getVendorReviews = async () => {
+  try {
+    const token = await AsyncStorage.getItem("auth_token");
+    const response = await axios({
+      method: 'GET',
+      url: `${API_URL}/bookings/vendor/reviews`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching vendor reviews:', error);
     throw error;
   }
 };

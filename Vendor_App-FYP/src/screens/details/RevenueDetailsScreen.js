@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   StyleSheet,
   View,
@@ -6,20 +6,28 @@ import {
   TouchableOpacity,
   Animated,
   Dimensions,
+  ActivityIndicator,
 } from "react-native";
 import { Text, Icon, Button, Divider } from "react-native-elements";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { LineChart, BarChart } from "react-native-chart-kit";
+import { getWeeklyRevenue, getMonthlyRevenue, getTodayRevenue } from "../../services/api";
 
 const { width } = Dimensions.get("window");
 
 const RevenueDetailsScreen = ({ route, navigation }) => {
   const [selectedPeriod, setSelectedPeriod] = useState("week");
   const [selectedChart, setSelectedChart] = useState("line");
+  const [loading, setLoading] = useState(true);
+  const [revenueData, setRevenueData] = useState({
+    labels: [],
+    datasets: [{ data: [] }],
+  });
+  const [todayRevenue, setTodayRevenue] = useState(0);
   const fadeAnim = new Animated.Value(0);
 
-  React.useEffect(() => {
+  useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 500,
@@ -27,13 +35,52 @@ const RevenueDetailsScreen = ({ route, navigation }) => {
     }).start();
   }, []);
 
-  const revenueData = {
-    labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
-    datasets: [
-      {
-        data: [500, 800, 600, 1200, 1800, 1500, 2000],
-      },
-    ],
+  useEffect(() => {
+    fetchRevenueData();
+    fetchTodayRevenue();
+  }, [selectedPeriod]);
+
+  const fetchRevenueData = async () => {
+    try {
+      setLoading(true);
+      let response;
+      if (selectedPeriod === "week") {
+        response = await getWeeklyRevenue();
+      } else {
+        response = await getMonthlyRevenue();
+      }
+
+      if (response.success) {
+        setRevenueData({
+          labels: response.labels,
+          datasets: [{ data: response.data }],
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching revenue data:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchTodayRevenue = async () => {
+    try {
+      const response = await getTodayRevenue();
+      if (response.success) {
+        setTodayRevenue(response.today_revenue);
+      }
+    } catch (error) {
+      console.error("Error fetching today's revenue:", error);
+    }
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
   };
 
   const TransactionItem = ({ transaction }) => (
@@ -45,28 +92,29 @@ const RevenueDetailsScreen = ({ route, navigation }) => {
     >
       <View style={styles.transactionIcon}>
         <Icon
-          name={
-            transaction.type === "income" ? "arrow-downward" : "arrow-upward"
-          }
+          name="arrow-downward"
           type="material"
           size={20}
-          color={transaction.type === "income" ? "#4CAF50" : "#F44336"}
+          color="#4CAF50"
         />
       </View>
       <View style={styles.transactionInfo}>
         <Text style={styles.transactionTitle}>{transaction.title}</Text>
         <Text style={styles.transactionDate}>{transaction.date}</Text>
       </View>
-      <Text
-        style={[
-          styles.transactionAmount,
-          { color: transaction.type === "income" ? "#4CAF50" : "#F44336" },
-        ]}
-      >
-        {transaction.type === "income" ? "+" : "-"}${transaction.amount}
+      <Text style={[styles.transactionAmount, { color: "#4CAF50" }]}>
+        +{formatCurrency(transaction.amount)}
       </Text>
     </TouchableOpacity>
   );
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#ff4500" />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -76,16 +124,33 @@ const RevenueDetailsScreen = ({ route, navigation }) => {
             colors={["#ff4500", "#cc3700"]}
             style={styles.headerGradient}
           >
-            <Text style={styles.periodLabel}>This Month</Text>
-            <Text style={styles.totalRevenue}>$12,400</Text>
+            <View style={styles.headerTop}>
+              <TouchableOpacity 
+                style={styles.backButton}
+                onPress={() => navigation.goBack()}
+              >
+                <Icon name="arrow-back" type="material" size={24} color="#FFF" />
+              </TouchableOpacity>
+              <Text style={styles.periodLabel}>
+                {selectedPeriod === "week" ? "This Week" : "This Month"}
+              </Text>
+            </View>
+            <Text style={styles.totalRevenue}>
+              {formatCurrency(revenueData.datasets[0].data.reduce((a, b) => a + b, 0))}
+            </Text>
             <View style={styles.statsRow}>
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>+12%</Text>
-                <Text style={styles.statLabel}>vs Last Month</Text>
+                <Text style={styles.statValue}>
+                  {formatCurrency(todayRevenue)}
+                </Text>
+                <Text style={styles.statLabel}>Today's Revenue</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>$1,200</Text>
+                <Text style={styles.statValue}>
+                  {formatCurrency(revenueData.datasets[0].data.reduce((a, b) => a + b, 0) / 
+                    (selectedPeriod === "week" ? 7 : 30))}
+                </Text>
                 <Text style={styles.statLabel}>Average Daily</Text>
               </View>
             </View>
@@ -94,7 +159,6 @@ const RevenueDetailsScreen = ({ route, navigation }) => {
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            {/* <Text style={styles.sectionTitle}>Revenue Trend</Text> */}
             <View>
               <Text style={styles.sectionTitle}>Revenue</Text>
               <Text style={styles.sectionTitle}>Overview</Text>
@@ -102,7 +166,7 @@ const RevenueDetailsScreen = ({ route, navigation }) => {
 
             <View style={styles.chartControls}>
               <View style={styles.periodSelector}>
-                {["week", "month", "year"].map((period) => (
+                {["week", "month"].map((period) => (
                   <TouchableOpacity
                     key={period}
                     style={[
@@ -181,40 +245,20 @@ const RevenueDetailsScreen = ({ route, navigation }) => {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recent Transactions</Text>
-          {[
-            {
-              id: "1",
-              type: "income",
-              title: "Wedding Reception Booking",
-              date: "24 Feb 2024",
-              amount: "2,500",
-            },
-            {
-              id: "2",
-              type: "expense",
-              title: "Equipment Purchase",
-              date: "23 Feb 2024",
-              amount: "800",
-            },
-            {
-              id: "3",
-              type: "income",
-              title: "Birthday Party Booking",
-              date: "22 Feb 2024",
-              amount: "1,200",
-            },
-          ].map((transaction) => (
-            <React.Fragment key={transaction.id}>
-              <TransactionItem transaction={transaction} />
-              <Divider style={styles.divider} />
-            </React.Fragment>
-          ))}
-          <Button
-            title="View All Transactions"
-            type="clear"
-            titleStyle={styles.viewAllButton}
-            // onPress={() => navigation.navigate("Transactions")}
-          />
+          {[...revenueData.datasets[0].data]
+            .map((amount, index) => ({
+              id: index,
+              title: `${selectedPeriod === "week" ? "Daily" : "Monthly"} Revenue`,
+              date: revenueData.labels[index],
+              amount: amount,
+            }))
+            .reverse()
+            .map((transaction) => (
+              <React.Fragment key={transaction.id}>
+                <TransactionItem transaction={transaction} />
+                <Divider style={styles.divider} />
+              </React.Fragment>
+            ))}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -238,11 +282,20 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
   },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 8,
+  },
+  backButton: {
+    padding: 8,
+    marginRight: 8,
+  },
   periodLabel: {
     color: "#FFF",
     fontSize: 16,
     opacity: 0.9,
-    marginBottom: 8,
   },
   totalRevenue: {
     color: "#FFF",
@@ -360,10 +413,10 @@ const styles = StyleSheet.create({
   divider: {
     marginVertical: 8,
   },
-  viewAllButton: {
-    color: "#ff4500",
-    fontSize: 14,
-    marginTop: 10,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });
 

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -7,20 +7,26 @@ import {
   Animated,
   Image,
   Modal,
+  FlatList,
+  ActivityIndicator,
+  Text,
 } from 'react-native';
-import { Text, Button, Icon, Input } from 'react-native-elements';
+import { Button, Icon, Input } from 'react-native-elements';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getVendorReviews } from '../../services/api';
 
 const ReviewDetailsScreen = ({ route, navigation }) => {
-  const { reviewId } = route.params;
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [reviews, setReviews] = useState([]);
   const [showResponseModal, setShowResponseModal] = useState(false);
+  const [selectedReview, setSelectedReview] = useState(null);
   const [response, setResponse] = useState('');
   const [selectedImage, setSelectedImage] = useState(null);
   const fadeAnim = new Animated.Value(0);
 
-  React.useEffect(() => {
+  useEffect(() => {
+    fetchReviews();
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 500,
@@ -28,25 +34,17 @@ const ReviewDetailsScreen = ({ route, navigation }) => {
     }).start();
   }, []);
 
-  // Mock review data
-  const review = {
-    id: reviewId,
-    customerName: 'John Smith',
-    rating: 4.5,
-    date: '24 Feb 2024',
-    eventType: 'Birthday Party',
-    comment: 'Amazing service! The food was absolutely delicious and the presentation was perfect. The staff was very professional and attentive to all our needs. Would definitely recommend to anyone looking for a catering service.',
-    images: [
-      'https://picsum.photos/400/300',
-      'https://picsum.photos/400/301',
-      'https://picsum.photos/400/302',
-    ],
-    booking: {
-      id: 'BK789',
-      date: '22 Feb 2024',
-      amount: '$1,800',
-    },
-    response: null,
+  const fetchReviews = async () => {
+    try {
+      setLoading(true);
+      const response = await getVendorReviews();
+      setReviews(response.reviews);
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+      alert('Failed to fetch reviews. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmitResponse = async () => {
@@ -60,7 +58,9 @@ const ReviewDetailsScreen = ({ route, navigation }) => {
       // TODO: Implement response submission logic
       await new Promise(resolve => setTimeout(resolve, 1500));
       setShowResponseModal(false);
-      navigation.goBack();
+      setSelectedReview(null);
+      setResponse('');
+      fetchReviews(); // Refresh reviews after submitting response
     } catch (error) {
       alert('Failed to submit response. Please try again.');
     } finally {
@@ -86,12 +86,79 @@ const ReviewDetailsScreen = ({ route, navigation }) => {
     );
   };
 
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
+
+  const ReviewCard = ({ review }) => (
+    <View style={styles.reviewCard}>
+      <View style={styles.reviewHeader}>
+        <View style={styles.customerInfo}>
+          <View style={styles.avatarContainer}>
+            <Text style={styles.avatarText}>
+              {review.user_name?.[0] || '?'}
+            </Text>
+          </View>
+          <View style={styles.reviewInfo}>
+            <Text style={styles.customerName}>{review.user_name}</Text>
+            <Text style={styles.reviewDate}>{formatDate(review.created_at)}</Text>
+          </View>
+        </View>
+        {renderStars(review.rating)}
+      </View>
+
+      <Text style={styles.reviewText}>{review.comment}</Text>
+
+      <View style={styles.bookingInfo}>
+        <Text style={styles.bookingLabel}>Booking Date:</Text>
+        <Text style={styles.bookingValue}>{formatDate(review.booking_date)}</Text>
+        <Text style={styles.bookingLabel}>Amount:</Text>
+        <Text style={styles.bookingValue}>${review.total_amount}</Text>
+      </View>
+
+      {review.response ? (
+        <View style={styles.responseContainer}>
+          <Text style={styles.responseLabel}>Your Response:</Text>
+          <Text style={styles.responseText}>{review.response}</Text>
+        </View>
+      ) : (
+        <Button
+          title="Respond to Review"
+          onPress={() => {
+            setSelectedReview(review);
+            setShowResponseModal(true);
+          }}
+          buttonStyle={styles.respondButton}
+          containerStyle={styles.buttonContainer}
+          icon={
+            <Icon
+              name="reply"
+              type="material"
+              size={20}
+              color="#FFFFFF"
+              style={styles.buttonIcon}
+            />
+          }
+        />
+      )}
+    </View>
+  );
+
   const ResponseModal = () => (
     <Modal
       visible={showResponseModal}
       animationType="slide"
       transparent={true}
-      onRequestClose={() => setShowResponseModal(false)}
+      onRequestClose={() => {
+        setShowResponseModal(false);
+        setSelectedReview(null);
+        setResponse('');
+      }}
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
@@ -110,7 +177,11 @@ const ReviewDetailsScreen = ({ route, navigation }) => {
             <Button
               title="Cancel"
               type="outline"
-              onPress={() => setShowResponseModal(false)}
+              onPress={() => {
+                setShowResponseModal(false);
+                setSelectedReview(null);
+                setResponse('');
+              }}
               buttonStyle={styles.cancelButton}
               titleStyle={styles.cancelButtonText}
               containerStyle={styles.modalButtonContainer}
@@ -129,110 +200,41 @@ const ReviewDetailsScreen = ({ route, navigation }) => {
     </Modal>
   );
 
+  if (loading && reviews.length === 0) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#ff4500" />
+      </View>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.content}>
-        <Animated.View style={styles.header}>
-          <LinearGradient
-            colors={["#ff4500", "#cc3700"]}
-            style={styles.headerGradient}
-          >
-            <View style={styles.ratingContainer}>
-              {renderStars(review.rating)}
-            </View>
-            <Text style={styles.customerName}>{review.customerName}</Text>
-            <Text style={styles.eventType}>{review.eventType}</Text>
-            <Text style={styles.reviewDate}>{review.date}</Text>
-          </LinearGradient>
-        </Animated.View>
+      <View style={styles.header}>
+        <LinearGradient
+          colors={["#ff4500", "#cc3700"]}
+          style={styles.headerGradient}
+        >
+          <Text style={styles.headerTitle}>Customer Reviews</Text>
+        </LinearGradient>
+      </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Review</Text>
-          <Text style={styles.reviewText}>{review.comment}</Text>
-        </View>
-
-        {review.images.length > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Photos</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {review.images.map((image, index) => (
-                <TouchableOpacity
-                  key={index}
-                  onPress={() => setSelectedImage(image)}
-                >
-                  <Image source={{ uri: image }} style={styles.reviewImage} />
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+      <FlatList
+        data={reviews}
+        renderItem={({ item }) => <ReviewCard review={item} />}
+        keyExtractor={item => item.id.toString()}
+        contentContainerStyle={styles.reviewsList}
+        refreshing={loading}
+        onRefresh={fetchReviews}
+        ListEmptyComponent={() => (
+          <View style={styles.emptyContainer}>
+            <Icon name="star-outline" size={50} color="#636E72" />
+            <Text style={styles.emptyText}>No reviews yet</Text>
           </View>
         )}
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Booking Details</Text>
-          <View style={styles.bookingCard}>
-            <View style={styles.bookingInfo}>
-              <Text style={styles.bookingLabel}>Booking ID</Text>
-              <Text style={styles.bookingValue}>{review.booking.id}</Text>
-            </View>
-            <View style={styles.bookingInfo}>
-              <Text style={styles.bookingLabel}>Event Date</Text>
-              <Text style={styles.bookingValue}>{review.booking.date}</Text>
-            </View>
-            <View style={styles.bookingInfo}>
-              <Text style={styles.bookingLabel}>Amount</Text>
-              <Text style={styles.bookingValue}>{review.booking.amount}</Text>
-            </View>
-          </View>
-        </View>
-
-        {review.response && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Your Response</Text>
-            <Text style={styles.responseText}>{review.response}</Text>
-          </View>
-        )}
-      </ScrollView>
-
-      {!review.response && (
-        <View style={styles.footer}>
-          <Button
-            title="Respond to Review"
-            onPress={() => setShowResponseModal(true)}
-            buttonStyle={styles.respondButton}
-            containerStyle={styles.buttonContainer}
-            icon={
-              <Icon
-                name="reply"
-                type="material"
-                size={20}
-                color="#FFFFFF"
-                style={styles.buttonIcon}
-              />
-            }
-          />
-        </View>
-      )}
+      />
 
       <ResponseModal />
-
-      {selectedImage && (
-        <Modal
-          visible={!!selectedImage}
-          transparent={true}
-          onRequestClose={() => setSelectedImage(null)}
-        >
-          <TouchableOpacity
-            style={styles.imageModalOverlay}
-            onPress={() => setSelectedImage(null)}
-          >
-            <Image
-              source={{ uri: selectedImage }}
-              style={styles.fullScreenImage}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
-        </Modal>
-      )}
     </SafeAreaView>
   );
 };
@@ -242,8 +244,10 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff",
   },
-  content: {
+  loadingContainer: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     marginBottom: 20,
@@ -254,8 +258,59 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 30,
     borderBottomLeftRadius: 30,
   },
-  ratingContainer: {
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#FFF",
+  },
+  reviewsList: {
+    padding: 20,
+  },
+  reviewCard: {
+    backgroundColor: "#FFF",
+    borderRadius: 12,
+    padding: 15,
     marginBottom: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  reviewHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  customerInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  avatarContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: "#ff4500",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  avatarText: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#FFF",
+  },
+  reviewInfo: {
+    marginLeft: 10,
+  },
+  customerName: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#2D3436",
+  },
+  reviewDate: {
+    fontSize: 12,
+    color: "#636E72",
   },
   starsContainer: {
     flexDirection: "row",
@@ -266,92 +321,71 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     marginLeft: 8,
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#FFF",
-  },
-  customerName: {
-    color: "#FFF",
-    fontSize: 24,
-    fontWeight: "bold",
-    marginBottom: 4,
-  },
-  eventType: {
-    color: "#FFF",
     fontSize: 16,
-    opacity: 0.9,
-    marginBottom: 4,
-  },
-  reviewDate: {
-    color: "#FFF",
-    fontSize: 14,
-    opacity: 0.8,
-  },
-  section: {
-    padding: 20,
-    backgroundColor: "#FFF",
-    marginBottom: 12,
-  },
-  sectionTitle: {
-    fontSize: 18,
     fontWeight: "bold",
     color: "#2D3436",
-    marginBottom: 15,
   },
   reviewText: {
-    fontSize: 16,
-    color: "#636E72",
-    lineHeight: 24,
-  },
-  reviewImage: {
-    width: 200,
-    height: 150,
-    borderRadius: 12,
-    marginRight: 12,
-  },
-  bookingCard: {
-    backgroundColor: "#F5F6FA",
-    borderRadius: 12,
-    padding: 15,
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  bookingInfo: {
-    flex: 1,
-    alignItems: "center",
-  },
-  bookingLabel: {
     fontSize: 14,
     color: "#636E72",
-    marginBottom: 4,
+    lineHeight: 20,
+    marginBottom: 10,
   },
-  bookingValue: {
-    fontSize: 16,
-    color: "#2D3436",
-    fontWeight: "600",
-  },
-  responseText: {
-    fontSize: 16,
-    color: "#636E72",
-    lineHeight: 24,
-    fontStyle: "italic",
-  },
-  footer: {
-    padding: 20,
-    backgroundColor: "#FFF",
+  bookingInfo: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 10,
+    paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: "#F5F6FA",
   },
-  buttonContainer: {
-    width: "100%",
+  bookingLabel: {
+    fontSize: 12,
+    color: "#636E72",
+    marginRight: 5,
+  },
+  bookingValue: {
+    fontSize: 12,
+    color: "#2D3436",
+    fontWeight: "600",
+    marginRight: 15,
+  },
+  responseContainer: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#F5F6FA",
+  },
+  responseLabel: {
+    fontSize: 12,
+    color: "#636E72",
+    marginBottom: 5,
+  },
+  responseText: {
+    fontSize: 14,
+    color: "#2D3436",
+    fontStyle: "italic",
   },
   respondButton: {
     backgroundColor: "#ff4500",
-    borderRadius: 12,
-    paddingVertical: 12,
+    borderRadius: 8,
+    paddingVertical: 8,
+  },
+  buttonContainer: {
+    marginTop: 10,
   },
   buttonIcon: {
     marginRight: 8,
+  },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#636E72",
+    marginTop: 10,
   },
   modalOverlay: {
     flex: 1,
@@ -407,16 +441,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#ff4500",
     borderRadius: 12,
     paddingVertical: 12,
-  },
-  imageModalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.9)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  fullScreenImage: {
-    width: "100%",
-    height: "80%",
   },
 });
 

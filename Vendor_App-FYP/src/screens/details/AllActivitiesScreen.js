@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -6,83 +6,141 @@ import {
   TouchableOpacity,
   Animated,
   Text,
+  ActivityIndicator,
+  RefreshControl,
+  ScrollView,
 } from 'react-native';
 import { SearchBar, Icon, Button } from 'react-native-elements';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getRecentActivities, getVendorReviews } from '../../services/api';
 
 const ACTIVITY_FILTERS = [
   { id: 'all', label: 'All Activities' },
   { id: 'bookings', label: 'Bookings' },
   { id: 'payments', label: 'Payments' },
   { id: 'reviews', label: 'Reviews' },
-  { id: 'messages', label: 'Messages' },
+  { id: 'chat', label: 'Chat' }
 ];
 
 const AllActivitiesScreen = ({ navigation }) => {
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [activities, setActivities] = useState([]);
   const fadeAnim = new Animated.Value(1);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Mock activities data
-  const activities = [
-    {
-      id: '1',
-      type: 'booking',
-      title: 'New Booking Request',
-      description: 'Wedding Reception - Sarah Johnson',
-      date: '24 Feb 2024',
-      time: '2:30 PM',
-      status: 'pending',
-    },
-    {
-      id: '2',
-      type: 'payment',
-      title: 'Payment Received',
-      description: 'Corporate Event - Mike Anderson',
-      date: '24 Feb 2024',
-      time: '1:45 PM',
-      amount: '$1,800',
-    },
-    {
-      id: '3',
-      type: 'review',
-      title: 'New Review',
-      description: '5-star rating from Emily Wilson',
-      date: '24 Feb 2024',
-      time: '11:20 AM',
-    },
-    {
-      id: '4',
-      type: 'message',
-      title: 'New Message',
-      description: 'From: John Smith',
-      date: '24 Feb 2024',
-      time: '10:15 AM',
-      preview: 'Hi, I would like to discuss the menu options...',
-    },
-  ];
+  // Helper function to format time ago
+  const getTimeAgo = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const seconds = Math.floor((now - date) / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    if (days > 0) return `${days} day${days === 1 ? '' : 's'} ago`;
+    if (hours > 0) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+    if (minutes > 0) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+    return 'Just now';
+  };
+
+  const fetchActivities = async () => {
+    try {
+      const response = await getRecentActivities();
+      if (response.success) {
+        const formattedActivities = [];
+        
+        if (response.activities.pendingBooking) {
+          formattedActivities.push({
+            id: `booking-${response.activities.pendingBooking.id}`,
+            type: 'booking',
+            title: 'New Booking Request',
+            description: `${response.activities.pendingBooking.user_name} - ${new Date(response.activities.pendingBooking.booking_date).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            })}`,
+            time: getTimeAgo(response.activities.pendingBooking.created_at),
+            amount: `$${response.activities.pendingBooking.total_amount}`,
+            data: response.activities.pendingBooking
+          });
+        }
+
+        if (response.activities.latestPayment) {
+          formattedActivities.push({
+            id: `payment-${response.activities.latestPayment.id}`,
+            type: 'payment',
+            title: 'Payment Received',
+            description: `${response.activities.latestPayment.user_name} - ${new Date(response.activities.latestPayment.booking_date).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            })}`,
+            time: getTimeAgo(response.activities.latestPayment.updated_at),
+            amount: `$${response.activities.latestPayment.total_amount}`,
+            data: response.activities.latestPayment
+          });
+        }
+
+        if (response.activities.latestReview) {
+          formattedActivities.push({
+            id: `review-${response.activities.latestReview.id}`,
+            type: 'review',
+            title: 'New Review',
+            description: `${response.activities.latestReview.user_name} - ${new Date(response.activities.latestReview.booking_date).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            })}`,
+            time: getTimeAgo(response.activities.latestReview.created_at),
+            rating: response.activities.latestReview.rating,
+            data: response.activities.latestReview
+          });
+        }
+
+        if (response.activities.latestChat) {
+          formattedActivities.push({
+            id: `chat-${response.activities.latestChat.id}`,
+            type: 'chat',
+            title: 'New Message',
+            description: `${response.activities.latestChat.user_name}: ${response.activities.latestChat.message.substring(0, 50)}${response.activities.latestChat.message.length > 50 ? '...' : ''}`,
+            time: getTimeAgo(response.activities.latestChat.created_at),
+            data: response.activities.latestChat
+          });
+        }
+
+        setActivities(formattedActivities);
+      }
+    } catch (error) {
+      console.error('Error fetching activities:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchActivities();
+  }, []);
 
   const filteredActivities = activities.filter(activity => {
-    const matchesFilter = selectedFilter === 'all' || activity.type === selectedFilter.slice(0, -1);
-    const matchesSearch = 
-      activity.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      activity.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesFilter && matchesSearch;
+    if (selectedFilter === 'all') return true;
+    return activity.type === selectedFilter;
   });
 
   const getActivityIcon = (type) => {
     switch (type) {
       case 'booking':
-        return 'event';
+        return 'calendar-outline';
       case 'payment':
-        return 'payment';
+        return 'wallet-outline';
       case 'review':
-        return 'star';
-      case 'message':
-        return 'message';
+        return 'star-outline';
+      case 'chat':
+        return 'chatbubble-outline';
       default:
-        return 'notifications';
+        return 'notifications-outline';
     }
   };
 
@@ -92,16 +150,28 @@ const AllActivitiesScreen = ({ navigation }) => {
       onPress={() => {
         switch (activity.type) {
           case 'booking':
-            navigation.navigate('BookingDetails', { bookingId: activity.id });
+            navigation.navigate('Bookings', { 
+              initialTab: 'pending',
+              bookingId: activity.data.id 
+            });
             break;
           case 'payment':
-            navigation.navigate('PaymentDetails', { paymentId: activity.id });
+            navigation.navigate('Bookings', { 
+              initialTab: 'completed',
+              bookingId: activity.data.id 
+            });
             break;
           case 'review':
-            navigation.navigate('ReviewDetails', { reviewId: activity.id });
+            navigation.navigate('ReviewDetails', {
+              reviewId: activity.data.id,
+              title: `Review - ${activity.data.user_name}`,
+            });
             break;
-          case 'message':
-            navigation.navigate('MessageDetails', { messageId: activity.id });
+          case 'chat':
+            navigation.navigate('Chat', {
+              conversationId: activity.data.conversation_id,
+              userName: activity.data.user_name
+            });
             break;
         }
       }}
@@ -123,14 +193,20 @@ const AllActivitiesScreen = ({ navigation }) => {
         {activity.type === 'payment' && (
           <Text style={styles.activityAmount}>{activity.amount}</Text>
         )}
-        {activity.type === 'message' && (
-          <Text style={styles.messagePreview} numberOfLines={1}>
-            {activity.preview}
-          </Text>
+        {activity.type === 'review' && (
+          <View style={styles.ratingContainer}>
+            <Icon name="star" type="material" size={16} color="#FFB800" />
+            <Text style={styles.ratingText}>{activity.rating}</Text>
+          </View>
         )}
       </View>
     </TouchableOpacity>
   );
+
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    fetchActivities().finally(() => setRefreshing(false));
+  }, []);
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -139,7 +215,15 @@ const AllActivitiesScreen = ({ navigation }) => {
           colors={["#ff4500", "#cc3700"]}
           style={styles.headerGradient}
         >
-          <Text style={styles.title}>Activities</Text>
+          <View style={styles.headerTop}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Icon name="arrow-back" type="material" size={24} color="#FFF" />
+            </TouchableOpacity>
+            <Text style={styles.title}>Activities</Text>
+          </View>
           <SearchBar
             placeholder="Search activities..."
             onChangeText={setSearchQuery}
@@ -181,13 +265,30 @@ const AllActivitiesScreen = ({ navigation }) => {
         />
       </View>
 
-      <FlatList
-        data={filteredActivities}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <ActivityItem activity={item} />}
-        contentContainerStyle={styles.activitiesList}
-        showsVerticalScrollIndicator={false}
-      />
+      {loading && !refreshing ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#ff4500" />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredActivities}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => <ActivityItem activity={item} />}
+          contentContainerStyle={styles.activitiesList}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <Text style={styles.noActivitiesText}>No activities found</Text>
+          }
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={["#ff4500"]}
+              tintColor="#ff4500"
+            />
+          }
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -206,11 +307,19 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 20,
     borderBottomLeftRadius: 20,
   },
+  headerTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  backButton: {
+    padding: 8,
+  },
   title: {
     fontSize: 28,
     fontWeight: "bold",
     color: "#FFF",
-    marginBottom: 15,
+    marginLeft: 10,
   },
   searchContainer: {
     backgroundColor: "transparent",
@@ -318,6 +427,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#636E72",
     fontStyle: "italic",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noActivitiesText: {
+    textAlign: 'center',
+    color: '#636E72',
+    fontSize: 16,
+    marginTop: 20,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  ratingText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2D3436',
+    marginLeft: 4,
+  },
+  chatIcon: {
+    backgroundColor: '#00b894',
   },
 });
 

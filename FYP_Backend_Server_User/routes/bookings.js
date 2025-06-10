@@ -476,4 +476,372 @@ router.post('/:bookingId/confirm', verifyToken, async (req, res) => {
   }
 });
 
+// Get total balance for a vendor
+router.get('/vendor/total-balance', verifyToken, async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    
+    const [result] = await pool.execute(
+      `SELECT COALESCE(SUM(total_amount), 0) as total_balance 
+       FROM bookings 
+       WHERE vendor_id = ? AND status = 'completed'`,
+      [vendorId]
+    );
+
+    res.json({
+      success: true,
+      total_balance: result[0].total_balance
+    });
+  } catch (error) {
+    console.error('Error getting total balance:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting total balance'
+    });
+  }
+});
+
+// Get today's revenue for a vendor
+router.get('/vendor/today-revenue', verifyToken, async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+    
+    const [result] = await pool.execute(
+      `SELECT COALESCE(SUM(total_amount), 0) as today_revenue 
+       FROM bookings 
+       WHERE vendor_id = ? 
+       AND status = 'completed'
+       AND DATE(booking_date) = ?`,
+      [vendorId, today]
+    );
+
+    res.json({
+      success: true,
+      today_revenue: result[0].today_revenue
+    });
+  } catch (error) {
+    console.error('Error getting today\'s revenue:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting today\'s revenue'
+    });
+  }
+});
+
+// Get new bookings count for a vendor
+router.get('/vendor/new-bookings', verifyToken, async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+    
+    const [result] = await pool.execute(
+      `SELECT COUNT(*) as new_bookings 
+       FROM bookings 
+       WHERE vendor_id = ? 
+       AND status = 'pending'
+       AND DATE(created_at) = ?`,
+      [vendorId, today]
+    );
+
+    res.json({
+      success: true,
+      new_bookings: result[0].new_bookings
+    });
+  } catch (error) {
+    console.error('Error getting new bookings count:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting new bookings count'
+    });
+  }
+});
+
+// Get total customers for a vendor
+router.get('/vendor/total-customers', verifyToken, async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    
+    const [result] = await pool.execute(
+      `SELECT COUNT(DISTINCT user_id) as total_customers 
+       FROM bookings 
+       WHERE vendor_id = ? 
+       AND status = 'completed'`,
+      [vendorId]
+    );
+
+    res.json({
+      success: true,
+      total_customers: result[0].total_customers
+    });
+  } catch (error) {
+    console.error('Error getting total customers:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting total customers'
+    });
+  }
+});
+
+// Get average rating for a vendor
+router.get('/vendor/average-rating', verifyToken, async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    
+    const [result] = await pool.execute(
+      `SELECT COALESCE(AVG(rating), 0) as average_rating 
+       FROM reviews 
+       WHERE vendor_id = ?`,
+      [vendorId]
+    );
+
+    res.json({
+      success: true,
+      average_rating: parseFloat(result[0].average_rating).toFixed(1)
+    });
+  } catch (error) {
+    console.error('Error getting average rating:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting average rating'
+    });
+  }
+});
+
+// Get weekly revenue data for vendor
+router.get('/vendor/weekly-revenue', verifyToken, async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    
+    // Get the current date
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+
+    // Calculate the start date (7 days ago)
+    const startDate = new Date(today);
+    startDate.setDate(today.getDate() - 6); // 6 days ago (to include today)
+    startDate.setHours(0, 0, 0, 0);
+
+    const [result] = await pool.execute(
+      `SELECT 
+        DATE(booking_date) as date,
+        COALESCE(SUM(total_amount), 0) as revenue
+       FROM bookings 
+       WHERE vendor_id = ? 
+       AND status = 'completed'
+       AND booking_date BETWEEN ? AND ?
+       GROUP BY DATE(booking_date)
+       ORDER BY date`,
+      [vendorId, startDate, today]
+    );
+
+    // Create labels for the past 7 days
+    const labels = [];
+    const data = new Array(7).fill(0);
+    
+    // Generate labels for the past 7 days (oldest to newest)
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + i);
+      labels.push(date.toLocaleDateString('en-US', { weekday: 'short' }));
+    }
+
+    // Create a map of date indices
+    const dateMap = {};
+    labels.forEach((label, index) => {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + index);
+      const dateKey = date.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+      dateMap[dateKey] = index;
+    });
+
+    // Fill in the revenue data
+    result.forEach(row => {
+      const dateIndex = dateMap[row.date.toISOString().split('T')[0]];
+      if (dateIndex !== undefined) {
+        data[dateIndex] = parseFloat(row.revenue);
+      }
+    });
+
+    res.json({
+      success: true,
+      data: data,
+      labels: labels
+    });
+  } catch (error) {
+    console.error('Error getting weekly revenue:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting weekly revenue'
+    });
+  }
+});
+
+// Get monthly revenue data for vendor
+router.get('/vendor/monthly-revenue', verifyToken, async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    
+    // Get the current date
+    const today = new Date();
+    
+    // Calculate the start date (6 months ago)
+    const startDate = new Date(today);
+    startDate.setMonth(today.getMonth() - 5); // 5 months ago (to include current month)
+    startDate.setDate(1); // First day of the month
+    startDate.setHours(0, 0, 0, 0);
+
+    // Calculate the end date (end of current month)
+    const endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    endDate.setHours(23, 59, 59, 999);
+
+    const [result] = await pool.execute(
+      `SELECT 
+        DATE_FORMAT(booking_date, '%Y-%m') as month,
+        COALESCE(SUM(total_amount), 0) as revenue
+       FROM bookings 
+       WHERE vendor_id = ? 
+       AND status = 'completed'
+       AND booking_date BETWEEN ? AND ?
+       GROUP BY DATE_FORMAT(booking_date, '%Y-%m')
+       ORDER BY month`,
+      [vendorId, startDate, endDate]
+    );
+
+    // Create labels for the past 6 months
+    const labels = [];
+    const data = new Array(6).fill(0);
+    
+    // Generate labels in reverse chronological order (oldest to newest)
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(today);
+      date.setMonth(today.getMonth() - i);
+      labels.push(date.toLocaleDateString('en-US', { month: 'short' }));
+    }
+
+    // Create a map of month indices
+    const monthMap = {};
+    labels.forEach((label, index) => {
+      const date = new Date(today);
+      date.setMonth(today.getMonth() - (5 - index));
+      const monthKey = date.toISOString().slice(0, 7); // Format: YYYY-MM
+      monthMap[monthKey] = index;
+    });
+
+    // Fill in the revenue data
+    result.forEach(row => {
+      const monthIndex = monthMap[row.month];
+      if (monthIndex !== undefined) {
+        data[monthIndex] = parseFloat(row.revenue);
+      }
+    });
+
+    res.json({
+      success: true,
+      data: data,
+      labels: labels
+    });
+  } catch (error) {
+    console.error('Error getting monthly revenue:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting monthly revenue'
+    });
+  }
+});
+
+// Get recent activities for vendor
+router.get('/vendor/recent-activities', verifyToken, async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+
+    // Get latest pending booking
+    const [pendingBooking] = await pool.execute(`
+      SELECT b.*, u.name as user_name, u.phone_number
+      FROM bookings b
+      JOIN users u ON b.user_id = u.id
+      WHERE b.vendor_id = ? 
+      AND b.status = 'pending'
+      ORDER BY b.created_at DESC
+      LIMIT 1
+    `, [vendorId]);
+
+    // Get latest completed booking (payment)
+    const [latestPayment] = await pool.execute(`
+      SELECT b.*, u.name as user_name, u.phone_number
+      FROM bookings b
+      JOIN users u ON b.user_id = u.id
+      WHERE b.vendor_id = ? 
+      AND b.status = 'completed'
+      ORDER BY b.updated_at DESC
+      LIMIT 1
+    `, [vendorId]);
+
+    // Get latest review
+    const [latestReview] = await pool.execute(`
+      SELECT r.*, u.name as user_name, b.booking_date
+      FROM reviews r
+      JOIN users u ON r.user_id = u.id
+      JOIN bookings b ON r.booking_id = b.id
+      WHERE r.vendor_id = ?
+      ORDER BY r.created_at DESC
+      LIMIT 1
+    `, [vendorId]);
+
+    // Get latest chat message
+    const [latestChat] = await pool.execute(`
+      SELECT m.*, u.name as user_name, c.id as conversation_id
+      FROM messages m
+      JOIN conversations c ON m.conversation_id = c.id
+      JOIN users u ON c.user_id = u.id
+      WHERE c.vendor_id = ?
+      ORDER BY m.created_at DESC
+      LIMIT 1
+    `, [vendorId]);
+
+    res.json({
+      success: true,
+      activities: {
+        pendingBooking: pendingBooking[0] || null,
+        latestPayment: latestPayment[0] || null,
+        latestReview: latestReview[0] || null,
+        latestChat: latestChat[0] || null
+      }
+    });
+  } catch (error) {
+    console.error('Error getting recent activities:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting recent activities'
+    });
+  }
+});
+
+// Get all reviews for a vendor
+router.get('/vendor/reviews', verifyToken, async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    
+    const [reviews] = await pool.execute(`
+      SELECT r.*, u.name as user_name, b.booking_date, b.total_amount
+      FROM reviews r
+      JOIN users u ON r.user_id = u.id
+      JOIN bookings b ON r.booking_id = b.id
+      WHERE r.vendor_id = ?
+      ORDER BY r.created_at DESC
+    `, [vendorId]);
+
+    res.json({
+      success: true,
+      reviews
+    });
+  } catch (error) {
+    console.error('Error getting vendor reviews:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting vendor reviews'
+    });
+  }
+});
+
 module.exports = router; 

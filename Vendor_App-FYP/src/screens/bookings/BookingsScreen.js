@@ -24,20 +24,37 @@ const BOOKING_FILTERS = [
   { id: 'rejected', label: 'Rejected' },
 ];
 
-const BookingsScreen = ({ navigation }) => {
+const BookingsScreen = ({ navigation, route }) => {
   const { user } = useAuth();
-  const [selectedFilter, setSelectedFilter] = useState('all');
+  const [selectedFilter, setSelectedFilter] = useState(route.params?.initialTab || 'all');
   const [searchQuery, setSearchQuery] = useState('');
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const fadeAnim = new Animated.Value(0);
+  const flatListRef = React.useRef(null);
 
   const fetchBookings = async () => {
     try {
       setLoading(true);
       const response = await getVendorBookings(user.id);
       setBookings(response.bookings);
+
+      // If a specific booking ID was provided, scroll to it
+      if (route.params?.bookingId) {
+        const bookingIndex = response.bookings.findIndex(
+          booking => booking.id === route.params.bookingId
+        );
+        if (bookingIndex !== -1) {
+          setTimeout(() => {
+            flatListRef.current?.scrollToIndex({
+              index: bookingIndex,
+              animated: true,
+              viewPosition: 0
+            });
+          }, 500);
+        }
+      }
     } catch (error) {
       console.error('Error fetching bookings:', error);
       Alert.alert('Error', 'Failed to fetch bookings. Please try again.');
@@ -49,6 +66,13 @@ const BookingsScreen = ({ navigation }) => {
   useEffect(() => {
     fetchBookings();
   }, []);
+
+  // Update selected filter when route params change
+  useEffect(() => {
+    if (route.params?.initialTab) {
+      setSelectedFilter(route.params.initialTab);
+    }
+  }, [route.params?.initialTab]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -294,6 +318,7 @@ const BookingsScreen = ({ navigation }) => {
       </View>
 
       <FlatList
+        ref={flatListRef}
         data={filteredBookings}
         renderItem={({ item }) => <BookingCard booking={item} />}
         keyExtractor={item => item.id.toString()}
