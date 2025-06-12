@@ -34,13 +34,29 @@ export function AuthProvider({ children }) {
         // Verify token with backend
         const userData = await AsyncStorage.getItem('userData');
         if (userData) {
-          setUser(JSON.parse(userData));
+          const parsedUserData = JSON.parse(userData);
+          setUser(parsedUserData);
+          // Fetch fresh profile data
+          await fetchUserProfile(parsedUserData.id);
         }
       }
     } catch (error) {
       console.error('Error checking stored token:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchUserProfile = async (userId) => {
+    try {
+      const response = await api.get(`/user/profile/${userId}`);
+      if (response.success && response.profile) {
+        const updatedUser = { ...user, ...response.profile };
+        await AsyncStorage.setItem('userData', JSON.stringify(updatedUser));
+        setUser(updatedUser);
+      }
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
     }
   };
 

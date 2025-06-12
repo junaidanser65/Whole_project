@@ -458,4 +458,36 @@ router.put('/update', verifyToken, async (req, res) => {
   }
 });
 
+// Get user profile by ID
+router.get('/:id', async (req, res) => {
+  try {
+    const userId = req.params.id;
+
+    // Get user profile information
+    const [users] = await pool.execute(
+      'SELECT id, name, email, phone_number, address, avatar_url FROM users WHERE id = ?',
+      [userId]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User profile not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      profile: users[0]
+    });
+  } catch (error) {
+    console.error('Get user profile error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error retrieving user profile',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+});
+
 module.exports = router;

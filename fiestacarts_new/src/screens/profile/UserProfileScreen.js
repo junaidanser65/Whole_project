@@ -1,8 +1,10 @@
-import React from 'react';
-import { StyleSheet, View, ScrollView, TouchableOpacity, Image } from 'react-native';
+import React, { useEffect } from 'react';
+import { StyleSheet, View, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { Text, Avatar, Icon, Button, ListItem } from '@rneui/themed';
 import { colors, spacing, typography } from '../../styles/theme';
 import { useAuth } from '../../contexts/AuthContext';
+import { useFocusEffect } from '@react-navigation/native';
+import api from '../../api/apiService';
 
 const PROFILE_SECTIONS = [
   {
@@ -35,6 +37,27 @@ const PROFILE_SECTIONS = [
 export default function UserProfileScreen({ navigation }) {
   const { user, logout } = useAuth();
   const [loading, setLoading] = React.useState(false);
+  const [profileData, setProfileData] = React.useState(null);
+
+  const fetchProfile = async () => {
+    try {
+      if (user?.id) {
+        const response = await api.get(`/user/profile/${user.id}`);
+        if (response.success && response.profile) {
+          setProfileData(response.profile);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
+
+  // Fetch profile when screen is focused
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchProfile();
+    }, [user?.id])
+  );
 
   const handleLogout = async () => {
     setLoading(true);
@@ -57,7 +80,7 @@ export default function UserProfileScreen({ navigation }) {
 
     const totalWeight = requiredFields.reduce((sum, field) => sum + field.weight, 0);
     const completedWeight = requiredFields.reduce((sum, field) => {
-      const value = user[field.field];
+      const value = (profileData || user)?.[field.field];
       return sum + (value ? field.weight : 0);
     }, 0);
 
@@ -84,17 +107,21 @@ export default function UserProfileScreen({ navigation }) {
             <Avatar
               size={80}
               rounded
-              source={user?.avatar_url ? { uri: user.avatar_url } : undefined}
-              icon={!user?.avatar_url ? { name: 'person', type: 'material' } : undefined}
+              source={
+                (profileData?.avatar_url || user?.avatar_url)
+                  ? { uri: profileData?.avatar_url || user?.avatar_url }
+                  : undefined
+              }
+              icon={!(profileData?.avatar_url || user?.avatar_url) ? { name: 'person', type: 'material' } : undefined}
               containerStyle={styles.avatar}
             >
               <Avatar.Accessory size={24} />
             </Avatar>
             <View style={styles.profileInfo}>
               <Text style={styles.name}>
-                {user?.name || getProfileStatus()}
+                {(profileData?.name || user?.name || getProfileStatus())}
               </Text>
-              <Text style={styles.email}>{user?.email}</Text>
+              <Text style={styles.email}>{profileData?.email || user?.email || ''}</Text>
             </View>
           </TouchableOpacity>
 
