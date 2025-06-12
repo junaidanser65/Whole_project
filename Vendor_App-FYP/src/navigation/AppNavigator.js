@@ -153,6 +153,8 @@ const DashboardStackNavigator = () => {
       <DashboardStack.Screen name="DashboardMain" component={DashboardScreen} />
       <DashboardStack.Screen name="RevenueDetails" component={RevenueDetailsScreen} />
       <DashboardStack.Screen name="AllActivities" component={AllActivitiesScreen} />
+      <DashboardStack.Screen name="ReviewDetails" component={ReviewDetailsScreen} />
+      <DashboardStack.Screen name="CustomersList" component={CustomersListScreen} />
     </DashboardStack.Navigator>
   );
 };
@@ -209,13 +211,11 @@ const AppNavigator = () => {
         <Stack.Screen name="SendMoney" component={SendMoneyScreen} />
         <Stack.Screen name="ReceiveMoney" component={ReceiveMoneyScreen} />
         <Stack.Screen name="BookingsList" component={BookingsListScreen} />
-        <Stack.Screen name="CustomersList" component={CustomersListScreen} />
         <Stack.Screen name="CustomerDetails" component={CustomerDetailsScreen} />
         <Stack.Screen name="RatingsReviews" component={RatingsReviewsScreen} />
         <Stack.Screen name="AllActivities" component={AllActivitiesScreen} />
         <Stack.Screen name="BookingDetails" component={BookingDetails} />
         <Stack.Screen name="PaymentDetails" component={PaymentDetailsScreen} />
-        <Stack.Screen name="ReviewDetails" component={ReviewDetailsScreen} />
         <Stack.Screen 
           name="ChatDetails" 
           component={ChatDetailsScreen} 

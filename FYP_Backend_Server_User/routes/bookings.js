@@ -844,4 +844,136 @@ router.get('/vendor/reviews', verifyToken, async (req, res) => {
   }
 });
 
+// Get all recent activities for vendor
+router.get('/vendor/all-recent-activities', verifyToken, async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+
+    // Get all pending bookings
+    const [pendingBookings] = await pool.execute(`
+      SELECT b.*, u.name as user_name, u.phone_number
+      FROM bookings b
+      JOIN users u ON b.user_id = u.id
+      WHERE b.vendor_id = ? 
+      AND b.status = 'pending'
+      ORDER BY b.created_at DESC
+      LIMIT 10
+    `, [vendorId]);
+
+    // Get all completed bookings (payments)
+    const [completedPayments] = await pool.execute(`
+      SELECT b.*, u.name as user_name, u.phone_number
+      FROM bookings b
+      JOIN users u ON b.user_id = u.id
+      WHERE b.vendor_id = ? 
+      AND b.status = 'completed'
+      ORDER BY b.updated_at DESC
+      LIMIT 10
+    `, [vendorId]);
+
+    // Get all reviews
+    const [reviews] = await pool.execute(`
+      SELECT r.*, u.name as user_name, b.booking_date
+      FROM reviews r
+      JOIN users u ON r.user_id = u.id
+      JOIN bookings b ON r.booking_id = b.id
+      WHERE r.vendor_id = ?
+      ORDER BY r.created_at DESC
+      LIMIT 10
+    `, [vendorId]);
+
+    // Get all chat messages
+    const [chatMessages] = await pool.execute(`
+      SELECT m.*, u.name as user_name, c.id as conversation_id
+      FROM messages m
+      JOIN conversations c ON m.conversation_id = c.id
+      JOIN users u ON c.user_id = u.id
+      WHERE c.vendor_id = ?
+      ORDER BY m.created_at DESC
+      LIMIT 10
+    `, [vendorId]);
+
+    res.json({
+      success: true,
+      activities: {
+        pendingBookings,
+        completedPayments,
+        reviews,
+        chatMessages
+      }
+    });
+  } catch (error) {
+    console.error('Error getting all recent activities:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting recent activities'
+    });
+  }
+});
+
+// Get all customers for a vendor
+router.get('/vendor/customers', verifyToken, async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    
+    const [customers] = await pool.execute(`
+      SELECT 
+        u.id,
+        u.name,
+        u.email,
+        u.phone_number,
+        u.avatar_url,
+        COUNT(DISTINCT b.id) as total_orders,
+        SUM(b.total_amount) as total_spent,
+        MAX(b.booking_date) as last_order_date
+      FROM users u
+      JOIN bookings b ON u.id = b.user_id
+      WHERE b.vendor_id = ?
+      AND b.status = 'completed'
+      GROUP BY u.id, u.name, u.email, u.phone_number, u.avatar_url
+      ORDER BY total_orders DESC
+    `, [vendorId]);
+
+    res.json({
+      success: true,
+      customers: customers.map(customer => ({
+        ...customer,
+        total_spent: parseFloat(customer.total_spent) || 0,
+        avatar_url: customer.avatar_url || `https://ui-avatars.com/api/?name=${customer.name[0]}&background=ff4500&color=fff`
+      }))
+    });
+  } catch (error) {
+    console.error('Error getting vendor customers:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting vendor customers'
+    });
+  }
+});
+
+// Get total bookings for a vendor
+router.get('/vendor/total-bookings', verifyToken, async (req, res) => {
+  try {
+    const vendorId = req.user.id;
+    
+    const [result] = await pool.execute(
+      `SELECT COUNT(*) as total_bookings 
+       FROM bookings 
+       WHERE vendor_id = ?`,
+      [vendorId]
+    );
+
+    res.json({
+      success: true,
+      total_bookings: result[0].total_bookings
+    });
+  } catch (error) {
+    console.error('Error getting total bookings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error getting total bookings'
+    });
+  }
+});
+
 module.exports = router; 

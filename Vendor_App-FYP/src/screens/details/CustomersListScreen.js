@@ -1,28 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
   FlatList,
   TouchableOpacity,
   Animated,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { Text, SearchBar, Icon, Button } from 'react-native-elements';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { getVendorCustomers } from '../../services/api';
 
 const CUSTOMER_FILTERS = [
   { id: 'all', label: 'All Customers' },
   { id: 'active', label: 'Active' },
   { id: 'new', label: 'New' },
-  { id: 'vip', label: 'VIP' },
+  { id: 'vip', label: 'VIP' }
 ];
 
 const CustomersListScreen = ({ navigation }) => {
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const fadeAnim = new Animated.Value(0);
 
-  React.useEffect(() => {
+  const fetchCustomers = async () => {
+    try {
+      setLoading(true);
+      const response = await getVendorCustomers();
+      if (response.success) {
+        // Transform the data to include status based on total orders
+        const transformedCustomers = response.customers.map(customer => ({
+          ...customer,
+          status: customer.total_orders > 10 ? 'vip' : 
+                 customer.total_orders >= 1 ? 'active' : 'new',
+          totalOrders: customer.total_orders,
+          totalSpent: `$${customer.total_spent.toFixed(2)}`,
+          lastOrder: formatLastOrder(customer.last_order_date)
+        }));
+        setCustomers(transformedCustomers);
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCustomers();
     Animated.timing(fadeAnim, {
       toValue: 1,
       duration: 500,
@@ -30,46 +61,26 @@ const CustomersListScreen = ({ navigation }) => {
     }).start();
   }, []);
 
-  // Mock customers data
-  const customers = [
-    {
-      id: '1',
-      name: 'Sarah Johnson',
-      email: 'sarah.j@email.com',
-      phone: '+1 234-567-8900',
-      totalOrders: 5,
-      totalSpent: '$12,500',
-      lastOrder: '2 days ago',
-      status: 'vip',
-    },
-    {
-      id: '2',
-      name: 'Michael Brown',
-      email: 'michael.b@email.com',
-      phone: '+1 234-567-8901',
-      totalOrders: 2,
-      totalSpent: '$3,200',
-      lastOrder: '1 week ago',
-      status: 'active',
-    },
-    {
-      id: '3',
-      name: 'Emma Wilson',
-      email: 'emma.w@email.com',
-      phone: '+1 234-567-8902',
-      totalOrders: 1,
-      totalSpent: '$800',
-      lastOrder: 'Just now',
-      status: 'new',
-    },
-  ];
+  const formatLastOrder = (dateString) => {
+    if (!dateString) return 'No orders yet';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffTime = Math.abs(now - date);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    return `${Math.floor(diffDays / 30)} months ago`;
+  };
 
   const filteredCustomers = customers.filter(customer => {
     const matchesFilter = selectedFilter === 'all' || customer.status === selectedFilter;
-    const matchesSearch = 
-      customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      customer.phone.includes(searchQuery);
+    const matchesSearch = searchQuery.trim() === '' || 
+      (customer.name && customer.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (customer.email && customer.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (customer.phone_number && customer.phone_number.includes(searchQuery));
     return matchesFilter && matchesSearch;
   });
 
@@ -100,15 +111,9 @@ const CustomersListScreen = ({ navigation }) => {
           <View style={styles.customerDetails}>
             <Text style={styles.customerName}>{customer.name}</Text>
             <Text style={styles.customerContact}>{customer.email}</Text>
-            <Text style={styles.customerContact}>{customer.phone}</Text>
+            <Text style={styles.customerContact}>{customer.phone_number}</Text>
           </View>
         </View>
-        <TouchableOpacity
-          onPress={() => handleMessageCustomer(customer)}
-          style={styles.messageButton}
-        >
-          <Icon name="message" type="material" size={20} color="#ff4500" />
-        </TouchableOpacity>
       </View>
 
       <View style={styles.statsContainer}>
@@ -134,15 +139,24 @@ const CustomersListScreen = ({ navigation }) => {
             {customer.status.toUpperCase()}
           </Text>
         </View>
-        {/* Commenting out view profile button for now
-        <TouchableOpacity style={styles.viewProfileButton}>
-          <Text style={styles.viewProfileText}>View Profile</Text>
-          <Icon name="chevron-right" type="material" size={20} color="#FF6B6B" />
-        </TouchableOpacity>
-        */}
       </View>
     </TouchableOpacity>
   );
+
+  const onRefresh = React.useCallback(() => {
+    setRefreshing(true);
+    fetchCustomers();
+  }, []);
+
+  if (loading && !refreshing) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#ff4500" />
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -151,7 +165,6 @@ const CustomersListScreen = ({ navigation }) => {
           colors={["#ff4500", "#cc3700"]}
           style={styles.headerGradient}
         >
-          {/* Back Button */}
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.backButton}
@@ -162,7 +175,6 @@ const CustomersListScreen = ({ navigation }) => {
           <Text style={styles.title}>Customers</Text>
         </LinearGradient>
 
-        {/* Search Bar positioned to overlap both sections */}
         <View style={styles.searchWrapper}>
           <SearchBar
             placeholder="Search customers..."
@@ -208,9 +220,18 @@ const CustomersListScreen = ({ navigation }) => {
       <FlatList
         data={filteredCustomers}
         renderItem={({ item }) => <CustomerCard customer={item} />}
-        keyExtractor={(item) => item.id}
+        keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.customersList}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        ListEmptyComponent={() => (
+          <View style={styles.emptyContainer}>
+            <Icon name="people" type="material" size={50} color="#636E72" />
+            <Text style={styles.emptyText}>No customers found</Text>
+          </View>
+        )}
       />
     </SafeAreaView>
   );
@@ -423,6 +444,21 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: "#ffe0cc",
     borderRadius: 8,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#636E72',
+    marginTop: 10,
   },
 });
 

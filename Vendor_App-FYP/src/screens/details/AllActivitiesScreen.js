@@ -13,14 +13,14 @@ import {
 import { SearchBar, Icon, Button } from 'react-native-elements';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { getRecentActivities, getVendorReviews } from '../../services/api';
+import { getRecentActivities, getVendorReviews, getAllRecentActivities } from '../../services/api';
 
 const ACTIVITY_FILTERS = [
   { id: 'all', label: 'All Activities' },
-  { id: 'bookings', label: 'Bookings' },
-  { id: 'payments', label: 'Payments' },
-  { id: 'reviews', label: 'Reviews' },
-  { id: 'chat', label: 'Chat' }
+  { id: 'booking', label: 'Bookings' },
+  { id: 'payment', label: 'Payments' },
+  { id: 'review', label: 'Reviews' },
+  { id: 'chat', label: 'Chats' }
 ];
 
 const AllActivitiesScreen = ({ navigation }) => {
@@ -48,68 +48,89 @@ const AllActivitiesScreen = ({ navigation }) => {
 
   const fetchActivities = async () => {
     try {
-      const response = await getRecentActivities();
+      const response = await getAllRecentActivities();
       if (response.success) {
         const formattedActivities = [];
         
-        if (response.activities.pendingBooking) {
-          formattedActivities.push({
-            id: `booking-${response.activities.pendingBooking.id}`,
-            type: 'booking',
-            title: 'New Booking Request',
-            description: `${response.activities.pendingBooking.user_name} - ${new Date(response.activities.pendingBooking.booking_date).toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}`,
-            time: getTimeAgo(response.activities.pendingBooking.created_at),
-            amount: `$${response.activities.pendingBooking.total_amount}`,
-            data: response.activities.pendingBooking
+        // Add all pending bookings
+        if (response.activities.pendingBookings) {
+          response.activities.pendingBookings.forEach(booking => {
+            formattedActivities.push({
+              id: `booking-${booking.id}`,
+              type: 'booking',
+              title: 'New Booking Request',
+              description: `${booking.user_name} - ${new Date(booking.booking_date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}`,
+              time: getTimeAgo(booking.created_at),
+              timestamp: new Date(booking.created_at).getTime(),
+              amount: `$${booking.total_amount}`,
+              data: booking
+            });
           });
         }
 
-        if (response.activities.latestPayment) {
-          formattedActivities.push({
-            id: `payment-${response.activities.latestPayment.id}`,
-            type: 'payment',
-            title: 'Payment Received',
-            description: `${response.activities.latestPayment.user_name} - ${new Date(response.activities.latestPayment.booking_date).toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}`,
-            time: getTimeAgo(response.activities.latestPayment.updated_at),
-            amount: `$${response.activities.latestPayment.total_amount}`,
-            data: response.activities.latestPayment
+        // Add all completed payments
+        if (response.activities.completedPayments) {
+          response.activities.completedPayments.forEach(payment => {
+            formattedActivities.push({
+              id: `payment-${payment.id}`,
+              type: 'payment',
+              title: 'Payment Received',
+              description: `${payment.user_name} - ${new Date(payment.booking_date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}`,
+              time: getTimeAgo(payment.updated_at),
+              timestamp: new Date(payment.updated_at).getTime(),
+              amount: `$${payment.total_amount}`,
+              data: payment
+            });
           });
         }
 
-        if (response.activities.latestReview) {
-          formattedActivities.push({
-            id: `review-${response.activities.latestReview.id}`,
-            type: 'review',
-            title: 'New Review',
-            description: `${response.activities.latestReview.user_name} - ${new Date(response.activities.latestReview.booking_date).toLocaleDateString('en-US', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            })}`,
-            time: getTimeAgo(response.activities.latestReview.created_at),
-            rating: response.activities.latestReview.rating,
-            data: response.activities.latestReview
+        // Add all reviews
+        if (response.activities.reviews) {
+          response.activities.reviews.forEach(review => {
+            formattedActivities.push({
+              id: `review-${review.id}`,
+              type: 'review',
+              title: 'New Review',
+              description: `${review.user_name} - ${new Date(review.booking_date).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}`,
+              time: getTimeAgo(review.created_at),
+              timestamp: new Date(review.created_at).getTime(),
+              rating: review.rating,
+              data: review
+            });
           });
         }
 
-        if (response.activities.latestChat) {
-          formattedActivities.push({
-            id: `chat-${response.activities.latestChat.id}`,
-            type: 'chat',
-            title: 'New Message',
-            description: `${response.activities.latestChat.user_name}: ${response.activities.latestChat.message.substring(0, 50)}${response.activities.latestChat.message.length > 50 ? '...' : ''}`,
-            time: getTimeAgo(response.activities.latestChat.created_at),
-            data: response.activities.latestChat
-          });
+        // Add all chat messages
+        if (response.activities.chatMessages) {
+          response.activities.chatMessages
+            .filter(chat => chat.sender_type === 'user') // Only show messages from users
+            .forEach(chat => {
+              formattedActivities.push({
+                id: `chat-${chat.id}`,
+                type: 'chat',
+                title: 'New Message',
+                description: `${chat.user_name}: ${chat.message.substring(0, 50)}${chat.message.length > 50 ? '...' : ''}`,
+                time: getTimeAgo(chat.created_at),
+                timestamp: new Date(chat.created_at).getTime(),
+                data: chat
+              });
+            });
         }
+
+        // Sort all activities by timestamp (newest first)
+        formattedActivities.sort((a, b) => b.timestamp - a.timestamp);
 
         setActivities(formattedActivities);
       }
@@ -125,9 +146,46 @@ const AllActivitiesScreen = ({ navigation }) => {
   }, []);
 
   const filteredActivities = activities.filter(activity => {
-    if (selectedFilter === 'all') return true;
-    return activity.type === selectedFilter;
+    const matchesFilter = selectedFilter === 'all' || activity.type === selectedFilter;
+    const matchesSearch = searchQuery === '' || 
+      activity.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      activity.description.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesFilter && matchesSearch;
   });
+
+  const renderActivityItem = ({ item }) => (
+    <ActivityItem
+      activity={item}
+      onPress={() => {
+        switch (item.type) {
+          case 'booking':
+            navigation.navigate('Bookings', { 
+              initialTab: 'pending',
+              bookingId: item.data.id 
+            });
+            break;
+          case 'payment':
+            navigation.navigate('Bookings', { 
+              initialTab: 'completed',
+              bookingId: item.data.id 
+            });
+            break;
+          case 'review':
+            navigation.navigate('ReviewDetails', {
+              reviewId: item.data.id,
+              title: `Review - ${item.data.user_name}`,
+            });
+            break;
+          case 'chat':
+            navigation.navigate('Chat', {
+              conversationId: item.data.conversation_id,
+              userName: item.data.user_name
+            });
+            break;
+        }
+      }}
+    />
+  );
 
   const getActivityIcon = (type) => {
     switch (type) {
@@ -273,7 +331,7 @@ const AllActivitiesScreen = ({ navigation }) => {
         <FlatList
           data={filteredActivities}
           keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => <ActivityItem activity={item} />}
+          renderItem={renderActivityItem}
           contentContainerStyle={styles.activitiesList}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={

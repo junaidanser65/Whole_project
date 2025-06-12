@@ -42,18 +42,29 @@ const BookingsScreen = ({ navigation, route }) => {
 
       // If a specific booking ID was provided, scroll to it
       if (route.params?.bookingId) {
-        const bookingIndex = response.bookings.findIndex(
-          booking => booking.id === route.params.bookingId
-        );
-        if (bookingIndex !== -1) {
-          setTimeout(() => {
-            flatListRef.current?.scrollToIndex({
+        // Wait for the next render cycle to ensure bookings are set
+        setTimeout(() => {
+          const filteredBookings = response.bookings.filter((booking) => {
+            const matchesFilter =
+              selectedFilter === 'all' || booking.status === selectedFilter;
+            const matchesSearch =
+              booking.customer_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              booking.special_instructions?.toLowerCase().includes(searchQuery.toLowerCase());
+            return matchesFilter && matchesSearch;
+          });
+
+          const bookingIndex = filteredBookings.findIndex(
+            booking => booking.id === route.params.bookingId
+          );
+
+          if (bookingIndex !== -1 && flatListRef.current) {
+            flatListRef.current.scrollToIndex({
               index: bookingIndex,
               animated: true,
               viewPosition: 0
             });
-          }, 500);
-        }
+          }
+        }, 500);
       }
     } catch (error) {
       console.error('Error fetching bookings:', error);
@@ -260,6 +271,13 @@ const BookingsScreen = ({ navigation, route }) => {
     </TouchableOpacity>
   );
 
+  const EmptyListComponent = () => (
+    <View style={styles.emptyContainer}>
+      <Icon name="event-busy" size={50} color="#636E72" />
+      <Text style={styles.emptyText}>No bookings found</Text>
+    </View>
+  );
+
   if (loading && !refreshing) {
     return (
       <View style={styles.loadingContainer}>
@@ -325,12 +343,7 @@ const BookingsScreen = ({ navigation, route }) => {
         contentContainerStyle={styles.bookingsList}
         refreshing={refreshing}
         onRefresh={handleRefresh}
-        ListEmptyComponent={() => (
-          <View style={styles.emptyContainer}>
-            <Icon name="event-busy" size={50} color="#636E72" />
-            <Text style={styles.emptyText}>No bookings found</Text>
-          </View>
-        )}
+        ListEmptyComponent={EmptyListComponent}
       />
     </SafeAreaView>
   );

@@ -6,12 +6,11 @@ import {
   TouchableOpacity,
   Animated,
   Image,
-  Modal,
   FlatList,
   ActivityIndicator,
   Text,
 } from 'react-native';
-import { Button, Icon, Input } from 'react-native-elements';
+import { Icon } from 'react-native-elements';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getVendorReviews } from '../../services/api';
@@ -19,10 +18,6 @@ import { getVendorReviews } from '../../services/api';
 const ReviewDetailsScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState([]);
-  const [showResponseModal, setShowResponseModal] = useState(false);
-  const [selectedReview, setSelectedReview] = useState(null);
-  const [response, setResponse] = useState('');
-  const [selectedImage, setSelectedImage] = useState(null);
   const fadeAnim = new Animated.Value(0);
 
   useEffect(() => {
@@ -42,27 +37,6 @@ const ReviewDetailsScreen = ({ route, navigation }) => {
     } catch (error) {
       console.error('Error fetching reviews:', error);
       alert('Failed to fetch reviews. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSubmitResponse = async () => {
-    if (!response.trim()) {
-      alert('Please enter a response');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // TODO: Implement response submission logic
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      setShowResponseModal(false);
-      setSelectedReview(null);
-      setResponse('');
-      fetchReviews(); // Refresh reviews after submitting response
-    } catch (error) {
-      alert('Failed to submit response. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -121,83 +95,13 @@ const ReviewDetailsScreen = ({ route, navigation }) => {
         <Text style={styles.bookingValue}>${review.total_amount}</Text>
       </View>
 
-      {review.response ? (
+      {review.response && (
         <View style={styles.responseContainer}>
           <Text style={styles.responseLabel}>Your Response:</Text>
           <Text style={styles.responseText}>{review.response}</Text>
         </View>
-      ) : (
-        <Button
-          title="Respond to Review"
-          onPress={() => {
-            setSelectedReview(review);
-            setShowResponseModal(true);
-          }}
-          buttonStyle={styles.respondButton}
-          containerStyle={styles.buttonContainer}
-          icon={
-            <Icon
-              name="reply"
-              type="material"
-              size={20}
-              color="#FFFFFF"
-              style={styles.buttonIcon}
-            />
-          }
-        />
       )}
     </View>
-  );
-
-  const ResponseModal = () => (
-    <Modal
-      visible={showResponseModal}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={() => {
-        setShowResponseModal(false);
-        setSelectedReview(null);
-        setResponse('');
-      }}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <Text style={styles.modalTitle}>Respond to Review</Text>
-          <Input
-            placeholder="Write your response..."
-            value={response}
-            onChangeText={setResponse}
-            multiline
-            numberOfLines={6}
-            containerStyle={styles.responseInput}
-            inputContainerStyle={styles.responseInputContainer}
-            inputStyle={styles.responseInputText}
-          />
-          <View style={styles.modalButtons}>
-            <Button
-              title="Cancel"
-              type="outline"
-              onPress={() => {
-                setShowResponseModal(false);
-                setSelectedReview(null);
-                setResponse('');
-              }}
-              buttonStyle={styles.cancelButton}
-              titleStyle={styles.cancelButtonText}
-              containerStyle={styles.modalButtonContainer}
-            />
-            <Button
-              title={loading ? 'Submitting...' : 'Submit Response'}
-              onPress={handleSubmitResponse}
-              loading={loading}
-              disabled={loading || !response.trim()}
-              buttonStyle={styles.submitButton}
-              containerStyle={styles.modalButtonContainer}
-            />
-          </View>
-        </View>
-      </View>
-    </Modal>
   );
 
   if (loading && reviews.length === 0) {
@@ -215,7 +119,15 @@ const ReviewDetailsScreen = ({ route, navigation }) => {
           colors={["#ff4500", "#cc3700"]}
           style={styles.headerGradient}
         >
-          <Text style={styles.headerTitle}>Customer Reviews</Text>
+          <View style={styles.headerContent}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Icon name="arrow-back" type="material" size={24} color="#FFF" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Customer Reviews</Text>
+          </View>
         </LinearGradient>
       </View>
 
@@ -233,8 +145,6 @@ const ReviewDetailsScreen = ({ route, navigation }) => {
           </View>
         )}
       />
-
-      <ResponseModal />
     </SafeAreaView>
   );
 };
@@ -258,10 +168,24 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 30,
     borderBottomLeftRadius: 30,
   },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    position: 'relative',
+  },
+  backButton: {
+    position: 'absolute',
+    left: 0,
+    padding: 10,
+    zIndex: 1,
+  },
   headerTitle: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#FFF",
+    flex: 1,
+    textAlign: 'center',
   },
   reviewsList: {
     padding: 20,
@@ -366,17 +290,6 @@ const styles = StyleSheet.create({
     color: "#2D3436",
     fontStyle: "italic",
   },
-  respondButton: {
-    backgroundColor: "#ff4500",
-    borderRadius: 8,
-    paddingVertical: 8,
-  },
-  buttonContainer: {
-    marginTop: 10,
-  },
-  buttonIcon: {
-    marginRight: 8,
-  },
   emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
@@ -386,62 +299,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#636E72",
     marginTop: 10,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: "#FFF",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#2D3436",
-    marginBottom: 20,
-  },
-  responseInput: {
-    paddingHorizontal: 0,
-  },
-  responseInputContainer: {
-    borderWidth: 1,
-    borderColor: "#DFE6E9",
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    minHeight: 120,
-  },
-  responseInputText: {
-    fontSize: 16,
-    color: "#2D3436",
-    textAlignVertical: "top",
-  },
-  modalButtons: {
-    flexDirection: "row",
-    marginTop: 20,
-  },
-  modalButtonContainer: {
-    flex: 1,
-    marginHorizontal: 5,
-  },
-  cancelButton: {
-    backgroundColor: "#FFF",
-    borderColor: "#ff4500",
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 12,
-  },
-  cancelButtonText: {
-    color: "#ff4500",
-  },
-  submitButton: {
-    backgroundColor: "#ff4500",
-    borderRadius: 12,
-    paddingVertical: 12,
-  },
+  }
 });
 
 export default ReviewDetailsScreen; 

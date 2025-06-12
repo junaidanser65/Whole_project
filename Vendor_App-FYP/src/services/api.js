@@ -502,3 +502,63 @@ export const getVendorReviews = async () => {
     throw error;
   }
 };
+
+// Get all recent activities for vendor
+export const getAllRecentActivities = async () => {
+  try {
+    const token = await AsyncStorage.getItem("auth_token");
+    const response = await axios({
+      method: 'GET',
+      url: `${API_URL}/bookings/vendor/all-recent-activities`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching all recent activities:', error);
+    throw error;
+  }
+};
+
+// Get all customers for vendor
+export const getVendorCustomers = async () => {
+  try {
+    const token = await AsyncStorage.getItem("auth_token");
+    const response = await axios({
+      method: 'GET',
+      url: `${API_URL}/bookings/vendor/customers`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching vendor customers:', error);
+    throw error;
+  }
+};
+
+// Get total bookings for vendor
+export const getTotalBookings = async () => {
+  try {
+    const token = await AsyncStorage.getItem("auth_token");
+    const response = await axios({
+      method: 'GET',
+      url: `${API_URL}/bookings/vendor/total-bookings`,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching total bookings:', error);
+    throw error;
+  }
+};

@@ -312,7 +312,12 @@ const DashboardScreen = ({ navigation }) => {
         navigation.navigate("CustomersList");
         break;
       case "ratings":
-        navigation.navigate("RatingsReviews");
+        navigation.navigate('MainApp', {
+          screen: 'Dashboard',
+          params: {
+            screen: 'ReviewDetails'
+          }
+        });
         break;
     }
   };
@@ -648,9 +653,15 @@ const DashboardScreen = ({ navigation }) => {
                   time={getTimeAgo(recentActivities.latestReview.created_at)}
                   rating={recentActivities.latestReview.rating}
             onPress={() =>
-              navigation.navigate("ReviewDetails", {
-                      reviewId: recentActivities.latestReview.id,
-                      title: `Review - ${recentActivities.latestReview.user_name}`,
+              navigation.navigate('MainApp', {
+                screen: 'Dashboard',
+                params: {
+                  screen: 'ReviewDetails',
+                  params: {
+                    reviewId: recentActivities.latestReview.id,
+                    title: `Review - ${recentActivities.latestReview.user_name}`,
+                  }
+                }
               })
             }
           />

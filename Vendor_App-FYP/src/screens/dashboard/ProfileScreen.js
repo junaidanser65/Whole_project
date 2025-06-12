@@ -6,7 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../contexts/AuthContext';
 import { locationService } from '../../services/locationService';
 import { websocketService } from '../../services/websocketService';
-import { apiClient } from '../../services/api';
+import { apiClient, getTotalBookings, getVendorReviews } from '../../services/api';
 import { useFocusEffect } from '@react-navigation/native';
 
 const menuItems = [
@@ -51,8 +51,12 @@ const ProfileScreen = ({ navigation }) => {
   const [isAvailable, setIsAvailable] = useState(user?.isAvailable || false);
   const [profileData, setProfileData] = useState(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [stats, setStats] = useState({
+    totalBookings: 0,
+    totalReviews: 0
+  });
 
-  // Fetch profile data
+  // Fetch profile data and stats
   const fetchProfile = async () => {
     try {
       if (user?.id) {
@@ -61,6 +65,24 @@ const ProfileScreen = ({ navigation }) => {
         console.log('Raw profile data received:', profile);
         console.log('Profile image URL:', profile?.profile_image);
         setProfileData(profile);
+
+        // Fetch total bookings
+        const bookingsResponse = await getTotalBookings();
+        if (bookingsResponse.success) {
+          setStats(prev => ({
+            ...prev,
+            totalBookings: bookingsResponse.total_bookings
+          }));
+        }
+
+        // Fetch total reviews
+        const reviewsResponse = await getVendorReviews();
+        if (reviewsResponse.success) {
+          setStats(prev => ({
+            ...prev,
+            totalReviews: reviewsResponse.reviews.length
+          }));
+        }
       }
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -220,17 +242,12 @@ const ProfileScreen = ({ navigation }) => {
             </Text>
             <View style={styles.statsContainer}>
               <View style={styles.statItem}>
-                <Text style={styles.statNumber}>12</Text>
+                <Text style={styles.statNumber}>{stats.totalBookings}</Text>
                 <Text style={styles.statLabel}>Orders</Text>
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={styles.statNumber}>4</Text>
-                <Text style={styles.statLabel}>Favorites</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statNumber}>2</Text>
+                <Text style={styles.statNumber}>{stats.totalReviews}</Text>
                 <Text style={styles.statLabel}>Reviews</Text>
               </View>
             </View>
