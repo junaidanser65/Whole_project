@@ -1,4 +1,0 @@
-dependencies {
-    // ... other dependencies
-    implementation project(':@react-native-community_datetimepicker')
-} 
