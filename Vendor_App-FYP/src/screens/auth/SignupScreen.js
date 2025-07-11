@@ -117,8 +117,26 @@ const SignupScreen = ({ navigation }) => {
        return;
      }
 
+     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+     if (!emailRegex.test(formData.email)) {
+       const errorMessage = "Please enter a valid email address.";
+       alert(errorMessage);
+       setSignupError(errorMessage);
+       return;
+     }
+
+     const phoneRegex = /^03\d{9}$/;
+     if (!phoneRegex.test(formData.phone_number)) {
+       const errorMessage =
+         "Please enter a valid Pakistani phone number, e.g., 03001234567.";
+       alert(errorMessage);
+       setSignupError(errorMessage);
+       return;
+     }
+
      if (formData.password.length < 6) {
        const errorMessage = "Password must be at least 6 characters long";
+       alert(errorMessage);
        setSignupError(errorMessage);
        return;
      }
@@ -438,14 +456,14 @@ const SignupScreen = ({ navigation }) => {
 
                     <View style={styles.inputWrapper}>
                       <Icon
-                        name="credit-card"
+                        name="phone"
                         type="material"
                         size={24}
                         color="rgba(255, 255, 255, 0.8)"
                         style={styles.inputIcon}
                       />
                       <Input
-                        placeholder="CNIC Number"
+                        placeholder="Phone Number"
                         value={formData.phone_number}
                         onChangeText={(value) =>
                           updateFormData("phone_number", value)

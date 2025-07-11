@@ -11,6 +11,11 @@ export default function PaymentScreen({ route, navigation }) {
   const [selectedMethod, setSelectedMethod] = useState('card');
   const [isProcessing, setIsProcessing] = useState(false);
   const { updateBooking } = useBooking();
+  const [cardNumber, setCardNumber] = useState('');
+  const [expiryDate, setExpiryDate] = useState('');
+  const [cvv, setCvv] = useState('');
+  const [cardholderName, setCardholderName] = useState('');
+  const [errors, setErrors] = useState({});
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
@@ -33,7 +38,57 @@ export default function PaymentScreen({ route, navigation }) {
     });
   };
 
+  const validateForm = () => {
+    const newErrors = {};
+
+    // Card Number validation
+    if (!cardNumber) {
+      newErrors.cardNumber = 'Card number is required.';
+    } else if (cardNumber.replace(/\s/g, '').length !== 16) {
+      newErrors.cardNumber = 'Please enter a valid 16-digit card number.';
+    }
+
+    // Expiry Date validation
+    if (!expiryDate) {
+      newErrors.expiryDate = 'Expiry date is required.';
+    } else if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiryDate)) {
+      newErrors.expiryDate = 'Please use MM/YY format.';
+    } else {
+      const [month, year] = expiryDate.split('/');
+      const expiryYear = parseInt(`20${year}`);
+      const expiryMonth = parseInt(month);
+      const currentYear = new Date().getFullYear();
+      const currentMonth = new Date().getMonth() + 1;
+
+      if (expiryYear < currentYear || (expiryYear === currentYear && expiryMonth < currentMonth)) {
+        newErrors.expiryDate = 'Card is expired.';
+      }
+    }
+
+    // CVV validation
+    if (!cvv) {
+      newErrors.cvv = 'CVV is required.';
+    } else if (!/^\d{3,4}$/.test(cvv)) {
+      newErrors.cvv = 'Please enter a valid CVV.';
+    }
+
+    // Cardholder Name validation
+    if (!cardholderName.trim()) {
+      newErrors.cardholderName = 'Cardholder name is required.';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handlePayment = async () => {
+    if (selectedMethod === 'card') {
+      const isValid = validateForm();
+      if (!isValid) {
+        return;
+      }
+    }
+
     try {
       setIsProcessing(true);
       console.log('Starting payment process for bookings:', bookings);
@@ -170,23 +225,58 @@ export default function PaymentScreen({ route, navigation }) {
             placeholder="Card Number"
             leftIcon={<Icon name="credit-card" color={colors.textLight} size={20} />}
             keyboardType="number-pad"
+            value={cardNumber}
+            onChangeText={(text) => {
+              setCardNumber(text.replace(/\s/g, '').replace(/(\d{4})/g, '$1 ').trim());
+              if (errors.cardNumber) setErrors({ ...errors, cardNumber: '' });
+            }}
+            errorMessage={errors.cardNumber}
+            maxLength={19}
           />
           <View style={styles.cardRow}>
             <Input
               containerStyle={styles.expiryInput}
               placeholder="MM/YY"
               keyboardType="number-pad"
+              value={expiryDate}
+              onChangeText={(text) => {
+                let newText = text.replace(/\D/g, '');
+                if (newText.length > 4) {
+                  newText = newText.slice(0, 4);
+                }
+                if (newText.length > 2) {
+                  newText = newText.slice(0, 2) + '/' + newText.slice(2);
+                }
+
+                setExpiryDate(newText);
+                if (errors.expiryDate) setErrors({ ...errors, expiryDate: '' });
+              }}
+              errorMessage={errors.expiryDate}
+              maxLength={5}
             />
             <Input
               containerStyle={styles.cvvInput}
               placeholder="CVV"
               keyboardType="number-pad"
               secureTextEntry
+              value={cvv}
+              onChangeText={(text) => {
+                setCvv(text);
+                if (errors.cvv) setErrors({ ...errors, cvv: '' });
+              }}
+              errorMessage={errors.cvv}
+              maxLength={4}
             />
           </View>
           <Input
             placeholder="Cardholder Name"
             leftIcon={<Icon name="person" color={colors.textLight} size={20} />}
+            value={cardholderName}
+            onChangeText={(text) => {
+              setCardholderName(text);
+              if (errors.cardholderName) setErrors({ ...errors, cardholderName: '' });
+            }}
+            errorMessage={errors.cardholderName}
           />
         </View>
 

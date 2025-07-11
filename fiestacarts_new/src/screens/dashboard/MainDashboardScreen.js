@@ -698,9 +698,6 @@ export default function MainDashboardScreen({ navigation }) {
                 <View style={styles.section}>
                   <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Special Offers</Text>
-                    <TouchableOpacity>
-                      <Text style={styles.seeAllText}>View All</Text>
-                    </TouchableOpacity>
                   </View>
                   <ScrollView 
                     horizontal 
@@ -717,9 +714,6 @@ export default function MainDashboardScreen({ navigation }) {
                             <Text style={styles.offerTitle}>{offer.title}</Text>
                             <Text style={styles.offerDescription}>{offer.description}</Text>
                             <View style={styles.offerMeta}>
-                              <View style={styles.offerCodeContainer}>
-                                <Text style={styles.offerCode}>{offer.code}</Text>
-                              </View>
                               <Text style={styles.offerExpiry}>Expires: {offer.expiryDate}</Text>
                             </View>
                           </View>
@@ -733,9 +727,6 @@ export default function MainDashboardScreen({ navigation }) {
                 <View style={styles.section}>
                   <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>Featured Vendors</Text>
-                    <TouchableOpacity>
-                      <Text style={styles.seeAllText}>See All</Text>
-                    </TouchableOpacity>
                   </View>
                   <ScrollView
                     horizontal
@@ -758,9 +749,6 @@ export default function MainDashboardScreen({ navigation }) {
                 <View style={styles.section}>
                   <View style={styles.sectionHeader}>
                     <Text style={styles.sectionTitle}>All Vendors</Text>
-                    <TouchableOpacity>
-                      <Text style={styles.seeAllText}>See All</Text>
-                    </TouchableOpacity>
                   </View>
                   <FlatList
                     data={vendors}

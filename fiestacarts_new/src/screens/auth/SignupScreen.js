@@ -24,6 +24,20 @@ export default function SignupScreen({ navigation }) {
       return;
     }
 
+    // Phone number validation for Pakistani numbers
+    const phoneRegex = /^0[0-9]{10}$/;
+    if (!phoneRegex.test(formData.phoneNumber)) {
+      setError('Please provide a valid Pakistani phone number (e.g., 03001234567)');
+      return;
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Please provide a valid email address');
+      return;
+    }
+
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;

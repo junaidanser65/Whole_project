@@ -39,10 +39,21 @@ export default function SavedVendorsScreen({ navigation }) {
       <TouchableOpacity
         onPress={() => navigation.navigate('VendorDetails', { vendor })}
       >
-        <Card.Image
-          source={{ uri: vendor.image_url }}
-          style={styles.vendorImage}
-        />
+        {vendor.profile_image && vendor.profile_image.trim() !== '' ? (
+          <Card.Image
+            source={{ uri: vendor.profile_image }}
+            style={styles.vendorImage}
+          />
+        ) : (
+          <View style={[styles.vendorImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#f0f0f0' }]}> 
+            <Icon
+              name="store"
+              type="material"
+              size={64}
+              color={colors.primary}
+            />
+          </View>
+        )}
         <View style={styles.cardContent}>
           <View style={styles.cardHeader}>
             <Text style={styles.vendorName}>{vendor.name}</Text>

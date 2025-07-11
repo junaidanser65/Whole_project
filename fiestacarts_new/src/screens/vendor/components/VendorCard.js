@@ -25,11 +25,22 @@ const VendorCard = ({ vendor, onPress, featured = false, style }) => {
   return (
     <Card containerStyle={[styles.card, featured && styles.featuredCard, style]}>
       <TouchableOpacity onPress={onPress}>
-        <Image
-          source={{ uri: vendor.profile_image }}
-          style={styles.image}
-          resizeMode="cover"
-        />
+        {vendor.profile_image && vendor.profile_image.trim() !== '' ? (
+          <Image
+            source={{ uri: vendor.profile_image }}
+            style={styles.image}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[styles.image, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#f0f0f0' }]}> 
+            <Icon
+              name="store"
+              type="material"
+              size={64}
+              color={colors.primary}
+            />
+          </View>
+        )}
         <View style={styles.content}>
           <View style={styles.header}>
             <Text style={styles.name} numberOfLines={1}>

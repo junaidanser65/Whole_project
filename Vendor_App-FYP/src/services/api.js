@@ -5,7 +5,7 @@ import axios from "axios";
 // 192.168.18.8
 // const API_URL = "http://localhost:5000/api";
 // const API_URL = "http://192.168.18.8:5000/api";
-export const API_URL = "http://192.168.142.240:5000/api";//ushna /  hamza bhai ke mobile ka
+export const API_URL = "http://192.168.233.240:5000/api";//ushna /  hamza bhai ke mobile ka
 // const API_URL = "http://192.168.72.42:5000/api";//mere mobile ka
 
 // Helper function to handle API responses
