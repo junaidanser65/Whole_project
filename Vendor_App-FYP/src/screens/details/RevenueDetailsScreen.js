@@ -167,7 +167,7 @@ const RevenueDetailsScreen = ({ route, navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView 
+      <ScrollView
         style={styles.content}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -181,17 +181,18 @@ const RevenueDetailsScreen = ({ route, navigation }) => {
             style={styles.headerGradient}
           >
             <View style={styles.headerContent}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.backButton}
                 onPress={() => navigation.goBack()}
               >
                 <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
               </TouchableOpacity>
-              
+
               <View style={styles.headerTitleSection}>
                 <RNText style={styles.headerTitle}>Revenue Analytics</RNText>
                 <RNText style={styles.headerSubtitle}>
-                  {selectedPeriod === "week" ? "Weekly" : "Monthly"} performance overview
+                  {selectedPeriod === "week" ? "Weekly" : "Monthly"} performance
+                  overview
                 </RNText>
               </View>
             </View>
@@ -203,13 +204,16 @@ const RevenueDetailsScreen = ({ route, navigation }) => {
                 {formatCurrency(getTotalRevenue())}
               </RNText>
               <View style={styles.growthIndicator}>
-                <Ionicons 
-                  name={getRevenueGrowth() >= 0 ? "trending-up" : "trending-down"} 
-                  size={16} 
-                  color="#FFFFFF" 
+                <Ionicons
+                  name={
+                    getRevenueGrowth() >= 0 ? "trending-up" : "trending-down"
+                  }
+                  size={16}
+                  color="#FFFFFF"
                 />
                 <RNText style={styles.growthPercentage}>
-                  {Math.abs(getRevenueGrowth()).toFixed(1)}% vs last {selectedPeriod}
+                  {Math.abs(getRevenueGrowth()).toFixed(1)}% vs last{" "}
+                  {selectedPeriod}
                 </RNText>
               </View>
             </View>
@@ -238,7 +242,11 @@ const RevenueDetailsScreen = ({ route, navigation }) => {
             <View style={styles.statCard}>
               <View style={styles.statCardHeader}>
                 <View style={styles.statIconContainer}>
-                  <Ionicons name="analytics-outline" size={24} color="#6366F1" />
+                  <Ionicons
+                    name="analytics-outline"
+                    size={24}
+                    color="#6366F1"
+                  />
                 </View>
                 <View style={styles.trendBadge}>
                   <Ionicons name="trending-up" size={12} color="#10B981" />
@@ -258,9 +266,11 @@ const RevenueDetailsScreen = ({ route, navigation }) => {
           <View style={styles.chartHeader}>
             <View style={styles.chartTitleContainer}>
               <RNText style={styles.chartTitle}>Revenue Trends</RNText>
-              <RNText style={styles.chartSubtitle}>Track your earnings performance</RNText>
+              <RNText style={styles.chartSubtitle}>
+                Track your earnings performance
+              </RNText>
             </View>
-            
+
             <View style={styles.chartControls}>
               <View style={styles.periodSelector}>
                 {["week", "month"].map((period) => (
@@ -275,7 +285,8 @@ const RevenueDetailsScreen = ({ route, navigation }) => {
                     <RNText
                       style={[
                         styles.periodButtonText,
-                        selectedPeriod === period && styles.periodButtonTextActive,
+                        selectedPeriod === period &&
+                          styles.periodButtonTextActive,
                       ]}
                     >
                       {period.charAt(0).toUpperCase() + period.slice(1)}
@@ -283,7 +294,7 @@ const RevenueDetailsScreen = ({ route, navigation }) => {
                   </TouchableOpacity>
                 ))}
               </View>
-              
+
               <TouchableOpacity
                 style={styles.chartTypeButton}
                 onPress={() =>
@@ -291,7 +302,11 @@ const RevenueDetailsScreen = ({ route, navigation }) => {
                 }
               >
                 <Ionicons
-                  name={selectedChart === "line" ? "bar-chart-outline" : "trending-up"}
+                  name={
+                    selectedChart === "line"
+                      ? "bar-chart-outline"
+                      : "trending-up"
+                  }
                   size={20}
                   color="#6366F1"
                 />
@@ -352,7 +367,9 @@ const RevenueDetailsScreen = ({ route, navigation }) => {
           <View style={styles.transactionsHeader}>
             <View>
               <RNText style={styles.sectionTitle}>Recent Transactions</RNText>
-              <RNText style={styles.sectionSubtitle}>Latest revenue activities</RNText>
+              <RNText style={styles.sectionSubtitle}>
+                Latest revenue activities
+              </RNText>
             </View>
             <TouchableOpacity style={styles.viewAllButton}>
               <RNText style={styles.viewAllText}>View All</RNText>
@@ -361,28 +378,38 @@ const RevenueDetailsScreen = ({ route, navigation }) => {
           </View>
 
           <View style={styles.transactionsList}>
-            {revenueData?.datasets?.[0]?.data && revenueData.datasets[0].data.length > 0 ? (
+            {revenueData?.datasets?.[0]?.data &&
+            revenueData.datasets[0].data.length > 0 ? (
               [...revenueData.datasets[0].data]
                 .map((amount, index) => ({
                   id: index,
-                  title: `${selectedPeriod === "week" ? "Daily" : "Monthly"} Revenue`,
-                  date: revenueData.labels?.[index] || `${selectedPeriod} ${index + 1}`,
+                  title: `${
+                    selectedPeriod === "week" ? "Daily" : "Monthly"
+                  } Revenue`,
+                  date:
+                    revenueData.labels?.[index] ||
+                    `${selectedPeriod} ${index + 1}`,
                   amount: amount || 0,
                 }))
+                .filter((transaction) => transaction.amount > 0) // Only include non-zero revenues
                 .reverse()
                 .slice(0, 5)
                 .map((transaction, index) => (
-                  <TransactionCard 
-                    key={transaction.id} 
-                    transaction={transaction} 
+                  <TransactionCard
+                    key={transaction.id}
+                    transaction={transaction}
                     index={index}
                   />
                 ))
             ) : (
               <View style={styles.emptyState}>
                 <Ionicons name="analytics-outline" size={48} color="#CBD5E1" />
-                <RNText style={styles.emptyStateText}>No transactions yet</RNText>
-                <RNText style={styles.emptyStateSubtext}>Revenue data will appear here once available</RNText>
+                <RNText style={styles.emptyStateText}>
+                  No transactions yet
+                </RNText>
+                <RNText style={styles.emptyStateSubtext}>
+                  Revenue data will appear here once available
+                </RNText>
               </View>
             )}
           </View>

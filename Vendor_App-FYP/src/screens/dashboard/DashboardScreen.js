@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -9,8 +9,10 @@ import {
   useWindowDimensions,
   RefreshControl,
   ActivityIndicator,
+  Animated,
 } from "react-native";
 import { LineChart } from "react-native-chart-kit";
+import { Easing } from 'react-native';
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../../contexts/AuthContext";
@@ -73,6 +75,12 @@ const DashboardScreen = ({ navigation }) => {
     latestReview: null
   });
   const [isLoadingActivities, setIsLoadingActivities] = useState(true);
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const lastScrollY = useRef(0);
+  const translateY = useRef(new Animated.Value(0)).current;
+  const isAnimating = useRef(false);
+  const cardHeight = 180; // Approximate height of the balance card
+  const scrollThreshold = 5; // Reduced threshold for more responsive feel
 
   const fetchTotalBalance = async () => {
     try {
@@ -337,12 +345,52 @@ const DashboardScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container} edges={["top"]}>
-      <ScrollView
+      <Animated.ScrollView
         contentContainerStyle={styles.contentContainer}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         showsVerticalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          {
+            useNativeDriver: true,
+            listener: (event) => {
+              const currentScrollY = event.nativeEvent.contentOffset.y;
+              const scrollDiff = currentScrollY - lastScrollY.current;
+              
+              // Skip if we're already animating or scroll is too small
+              if (Math.abs(scrollDiff) < 1 || isAnimating.current) {
+                lastScrollY.current = currentScrollY;
+                return;
+              }
+              
+              // Determine scroll direction based on scroll diff
+              const scrollingDown = scrollDiff > 0;
+              const targetY = scrollingDown ? -cardHeight : 0;
+              
+              // Only trigger animation if we're not already at the target position
+              if ((scrollingDown && translateY._value !== -cardHeight) || 
+                  (!scrollingDown && translateY._value !== 0)) {
+                isAnimating.current = true;
+                
+                Animated.timing(translateY, {
+                  toValue: targetY,
+                  duration: 250,
+                  useNativeDriver: true,
+                  easing: scrollingDown ? 
+                    Easing.out(Easing.quad) : // Smooth out when hiding
+                    Easing.out(Easing.quad)   // Smooth in when showing
+                }).start(({ finished }) => {
+                  if (finished) isAnimating.current = false;
+                });
+              }
+              
+              lastScrollY.current = currentScrollY;
+            },
+          }
+        )}
+        scrollEventThrottle={16}
       >
         {/* Header Section */}
         <View style={styles.headerSection}>
@@ -366,7 +414,22 @@ const DashboardScreen = ({ navigation }) => {
             </View>
 
         {/* Balance Card */}
-        <View style={styles.balanceCard}>
+        <Animated.View 
+          style={[
+            styles.balanceCard, 
+            { 
+              transform: [{ translateY: translateY }],
+              position: 'relative',
+              zIndex: 1000,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 3,
+              elevation: 5,
+              backgroundColor: '#fff', // Ensure background color is set for smooth shadow
+            }
+          ]}
+        >
           <LinearGradient
             colors={["#6366F1", "#8B5CF6", "#A855F7"]}
             style={styles.balanceGradient}
@@ -398,7 +461,7 @@ const DashboardScreen = ({ navigation }) => {
               </View>
             </View>
           </LinearGradient>
-        </View>
+        </Animated.View>
 
         {/* Stats Section */}
         <View style={styles.statsSection}>
@@ -710,7 +773,7 @@ const DashboardScreen = ({ navigation }) => {
             </>
           )}
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 };
