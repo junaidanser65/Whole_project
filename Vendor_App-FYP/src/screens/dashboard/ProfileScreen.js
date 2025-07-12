@@ -304,19 +304,27 @@ const ProfileScreen = ({ navigation }) => {
         >
           {/* Back Button */}
           <View style={styles.headerTop}>
-            <TouchableOpacity 
-              style={styles.backButton} 
+            <TouchableOpacity
+              style={styles.backButton}
               onPress={() => navigation.goBack()}
             >
               <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>Profile</Text>
+            {/* <Text style={styles.headerTitle}>Profile</Text> */}
             <View style={styles.headerRight} />
           </View>
 
           {/* Profile Header Content */}
           <View style={styles.profileHeader}>
             <View style={styles.avatarSection}>
+              <View style={styles.userInfo}>
+                <Text style={styles.userName}>
+                  {profileData?.name || user?.name || "User"}
+                </Text>
+                <Text style={styles.userEmail}>
+                  {profileData?.email || user?.email || "email@example.com"}
+                </Text>
+              </View>
               <View style={styles.avatarContainer}>
                 <Avatar
                   size={120}
@@ -326,7 +334,11 @@ const ProfileScreen = ({ navigation }) => {
                       ? { uri: profileData.profile_image }
                       : undefined
                   }
-                  icon={!profileData?.profile_image ? { name: 'store', type: 'material' } : undefined}
+                  icon={
+                    !profileData?.profile_image
+                      ? { name: "store", type: "material" }
+                      : undefined
+                  }
                   containerStyle={styles.avatar}
                 >
                   <Avatar.Accessory
@@ -335,15 +347,6 @@ const ProfileScreen = ({ navigation }) => {
                     containerStyle={styles.avatarAccessory}
                   />
                 </Avatar>
-              </View>
-              
-              <View style={styles.userInfo}>
-                <Text style={styles.userName}>
-                  {profileData?.name || user?.name || "User"}
-                </Text>
-                <Text style={styles.userEmail}>
-                  {profileData?.email || user?.email || "email@example.com"}
-                </Text>
               </View>
             </View>
 
@@ -363,14 +366,23 @@ const ProfileScreen = ({ navigation }) => {
             <View style={styles.availabilityCard}>
               <View style={styles.availabilityContent}>
                 <View>
-                  <Text style={styles.availabilityTitle}>Availability Status</Text>
+                  <Text style={styles.availabilityTitle}>
+                    Availability Status
+                  </Text>
                   <Text style={styles.availabilitySubtitle}>
-                    {isAvailable ? 'You are currently available for orders' : 'You are currently unavailable'}
+                    {isAvailable
+                      ? "You are currently available for orders"
+                      : "You are currently unavailable"}
                   </Text>
                 </View>
                 <Switch
-                  trackColor={{ false: 'rgba(255, 255, 255, 0.3)', true: 'rgba(255, 255, 255, 0.4)' }}
-                  thumbColor={isAvailable ? '#FFFFFF' : 'rgba(255, 255, 255, 0.8)'}
+                  trackColor={{
+                    false: "rgba(255, 255, 255, 0.3)",
+                    true: "rgba(255, 255, 255, 0.4)",
+                  }}
+                  thumbColor={
+                    isAvailable ? "#FFFFFF" : "rgba(255, 255, 255, 0.8)"
+                  }
                   ios_backgroundColor="rgba(255, 255, 255, 0.3)"
                   onValueChange={handleAvailabilityToggle}
                   value={isAvailable}
@@ -388,10 +400,12 @@ const ProfileScreen = ({ navigation }) => {
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>{section.section}</Text>
                 <Text style={styles.sectionSubtitle}>
-                  {section.section === 'Account' ? 'Manage your account settings' : 'App preferences and support'}
+                  {section.section === "Account"
+                    ? "Manage your account settings"
+                    : "App preferences and support"}
                 </Text>
               </View>
-              
+
               <View style={styles.menuGrid}>
                 {section.items.map((item, index) => (
                   <TouchableOpacity
@@ -401,14 +415,19 @@ const ProfileScreen = ({ navigation }) => {
                     activeOpacity={0.7}
                   >
                     <View style={styles.menuItemContent}>
-                      <View style={[styles.menuIconContainer, { backgroundColor: getIconBackground(item.icon) }]}>
-                        <Ionicons 
-                          name={getIoniconName(item.icon)} 
-                          size={24} 
-                          color={getIconColor(item.icon)} 
+                      <View
+                        style={[
+                          styles.menuIconContainer,
+                          { backgroundColor: getIconBackground(item.icon) },
+                        ]}
+                      >
+                        <Ionicons
+                          name={getIoniconName(item.icon)}
+                          size={24}
+                          color={getIconColor(item.icon)}
                         />
                       </View>
-                      
+
                       <View style={styles.menuTextContainer}>
                         <Text style={styles.menuItemTitle}>{item.title}</Text>
                         <Text style={styles.menuItemSubtitle}>
@@ -422,7 +441,11 @@ const ProfileScreen = ({ navigation }) => {
                             <Text style={styles.badgeText}>{item.badge}</Text>
                           </View>
                         )}
-                        <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
+                        <Ionicons
+                          name="chevron-forward"
+                          size={20}
+                          color="#94A3B8"
+                        />
                       </View>
                     </View>
                   </TouchableOpacity>
@@ -468,11 +491,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 40,
+    paddingTop: 20,
     paddingBottom: 20,
   },
   backButton: {
-    padding: 8,
+    padding: 2,
   },
   headerTitle: {
     fontSize: 24,

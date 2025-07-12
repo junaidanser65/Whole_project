@@ -1,50 +1,50 @@
-import React from 'react';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Icon } from 'react-native-elements';
-import { useAuth } from '../contexts/AuthContext';
-import { BookingsProvider } from '../contexts/BookingsContext';
-import TimingsScreen from '../screens/timing/TimingsScreen';
+import React from "react";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { Icon } from "react-native-elements";
+import { useAuth } from "../contexts/AuthContext";
+import { BookingsProvider } from "../contexts/BookingsContext";
+import TimingsScreen from "../screens/timing/TimingsScreen";
 
 // Auth Screens
-import WelcomeScreen from '../screens/auth/WelcomeScreen';
-import LoginScreen from '../screens/auth/LoginScreen';
-import SignupScreen from '../screens/auth/SignupScreen';
+import WelcomeScreen from "../screens/auth/WelcomeScreen";
+import LoginScreen from "../screens/auth/LoginScreen";
+import SignupScreen from "../screens/auth/SignupScreen";
 
 // Main App Screens
 // import VendorListScreen from '../screens/vendor/VendorListScreen';
 // import VendorDetailsScreen from '../screens/vendor/VendorDetailsScreen';
-import DashboardScreen from '../screens/dashboard/DashboardScreen';
-import ProfileScreen from '../screens/dashboard/ProfileScreen';
-import MenuScreen from '../screens/menu/MenuScreen';
-import AllActivitiesScreen from '../screens/details/AllActivitiesScreen';
+import DashboardScreen from "../screens/dashboard/DashboardScreen";
+import ProfileScreen from "../screens/dashboard/ProfileScreen";
+import MenuScreen from "../screens/menu/MenuScreen";
+import AllActivitiesScreen from "../screens/details/AllActivitiesScreen";
 // import ContactVendorScreen from '../screens/vendor/ContactVendorScreen';
 
 // Profile Screens
-import BookingsScreen from '../screens/bookings/BookingsScreen';
-import PaymentMethodsScreen from '../screens/profile/PaymentMethodsScreen';
-import NotificationsScreen from '../screens/profile/NotificationsScreen';
-import HelpSupportScreen from '../screens/profile/HelpSupportScreen';
-import PrivacyPolicyScreen from '../screens/profile/PrivacyPolicyScreen';
-import EditProfileScreen from '../screens/profile/EditProfileScreen';
-import BookingDetails from '../screens/bookings/BookingDetails';
+import BookingsScreen from "../screens/bookings/BookingsScreen";
+import PaymentMethodsScreen from "../screens/profile/PaymentMethodsScreen";
+import NotificationsScreen from "../screens/profile/NotificationsScreen";
+import HelpSupportScreen from "../screens/profile/HelpSupportScreen";
+import PrivacyPolicyScreen from "../screens/profile/PrivacyPolicyScreen";
+import EditProfileScreen from "../screens/profile/EditProfileScreen";
+import BookingDetails from "../screens/bookings/BookingDetails";
 
 // Money Management Screens
-import ReceiveMoneyScreen from '../screens/money-management/ReceiveMoneyScreen';
+import ReceiveMoneyScreen from "../screens/money-management/ReceiveMoneyScreen";
 
 // Detail Screens
-import RevenueDetailsScreen from '../screens/details/RevenueDetailsScreen';
-import CustomersListScreen from '../screens/details/CustomersListScreen';
-import ReviewDetailsScreen from '../screens/details/ReviewDetailsScreen';
-import ChatScreen from '../screens/chat/ChatScreen';
+import RevenueDetailsScreen from "../screens/details/RevenueDetailsScreen";
+import CustomersListScreen from "../screens/details/CustomersListScreen";
+import ReviewDetailsScreen from "../screens/details/ReviewDetailsScreen";
+import ChatScreen from "../screens/chat/ChatScreen";
 
 // Menu Screens
-import AddMenuItemScreen from '../screens/menu/AddMenuItemScreen';
-import MenuItemDetailsScreen from '../screens/menu/MenuItemDetailsScreen';
-import EditMenuItemScreen from '../screens/menu/EditMenuItemScreen';
+import AddMenuItemScreen from "../screens/menu/AddMenuItemScreen";
+import MenuItemDetailsScreen from "../screens/menu/MenuItemDetailsScreen";
+import EditMenuItemScreen from "../screens/menu/EditMenuItemScreen";
 
 // Chat Screens
-import ChatDetailsScreen from '../screens/chat/ChatDetailsScreen';
+import ChatDetailsScreen from "../screens/chat/ChatDetailsScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -63,78 +63,49 @@ const ProfileStackNavigator = () => {
         name="EditProfile"
         component={EditProfileScreen}
         options={{
-          title: "Edit Profile",
-          headerShown: false ,
-          headerStyle: {
-            backgroundColor: "#F5F6FA",
-          },
-          headerTintColor: "#2D3436",
+          headerShown: false,
         }}
       />
       <ProfileStack.Screen
         name="Bookings"
         component={BookingsScreen}
         options={{
-          title: "My Bookings",
-          headerStyle: {
-            backgroundColor: "#F5F6FA",
-          },
-          headerTintColor: "#2D3436",
+          headerShown: false,
         }}
       />
       <ProfileStack.Screen
         name="PaymentMethods"
         component={PaymentMethodsScreen}
         options={{
-          title: "Payment Methods",
-          headerStyle: {
-            backgroundColor: "#F5F6FA",
-          },
-          headerTintColor: "#2D3436",
+          headerShown: false,
         }}
       />
       <ProfileStack.Screen
         name="Notifications"
         component={NotificationsScreen}
         options={{
-          title: "Notifications",
-          headerStyle: {
-            backgroundColor: "#F5F6FA",
-          },
-          headerTintColor: "#2D3436",
+          headerShown: false,
         }}
       />
       <ProfileStack.Screen
         name="Support"
         component={HelpSupportScreen}
         options={{
-          title: "Help & Support",
-          headerStyle: {
-            backgroundColor: "#F5F6FA",
-          },
-          headerTintColor: "#2D3436",
+          headerShown: false,
         }}
       />
       <ProfileStack.Screen
         name="Privacy"
         component={PrivacyPolicyScreen}
         options={{
-          title: "Privacy Policy",
-          headerStyle: {
-            backgroundColor: "#F5F6FA",
-          },
-          headerTintColor: "#2D3436",
+          headerShown: false,
         }}
       />
       <ProfileStack.Screen
         name="BookingDetails"
         component={BookingDetails}
         options={{
-          title: "Booking Details",
-          headerStyle: {
-            backgroundColor: "#F5F6FA",
-          },
-          headerTintColor: "#2D3436",
+          headerShown: false,
         }}
       />
     </ProfileStack.Navigator>
@@ -145,10 +116,22 @@ const DashboardStackNavigator = () => {
   return (
     <DashboardStack.Navigator screenOptions={{ headerShown: false }}>
       <DashboardStack.Screen name="DashboardMain" component={DashboardScreen} />
-      <DashboardStack.Screen name="RevenueDetails" component={RevenueDetailsScreen} />
-      <DashboardStack.Screen name="AllActivities" component={AllActivitiesScreen} />
-      <DashboardStack.Screen name="ReviewDetails" component={ReviewDetailsScreen} />
-      <DashboardStack.Screen name="CustomersList" component={CustomersListScreen} />
+      <DashboardStack.Screen
+        name="RevenueDetails"
+        component={RevenueDetailsScreen}
+      />
+      <DashboardStack.Screen
+        name="AllActivities"
+        component={AllActivitiesScreen}
+      />
+      <DashboardStack.Screen
+        name="ReviewDetails"
+        component={ReviewDetailsScreen}
+      />
+      <DashboardStack.Screen
+        name="CustomersList"
+        component={CustomersListScreen}
+      />
     </DashboardStack.Navigator>
   );
 };
@@ -161,20 +144,22 @@ const MainTabNavigator = () => {
         tabBarIcon: ({ focused, color, size }) => {
           let iconName;
 
-          if (route.name === 'Dashboard') {
-            iconName = focused ? 'dashboard' : 'dashboard';
-          } else if (route.name === 'Menu') {
-            iconName = focused ? 'restaurant-menu' : 'restaurant-menu';
-          } else if (route.name === 'Timings') {
-            iconName = focused ? 'schedule' : 'schedule';
-          } else if (route.name === 'Chat') {
-            iconName = focused ? 'chat' : 'chat-bubble-outline';
+          if (route.name === "Dashboard") {
+            iconName = focused ? "dashboard" : "dashboard";
+          } else if (route.name === "Menu") {
+            iconName = focused ? "restaurant-menu" : "restaurant-menu";
+          } else if (route.name === "Timings") {
+            iconName = focused ? "schedule" : "schedule";
+          } else if (route.name === "Chat") {
+            iconName = focused ? "chat" : "chat-bubble-outline";
           }
 
-          return <Icon name={iconName} type="material" size={size} color={color} />;
+          return (
+            <Icon name={iconName} type="material" size={size} color={color} />
+          );
         },
-        tabBarActiveTintColor: '#6366F1',
-        tabBarInactiveTintColor: '#94A3B8',
+        tabBarActiveTintColor: "#6366F1",
+        tabBarInactiveTintColor: "#94A3B8",
       })}
     >
       <Tab.Screen name="Dashboard" component={DashboardStackNavigator} />
@@ -205,38 +190,36 @@ const AppNavigator = () => {
         <Stack.Screen name="ReceiveMoney" component={ReceiveMoneyScreen} />
         <Stack.Screen name="AllActivities" component={AllActivitiesScreen} />
         <Stack.Screen name="BookingDetails" component={BookingDetails} />
-        <Stack.Screen 
-          name="ChatDetails" 
-          component={ChatDetailsScreen} 
-          options={{ 
+        <Stack.Screen
+          name="ChatDetails"
+          component={ChatDetailsScreen}
+          options={{
             headerShown: false,
-            presentation: 'modal'
-          }} 
+            presentation: "modal",
+          }}
         />
-        <Stack.Screen 
-          name="AddMenuItem" 
+        <Stack.Screen
+          name="AddMenuItem"
           component={AddMenuItemScreen}
           options={{
             headerShown: false,
-            title: 'Add Menu Item',
+            title: "Add Menu Item",
           }}
         />
-        <Stack.Screen 
-          name="MenuItemDetails" 
+        <Stack.Screen
+          name="MenuItemDetails"
           component={MenuItemDetailsScreen}
           options={{
             headerShown: false,
-            title: 'Menu Item Details',
-
+            title: "Menu Item Details",
           }}
         />
-        <Stack.Screen 
-          name="EditMenuItem" 
+        <Stack.Screen
+          name="EditMenuItem"
           component={EditMenuItemScreen}
           options={{
             headerShown: false,
-            title: 'Edit Menu Item',
-
+            title: "Edit Menu Item",
           }}
         />
       </Stack.Navigator>
@@ -244,4 +227,4 @@ const AppNavigator = () => {
   );
 };
 
-export default AppNavigator; 
+export default AppNavigator;

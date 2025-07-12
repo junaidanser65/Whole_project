@@ -746,7 +746,10 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient colors={["#ff4500", "#cc3700"]} style={styles.gradient}>
+      <LinearGradient
+        colors={["#6366F1", "#8B5CF6", "#A855F7"]}
+        style={styles.gradient}
+      >
         <View style={styles.doodleContainer}>
           {/* First Row */}
           <FoodDoodle
@@ -1139,7 +1142,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   signupButton: {
-    backgroundColor: "#ff4500",
+    backgroundColor: "#6366F1",
     borderRadius: 15,
     paddingVertical: 15,
     marginTop: 10,
