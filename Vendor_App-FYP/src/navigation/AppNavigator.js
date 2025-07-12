@@ -30,17 +30,11 @@ import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import BookingDetails from '../screens/bookings/BookingDetails';
 
 // Money Management Screens
-import AddBalanceScreen from '../screens/money-management/AddBalanceScreen';
-import SendMoneyScreen from '../screens/money-management/SendMoneyScreen';
 import ReceiveMoneyScreen from '../screens/money-management/ReceiveMoneyScreen';
 
 // Detail Screens
 import RevenueDetailsScreen from '../screens/details/RevenueDetailsScreen';
-import BookingsListScreen from '../screens/details/BookingsListScreen';
 import CustomersListScreen from '../screens/details/CustomersListScreen';
-import CustomerDetailsScreen from '../screens/details/CustomerDetailsScreen';
-import RatingsReviewsScreen from '../screens/details/RatingsReviewsScreen';
-import PaymentDetailsScreen from '../screens/details/PaymentDetailsScreen';
 import ReviewDetailsScreen from '../screens/details/ReviewDetailsScreen';
 import ChatScreen from '../screens/chat/ChatScreen';
 
@@ -171,28 +165,22 @@ const MainTabNavigator = () => {
             iconName = focused ? 'dashboard' : 'dashboard';
           } else if (route.name === 'Menu') {
             iconName = focused ? 'restaurant-menu' : 'restaurant-menu';
-          } else if (route.name === 'Bookings') {
-            iconName = focused ? 'event' : 'event';
           } else if (route.name === 'Timings') {
             iconName = focused ? 'schedule' : 'schedule';
           } else if (route.name === 'Chat') {
             iconName = focused ? 'chat' : 'chat-bubble-outline';
-          } else if (route.name === 'Profile') {
-            iconName = focused ? 'person' : 'person-outline';
           }
 
           return <Icon name={iconName} type="material" size={size} color={color} />;
         },
-        tabBarActiveTintColor: '#ff4500',
-        tabBarInactiveTintColor: 'gray',
+        tabBarActiveTintColor: '#6366F1',
+        tabBarInactiveTintColor: '#94A3B8',
       })}
     >
       <Tab.Screen name="Dashboard" component={DashboardStackNavigator} />
       <Tab.Screen name="Menu" component={MenuScreen} />
-      <Tab.Screen name="Bookings" component={BookingsScreen} />
       <Tab.Screen name="Timings" component={TimingsScreen} />
       <Tab.Screen name="Chat" component={ChatScreen} />
-      <Tab.Screen name="Profile" component={ProfileStackNavigator} />
     </Tab.Navigator>
   );
 };
@@ -207,15 +195,16 @@ const AppNavigator = () => {
         <Stack.Screen name="Login" component={LoginScreen} />
         <Stack.Screen name="Signup" component={SignupScreen} />
         <Stack.Screen name="MainApp" component={MainTabNavigator} />
-        <Stack.Screen name="AddBalance" component={AddBalanceScreen} />
-        <Stack.Screen name="SendMoney" component={SendMoneyScreen} />
+        <Stack.Screen name="Profile" component={ProfileStackNavigator} />
+        <Stack.Screen name="Bookings" component={BookingsScreen} />
+        <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+        <Stack.Screen name="PaymentMethods" component={PaymentMethodsScreen} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} />
+        <Stack.Screen name="Support" component={HelpSupportScreen} />
+        <Stack.Screen name="Privacy" component={PrivacyPolicyScreen} />
         <Stack.Screen name="ReceiveMoney" component={ReceiveMoneyScreen} />
-        <Stack.Screen name="BookingsList" component={BookingsListScreen} />
-        <Stack.Screen name="CustomerDetails" component={CustomerDetailsScreen} />
-        <Stack.Screen name="RatingsReviews" component={RatingsReviewsScreen} />
         <Stack.Screen name="AllActivities" component={AllActivitiesScreen} />
         <Stack.Screen name="BookingDetails" component={BookingDetails} />
-        <Stack.Screen name="PaymentDetails" component={PaymentDetailsScreen} />
         <Stack.Screen 
           name="ChatDetails" 
           component={ChatDetailsScreen} 
@@ -228,36 +217,26 @@ const AppNavigator = () => {
           name="AddMenuItem" 
           component={AddMenuItemScreen}
           options={{
-            headerShown: true,
+            headerShown: false,
             title: 'Add Menu Item',
-            headerStyle: {
-              backgroundColor: '#F8F9FA',
-            },
-            headerTintColor: '#2D3436',
           }}
         />
         <Stack.Screen 
           name="MenuItemDetails" 
           component={MenuItemDetailsScreen}
           options={{
-            headerShown: true,
+            headerShown: false,
             title: 'Menu Item Details',
-            headerStyle: {
-              backgroundColor: '#F8F9FA',
-            },
-            headerTintColor: '#2D3436',
+
           }}
         />
         <Stack.Screen 
           name="EditMenuItem" 
           component={EditMenuItemScreen}
           options={{
-            headerShown: true,
+            headerShown: false,
             title: 'Edit Menu Item',
-            headerStyle: {
-              backgroundColor: '#F8F9FA',
-            },
-            headerTintColor: '#2D3436',
+
           }}
         />
       </Stack.Navigator>

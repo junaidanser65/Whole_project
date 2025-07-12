@@ -10,8 +10,13 @@ import {
   StatusBar,
   SafeAreaView,
   Alert,
+  Text,
+  TextInput,
+  Image,
+  Animated,
 } from 'react-native';
-import { Text, Input, Icon } from '@rneui/themed';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../contexts/AuthContext';
 import { getMessages, sendMessage, API_URL } from '../../services/api';
 import { formatDistanceToNow } from 'date-fns';
@@ -28,6 +33,7 @@ export default function ChatDetailsScreen({ route, navigation }) {
   const [currentConversationId, setCurrentConversationId] = useState(conversationId);
   const flatListRef = useRef(null);
   const ws = useRef(null);
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     if (currentConversationId) {
@@ -36,6 +42,14 @@ export default function ChatDetailsScreen({ route, navigation }) {
     } else if (userId) {
       createNewConversation();
     }
+    
+    // Animate entrance
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+    
     return () => {
       if (ws.current) {
         ws.current.close();
@@ -101,14 +115,10 @@ export default function ChatDetailsScreen({ route, navigation }) {
       let errorMessage = 'Failed to create conversation. ';
       
       if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
         errorMessage += error.response.data?.message || `Server error: ${error.response.status}`;
       } else if (error.request) {
-        // The request was made but no response was received
         errorMessage += 'No response from server. Please check your connection.';
       } else {
-        // Something happened in setting up the request that triggered an Error
         errorMessage += error.message;
       }
       
@@ -124,7 +134,7 @@ export default function ChatDetailsScreen({ route, navigation }) {
       return;
     }
 
-    // Extract host from API_URL (e.g., "192.168.38.240:5000" from "http://192.168.38.240:5000/api")
+    // Extract host from API_URL
     const host = API_URL.replace('http://', '').replace('/api', '');
     const wsUrl = `ws://${host}/ws`;
     
@@ -208,15 +218,46 @@ export default function ChatDetailsScreen({ route, navigation }) {
     }
   };
 
-  const renderMessage = ({ item }) => {
+  const formatMessageTime = (timestamp) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInHours = (now - date) / (1000 * 60 * 60);
+    
+    if (diffInHours < 1) {
+      return 'Just now';
+    } else if (diffInHours < 24) {
+      return formatDistanceToNow(date, { addSuffix: true });
+    } else {
+      return date.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+      });
+    }
+  };
+
+  const renderMessage = ({ item, index }) => {
     const isVendor = item.sender_type === 'vendor';
-    const messageTime = formatDistanceToNow(new Date(item.created_at), { addSuffix: true });
+    const messageTime = formatMessageTime(item.created_at);
+    const isLastMessage = index === messages.length - 1;
 
     return (
-      <View style={[
-        styles.messageContainer,
-        isVendor ? styles.vendorMessage : styles.userMessage
-      ]}>
+      <Animated.View 
+        style={[
+          styles.messageContainer,
+          isVendor ? styles.vendorMessage : styles.userMessage,
+          isLastMessage && styles.lastMessage,
+          {
+            opacity: fadeAnim,
+            transform: [{ 
+              translateY: fadeAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [20, 0]
+              })
+            }]
+          }
+        ]}
+      >
         <View style={[
           styles.messageBubble,
           isVendor ? styles.vendorBubble : styles.userBubble
@@ -234,20 +275,40 @@ export default function ChatDetailsScreen({ route, navigation }) {
             {messageTime}
           </Text>
         </View>
-      </View>
+      </Animated.View>
     );
   };
 
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar
-          barStyle="dark-content"
-          backgroundColor="#fff"
-          translucent={true}
-        />
+        <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
+        
+        {/* Header */}
+        <LinearGradient
+          colors={["#6366F1", "#8B5CF6", "#A855F7"]}
+          style={styles.header}
+        >
+          <View style={styles.headerContent}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={24} color="#FFF" />
+            </TouchableOpacity>
+            
+            <View style={styles.headerCenter}>
+              <Text style={styles.headerTitle}>{userName || 'Chat'}</Text>
+              <Text style={styles.headerSubtitle}>Loading messages...</Text>
+            </View>
+            
+            <View style={styles.headerRight} />
+          </View>
+        </LinearGradient>
+        
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#ff4500" />
+          <ActivityIndicator size="large" color="#6366F1" />
+          <Text style={styles.loadingText}>Loading conversation...</Text>
         </View>
       </SafeAreaView>
     );
@@ -255,60 +316,113 @@ export default function ChatDetailsScreen({ route, navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="#fff"
-        translucent={true}
-      />
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Icon name="arrow-back" type="material" size={24} color="#333" />
-        </TouchableOpacity>
-        <View style={styles.headerInfo}>
-          <Text style={styles.headerName}>{userName}</Text>
-          <Text style={styles.headerStatus}>Online</Text>
+      <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
+      
+      {/* Header */}
+      <LinearGradient
+        colors={["#6366F1", "#8B5CF6", "#A855F7"]}
+        style={styles.header}
+      >
+        <View style={styles.headerContent}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#FFF" />
+          </TouchableOpacity>
+          
+          <View style={styles.headerCenter}>
+            <View style={styles.userInfo}>
+              {userImage ? (
+                <Image source={{ uri: userImage }} style={styles.headerAvatar} />
+              ) : (
+                <LinearGradient
+                  colors={["rgba(255,255,255,0.3)", "rgba(255,255,255,0.1)"]}
+                  style={styles.headerAvatarPlaceholder}
+                >
+                  <Text style={styles.headerAvatarText}>
+                    {userName?.charAt(0).toUpperCase() || 'U'}
+                  </Text>
+                </LinearGradient>
+              )}
+              <View style={styles.userDetails}>
+                <Text style={styles.headerTitle}>{userName || 'Customer'}</Text>
+                <Text style={styles.headerSubtitle}>
+                  {messages.length} {messages.length === 1 ? 'message' : 'messages'}
+                </Text>
+              </View>
+            </View>
+          </View>
+          
+          <View style={styles.headerRight} />
         </View>
-      </View>
+      </LinearGradient>
 
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        <FlatList
-          ref={flatListRef}
-          data={messages}
-          renderItem={renderMessage}
-          keyExtractor={item => item.id.toString()}
-          contentContainerStyle={styles.messagesList}
-          onContentSizeChange={scrollToBottom}
-          onLayout={scrollToBottom}
-        />
+        {messages.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="chatbubble-outline" size={64} color="#CBD5E1" />
+            <Text style={styles.emptyTitle}>Start the conversation</Text>
+            <Text style={styles.emptySubtitle}>
+              Send a message to {userName || 'customer'} to get started
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            renderItem={renderMessage}
+            keyExtractor={item => item.id.toString()}
+            contentContainerStyle={styles.messagesList}
+            showsVerticalScrollIndicator={false}
+            onContentSizeChange={scrollToBottom}
+            onLayout={scrollToBottom}
+          />
+        )}
 
         <View style={styles.inputContainer}>
-          <Input
-            placeholder="Type a message..."
-            value={newMessage}
-            onChangeText={setNewMessage}
-            containerStyle={styles.input}
-            inputContainerStyle={styles.inputField}
-            rightIcon={
-              <TouchableOpacity
-                onPress={handleSend}
-                disabled={sending || !newMessage.trim()}
+          <View style={styles.inputWrapper}>
+            <View style={styles.textInputContainer}>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Type a message..."
+                placeholderTextColor="#94A3B8"
+                value={newMessage}
+                onChangeText={setNewMessage}
+                multiline
+                maxLength={1000}
+              />
+            </View>
+            
+            <TouchableOpacity
+              style={[
+                styles.sendButton,
+                (!newMessage.trim() || sending) && styles.sendButtonDisabled
+              ]}
+              onPress={handleSend}
+              disabled={sending || !newMessage.trim()}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={
+                  sending || !newMessage.trim() 
+                    ? ['#94A3B8', '#94A3B8'] 
+                    : ['#6366F1', '#8B5CF6']
+                }
+                style={styles.sendButtonGradient}
               >
-                <Icon
-                  name="send"
-                  type="material"
-                  color={sending || !newMessage.trim() ? '#666' : '#ff4500'}
-                  size={24}
-                />
-              </TouchableOpacity>
-            }
-          />
+                {sending ? (
+                  <ActivityIndicator size="small" color="#FFF" />
+                ) : (
+                  <Ionicons name="send" size={20} color="#FFF" />
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -318,48 +432,120 @@ export default function ChatDetailsScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    backgroundColor: '#F8FAFC',
   },
   header: {
+    paddingTop: 10,
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    backgroundColor: '#fff',
+    justifyContent: 'space-between',
   },
   backButton: {
-    marginRight: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  headerInfo: {
+  headerCenter: {
     flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 16,
   },
-  headerName: {
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  headerAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: 12,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  headerAvatarPlaceholder: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  headerAvatarText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  userDetails: {
+    alignItems: 'center',
+  },
+  headerTitle: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
+    fontWeight: '700',
+    color: '#FFF',
+    marginBottom: 2,
   },
-  headerStatus: {
+  headerSubtitle: {
     fontSize: 12,
-    color: '#666',
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
+  },
+
+  headerRight: {
+    width: 36,
   },
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8FAFC',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    padding: 40,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#64748B',
+    marginTop: 16,
+    fontWeight: '500',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 24,
   },
   messagesList: {
-    padding: 16,
+    padding: 20,
+    paddingBottom: 10,
   },
   messageContainer: {
-    marginBottom: 8,
-    maxWidth: '80%',
+    marginBottom: 12,
+    maxWidth: '85%',
   },
   vendorMessage: {
     alignSelf: 'flex-end',
@@ -367,58 +553,99 @@ const styles = StyleSheet.create({
   userMessage: {
     alignSelf: 'flex-start',
   },
+  lastMessage: {
+    marginBottom: 20,
+  },
   messageBubble: {
-    padding: 8,
-    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 20,
     maxWidth: '100%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
   vendorBubble: {
-    backgroundColor: '#ff4500',
-    borderTopRightRadius: 4,
+    backgroundColor: '#6366F1',
+    borderTopRightRadius: 8,
   },
   userBubble: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: '#FFF',
+    borderTopLeftRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   messageText: {
-    fontSize: 14,
+    fontSize: 15,
+    lineHeight: 20,
     marginBottom: 4,
   },
   vendorText: {
-    color: '#fff',
+    color: '#FFF',
   },
   userText: {
-    color: '#333',
+    color: '#0F172A',
   },
   messageTime: {
-    fontSize: 12,
+    fontSize: 11,
     alignSelf: 'flex-end',
+    fontWeight: '500',
   },
   vendorTime: {
-    color: '#fff',
-    opacity: 0.8,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
   userTime: {
-    color: '#666',
+    color: '#64748B',
   },
   inputContainer: {
-    padding: 8,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFF',
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
+    borderTopColor: '#E2E8F0',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
-  input: {
-    paddingHorizontal: 0,
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 12,
   },
-  inputField: {
+  textInputContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 24,
+    borderColor: '#E2E8F0',
     paddingHorizontal: 16,
+    paddingVertical: 8,
+    maxHeight: 100,
+  },
+  textInput: {
+    fontSize: 16,
+    color: '#0F172A',
+    paddingVertical: 8,
+    maxHeight: 80,
+    minHeight: 20,
+  },
+  sendButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: 'hidden',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  sendButtonDisabled: {
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  sendButtonGradient: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 }); 

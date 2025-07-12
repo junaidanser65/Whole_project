@@ -49,8 +49,8 @@ const DashboardScreen = ({ navigation }) => {
     datasets: [
       {
         data: Array(7).fill(0),
-        color: (opacity = 1) => `rgba(255, 107, 107, ${opacity})`,
-        strokeWidth: 2,
+        color: (opacity = 1) => `rgba(99, 102, 241, ${opacity})`,
+        strokeWidth: 3,
       },
     ],
   });
@@ -60,8 +60,8 @@ const DashboardScreen = ({ navigation }) => {
     datasets: [
       {
         data: Array(6).fill(0),
-        color: (opacity = 1) => `rgba(255, 107, 107, ${opacity})`,
-        strokeWidth: 2,
+        color: (opacity = 1) => `rgba(99, 102, 241, ${opacity})`,
+        strokeWidth: 3,
       },
     ],
   });
@@ -245,18 +245,18 @@ const DashboardScreen = ({ navigation }) => {
     backgroundGradientFrom: "#ffffff",
     backgroundGradientTo: "#ffffff",
     decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(255, 85, 0, ${opacity})`,
-    labelColor: () => "#636E72",
+    color: (opacity = 1) => `rgba(99, 102, 241, ${opacity})`,
+    labelColor: () => "#64748B",
     style: { borderRadius: 16 },
     propsForDots: {
-      r: "4",
+      r: "6",
       strokeWidth: "2",
-      stroke: "#ff4500",
+      stroke: "#6366F1",
     },
     propsForBackgroundLines: {
       strokeDasharray: "",
       strokeWidth: 0.5,
-      stroke: "rgba(0, 0, 0, 0.05)",
+      stroke: "rgba(100, 116, 139, 0.1)",
     },
     formatYLabel: (value) => `$${value}`,
   };
@@ -285,10 +285,6 @@ const DashboardScreen = ({ navigation }) => {
 
   const handleReceiveMoney = () => {
     navigation.navigate("ReceiveMoney");
-  };
-
-  const handleChat = () => {
-    navigation.navigate('Chat');
   };
 
   const handleViewRevenue = () => {
@@ -322,61 +318,7 @@ const DashboardScreen = ({ navigation }) => {
     }
   };
 
-  const StatCard = ({ icon, label, value, trend, color, type }) => (
-    <TouchableOpacity
-      style={styles.statCardNew}
-      onPress={() => handleStatCardPress(type)}
-    >
-      <LinearGradient
-        colors={[color + "15", color + "05"]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.statGradient}
-      >
-        <View style={styles.statContent}>
-          <View style={[styles.iconCircle, { backgroundColor: `${color}15` }]}>
-            <Ionicons name={icon} size={20} color={color} />
-          </View>
-          <View style={styles.statInfo}>
-            <Text style={styles.statLabel}>
-              {" "}
-              {label.split(" ").length > 1
-                ? label.split(" ").join("\n")
-                : label}
-            </Text>
-            <Text style={[styles.statValue, { color }]}>{value}</Text>
-          </View>
-        </View>
-        {trend && (
-          <View
-            style={[
-              styles.trendBadge,
-              {
-                backgroundColor:
-                  trend > 0
-                    ? "rgba(46, 213, 115, 0.15)"
-                    : "rgba(255, 71, 87, 0.15)",
-              },
-            ]}
-          >
-            <Ionicons
-              name={trend > 0 ? "trending-up" : "trending-down"}
-              size={14}
-              color={trend > 0 ? "#2ed573" : "#ff4757"}
-            />
-            <Text
-              style={[
-                styles.trendText,
-                { color: trend > 0 ? "#2ed573" : "#ff4757" },
-              ]}
-            >
-              {Math.abs(trend)}%
-            </Text>
-          </View>
-        )}
-      </LinearGradient>
-    </TouchableOpacity>
-  );
+
 
   // Helper function to format time ago
   const getTimeAgo = (dateString) => {
@@ -400,25 +342,14 @@ const DashboardScreen = ({ navigation }) => {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
+        showsVerticalScrollIndicator={false}
       >
-        {/* Main Balance Card */}
-        <View style={styles.balanceCard}>
-          <LinearGradient
-            colors={["#ff4500", "#cc3700"]}
-            style={styles.balanceGradient}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          >
-            <View style={styles.balanceHeader}>
+        {/* Header Section */}
+        <View style={styles.headerSection}>
+          <View style={styles.greetingContainer}>
               <View>
-                <Text style={styles.balanceLabel}>Total Balance</Text>
-                {isLoadingBalance ? (
-                  <ActivityIndicator color="#fff" size="small" />
-                ) : (
-                  <Text style={styles.balanceAmount}>
-                    ${Number(totalBalance).toFixed(2)}
-                  </Text>
-                )}
+              <Text style={styles.greetingText}>Good morning</Text>
+              <Text style={styles.welcomeText}>{user?.name || "Vendor"}</Text>
               </View>
               <TouchableOpacity
                 style={styles.avatarContainer}
@@ -426,99 +357,157 @@ const DashboardScreen = ({ navigation }) => {
               >
                 <Image
                   source={{
-                    uri: `https://ui-avatars.com/api/?name=${initials}&background=ff4500&color=fff`,
+                  uri: `https://ui-avatars.com/api/?name=${initials}&background=6366F1&color=fff`,
                   }}
                   style={styles.avatar}
                 />
               </TouchableOpacity>
+          </View>
             </View>
 
-            <View style={styles.quickActions}>
-              {/* <TouchableOpacity
-                style={styles.actionButton}
-                onPress={handleAddBalance}
-              >
-                <Ionicons name="add-circle-outline" size={24} color="#fff" />
-                <Text style={styles.actionText}>Add</Text>
-              </TouchableOpacity> */}
-              {/* <TouchableOpacity
-                style={styles.actionButton}
-                onPress={handleSendMoney}
-              >
-                <Ionicons name="arrow-up-circle-outline" size={24} color="#fff" />
-                <Text style={styles.actionText}>Send</Text>
-              </TouchableOpacity> */}
+        {/* Balance Card */}
+        <View style={styles.balanceCard}>
+          <LinearGradient
+            colors={["#6366F1", "#8B5CF6", "#A855F7"]}
+            style={styles.balanceGradient}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+          >
+            <View style={styles.balanceContent}>
+              <Text style={styles.balanceLabel}>Total Balance</Text>
+              {isLoadingBalance ? (
+                <ActivityIndicator color="#fff" size="large" />
+              ) : (
+                <Text style={styles.balanceAmount}>
+                  ${Number(totalBalance).toFixed(2)}
+                </Text>
+              )}
+              
+              <View style={styles.quickActions}>
               <TouchableOpacity
                 style={styles.actionButton}
                 onPress={handleReceiveMoney}
               >
                 <Ionicons
-                  name="arrow-down-circle-outline"
-                  size={24}
+                    name="download-outline"
+                    size={20}
                   color="#fff"
                 />
                 <Text style={styles.actionText}>Receive</Text>
               </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.actionButton}
-                onPress={handleChat}
-              >
-                <Ionicons
-                  name="chatbubble-outline"
-                  size={24}
-                  color="#fff"
-                />
-                <Text style={styles.actionText}>Chat</Text>
-              </TouchableOpacity>
+              </View>
             </View>
           </LinearGradient>
         </View>
 
-        {/* Stats Grid */}
-        <View style={styles.statsContainer}>
-          <Text style={styles.statsTitle}>Overview</Text>
+        {/* Stats Section */}
+        <View style={styles.statsSection}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Overview</Text>
+            <Text style={styles.sectionSubtitle}>Your business metrics</Text>
+          </View>
+          
           <View style={styles.statsGrid}>
-            <StatCard
-              icon="wallet-outline"
-              label="Today's Revenue"
-              value={isLoadingRevenue ? "..." : `$${Number(todayRevenue).toFixed(2)}`}
-              trend={12.5}
-              color="#ff4500"
-              type="revenue"
-            />
-            <StatCard
-              icon="calendar-outline"
-              label="New Bookings"
-              value={isLoadingBookings ? "..." : newBookings.toString()}
-              trend={-5.2}
-              color="#4834d4"
-              type="bookings"
-            />
-            <StatCard
-              icon="people-outline"
-              label="Total Customers"
-              value={isLoadingCustomers ? "..." : totalCustomers.toString()}
-              trend={8.1}
-              color="#20bf6b"
-              type="customers"
-            />
-            <StatCard
-              icon="star-outline"
-              label="Avg Rating"
-              value={isLoadingRating ? "..." : averageRating.toString()}
-              trend={2.3}
-              color="#f39c12"
-              type="ratings"
-            />
+            <View style={styles.statsRow}>
+              <TouchableOpacity
+                style={styles.statCard}
+                onPress={() => handleStatCardPress("revenue")}
+              >
+                <View style={[styles.statCardAccent, { backgroundColor: "#6366F1" }]} />
+                <View style={styles.statHeader}>
+                  <View style={[styles.statIcon, { backgroundColor: "#EEF2FF" }]}>
+                    <Ionicons name="wallet-outline" size={24} color="#6366F1" />
+          </View>
+        </View>
+                <Text style={styles.statValue}>
+                  {isLoadingRevenue ? "..." : `$${Number(todayRevenue).toFixed(2)}`}
+                </Text>
+                <Text style={styles.statLabel}>TODAY'S REVENUE</Text>
+                <View style={styles.trendContainer}>
+                  <View style={[styles.trendBadge, { backgroundColor: "rgba(34, 197, 94, 0.1)" }]}>
+                    <Ionicons name="trending-up" size={12} color="#22C55E" />
+                    <Text style={[styles.trendText, { color: "#22C55E" }]}>12.5%</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.statCard}
+                onPress={() => handleStatCardPress("bookings")}
+              >
+                <View style={[styles.statCardAccent, { backgroundColor: "#00D4AA" }]} />
+                <View style={styles.statHeader}>
+                  <View style={[styles.statIcon, { backgroundColor: "#ECFDF5" }]}>
+                    <Ionicons name="calendar-outline" size={24} color="#00D4AA" />
+                  </View>
+                </View>
+                <Text style={styles.statValue}>
+                  {isLoadingBookings ? "..." : newBookings.toString()}
+                </Text>
+                <Text style={styles.statLabel}>NEW BOOKINGS</Text>
+                <View style={styles.trendContainer}>
+                  <View style={[styles.trendBadge, { backgroundColor: "rgba(239, 68, 68, 0.1)" }]}>
+                    <Ionicons name="trending-down" size={12} color="#EF4444" />
+                    <Text style={[styles.trendText, { color: "#EF4444" }]}>5.2%</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.statsRow}>
+              <TouchableOpacity
+                style={styles.statCard}
+                onPress={() => handleStatCardPress("customers")}
+              >
+                <View style={[styles.statCardAccent, { backgroundColor: "#FF6B9D" }]} />
+                <View style={styles.statHeader}>
+                  <View style={[styles.statIcon, { backgroundColor: "#FEF7FF" }]}>
+                    <Ionicons name="people-outline" size={24} color="#FF6B9D" />
+                  </View>
+                </View>
+                <Text style={styles.statValue}>
+                  {isLoadingCustomers ? "..." : totalCustomers.toString()}
+                </Text>
+                <Text style={styles.statLabel}>TOTAL CUSTOMERS</Text>
+                <View style={styles.trendContainer}>
+                  <View style={[styles.trendBadge, { backgroundColor: "rgba(34, 197, 94, 0.1)" }]}>
+                    <Ionicons name="trending-up" size={12} color="#22C55E" />
+                    <Text style={[styles.trendText, { color: "#22C55E" }]}>8.1%</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.statCard}
+                onPress={() => handleStatCardPress("ratings")}
+              >
+                <View style={[styles.statCardAccent, { backgroundColor: "#F59E0B" }]} />
+                <View style={styles.statHeader}>
+                  <View style={[styles.statIcon, { backgroundColor: "#FEF3C7" }]}>
+                    <Ionicons name="star-outline" size={24} color="#F59E0B" />
+                  </View>
+                </View>
+                <Text style={styles.statValue}>
+                  {isLoadingRating ? "..." : averageRating.toString()}
+                </Text>
+                <Text style={styles.statLabel}>AVG RATING</Text>
+                <View style={styles.trendContainer}>
+                  <View style={[styles.trendBadge, { backgroundColor: "rgba(34, 197, 94, 0.1)" }]}>
+                    <Ionicons name="trending-up" size={12} color="#22C55E" />
+                    <Text style={[styles.trendText, { color: "#22C55E" }]}>2.3%</Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
-        {/* Chart Section - Updated */}
-        <View style={styles.chartContainer}>
+        {/* Chart Section */}
+        <View style={styles.chartSection}>
           <View style={styles.chartHeader}>
-            <View>
-              <Text style={styles.chartTitle}>Revenue</Text>
-              <Text style={styles.chartTitle}>Overview</Text>
+            <View style={styles.chartTitleContainer}>
+              <Text style={styles.chartTitle}>Revenue Overview</Text>
+              <Text style={styles.chartSubtitle}>Track your earnings performance</Text>
             </View>
             <View style={styles.periodSelector}>
               <TouchableOpacity
@@ -564,18 +553,18 @@ const DashboardScreen = ({ navigation }) => {
             </View>
           </View>
           {isLoadingChart ? (
-            <ActivityIndicator size="large" color="#ff4500" style={styles.chartLoader} />
+            <ActivityIndicator size="large" color="#6366F1" style={styles.chartLoader} />
           ) : (
           <LineChart
               data={selectedPeriod === "weekly" ? weeklyData : monthlyData}
-            width={width - 50}
-            height={180}
+            width={width - 56}
+            height={240}
             chartConfig={{
               ...chartConfig,
               propsForBackgroundLines: {
                 strokeDasharray: "",
                 strokeWidth: 0.5,
-                stroke: "rgba(0, 0, 0, 0.05)",
+                stroke: "rgba(100, 116, 139, 0.1)",
               },
             }}
             bezier
@@ -584,74 +573,97 @@ const DashboardScreen = ({ navigation }) => {
           )}
         </View>
 
-        {/* Recent Activity */}
-        <View style={styles.activityContainer}>
-          <View style={styles.sectionHeader}>
+        {/* Activity Section */}
+        <View style={styles.activitySection}>
+          <View style={styles.activityHeader}>
+            <View>
             <Text style={styles.sectionTitle}>Recent Activity</Text>
+              <Text style={styles.sectionSubtitle}>Latest business updates</Text>
+            </View>
             <TouchableOpacity
               onPress={() => navigation.navigate("AllActivities")}
               style={styles.seeAllButton}
             >
               <Text style={styles.seeAllText}>View All</Text>
-              <Ionicons name="chevron-forward" size={16} color="#ff4500" />
+              <Ionicons name="chevron-forward" size={16} color="#6366F1" />
             </TouchableOpacity>
           </View>
 
           {isLoadingActivities ? (
-            <ActivityIndicator size="large" color="#ff4500" style={styles.activityLoader} />
+            <ActivityIndicator size="large" color="#6366F1" style={styles.activityLoader} />
           ) : (
             <>
               {recentActivities.pendingBooking && (
-          <ActivityItem
-            type="booking"
-            title="New Booking Request"
-                  description={`${recentActivities.pendingBooking.user_name} - ${new Date(recentActivities.pendingBooking.booking_date).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}`}
-                  time={getTimeAgo(recentActivities.pendingBooking.created_at)}
-                  amount={`$${recentActivities.pendingBooking.total_amount}`}
+                <TouchableOpacity 
+                  style={styles.activityCard}
             onPress={() =>
                     navigation.navigate("Bookings", { 
                       initialTab: 'pending',
                       bookingId: recentActivities.pendingBooking.id 
               })
             }
-          />
-              )}
-
-              {recentActivities.latestPayment && (
-          <ActivityItem
-            type="payment"
-            title="Payment Received"
-                  description={`${recentActivities.latestPayment.user_name} - ${new Date(recentActivities.latestPayment.booking_date).toLocaleDateString('en-US', {
+                >
+                  <View style={styles.activityContent}>
+                    <View style={[styles.activityIconContainer, styles.bookingIcon]}>
+                      <Ionicons name="calendar" size={24} color="#6366F1" />
+                    </View>
+                    <View style={styles.activityDetails}>
+                      <Text style={styles.activityTitle}>New Booking Request</Text>
+                      <Text style={styles.activityDescription}>
+                        {`${recentActivities.pendingBooking.user_name} - ${new Date(recentActivities.pendingBooking.booking_date).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric'
                   })}`}
-                  time={getTimeAgo(recentActivities.latestPayment.updated_at)}
-                  amount={`$${recentActivities.latestPayment.total_amount}`}
+                      </Text>
+                      <Text style={styles.activityTime}>
+                        {getTimeAgo(recentActivities.pendingBooking.created_at)}
+                      </Text>
+                    </View>
+                    <Text style={styles.activityAmount}>
+                      ${recentActivities.pendingBooking.total_amount}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+
+              {recentActivities.latestPayment && (
+                <TouchableOpacity 
+                  style={styles.activityCard}
             onPress={() =>
                     navigation.navigate("Bookings", { 
                       initialTab: 'completed',
                       bookingId: recentActivities.latestPayment.id 
               })
             }
-          />
-              )}
-
-              {recentActivities.latestReview && (
-          <ActivityItem
-            type="review"
-            title="New Review"
-                  description={`${recentActivities.latestReview.user_name} - ${new Date(recentActivities.latestReview.booking_date).toLocaleDateString('en-US', {
+                >
+                  <View style={styles.activityContent}>
+                    <View style={[styles.activityIconContainer, styles.paymentIcon]}>
+                      <Ionicons name="wallet" size={24} color="#00D4AA" />
+                    </View>
+                    <View style={styles.activityDetails}>
+                      <Text style={styles.activityTitle}>Payment Received</Text>
+                      <Text style={styles.activityDescription}>
+                        {`${recentActivities.latestPayment.user_name} - ${new Date(recentActivities.latestPayment.booking_date).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric'
                   })}`}
-                  time={getTimeAgo(recentActivities.latestReview.created_at)}
-                  rating={recentActivities.latestReview.rating}
+                      </Text>
+                      <Text style={styles.activityTime}>
+                        {getTimeAgo(recentActivities.latestPayment.updated_at)}
+                      </Text>
+                    </View>
+                    <Text style={styles.activityAmount}>
+                      ${recentActivities.latestPayment.total_amount}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              )}
+
+              {recentActivities.latestReview && (
+                <TouchableOpacity 
+                  style={styles.activityCard}
             onPress={() =>
               navigation.navigate('MainApp', {
                 screen: 'Dashboard',
@@ -664,7 +676,30 @@ const DashboardScreen = ({ navigation }) => {
                 }
               })
             }
-          />
+                >
+                  <View style={styles.activityContent}>
+                    <View style={[styles.activityIconContainer, styles.reviewIcon]}>
+                      <Ionicons name="star" size={24} color="#F59E0B" />
+                    </View>
+                    <View style={styles.activityDetails}>
+                      <Text style={styles.activityTitle}>New Review</Text>
+                      <Text style={styles.activityDescription}>
+                        {`${recentActivities.latestReview.user_name} - ${new Date(recentActivities.latestReview.booking_date).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}`}
+                      </Text>
+                      <Text style={styles.activityTime}>
+                        {getTimeAgo(recentActivities.latestReview.created_at)}
+                      </Text>
+                    </View>
+                    <View style={styles.ratingContainer}>
+                      <Ionicons name="star" size={16} color="#F59E0B" />
+                      <Text style={styles.ratingText}>{recentActivities.latestReview.rating}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
               )}
 
               {!recentActivities.pendingBooking && 
@@ -680,372 +715,412 @@ const DashboardScreen = ({ navigation }) => {
   );
 };
 
-const ActivityItem = ({
-  type,
-  title,
-  description,
-  time,
-  amount,
-  rating,
-  onPress,
-}) => (
-  <TouchableOpacity style={styles.activityItem} onPress={onPress}>
-    <View style={styles.activityLeft}>
-      <View style={[styles.activityIcon, styles[`${type}Icon`]]}>
-        <Ionicons
-          name={
-            type === "booking"
-              ? "calendar"
-              : type === "payment"
-              ? "wallet"
-              : "star"
-          }
-          size={20}
-          color="#fff"
-        />
-      </View>
-      <View style={styles.activityInfo}>
-        <Text style={styles.activityTitle}>{title}</Text>
-        <Text style={styles.activityDescription}>{description}</Text>
-        <Text style={styles.activityTime}>{time}</Text>
-      </View>
-    </View>
-    {amount && <Text style={styles.activityAmount}>{amount}</Text>}
-    {rating && (
-      <View style={styles.ratingContainer}>
-        <Ionicons name="star" size={16} color="#FFB800" />
-        <Text style={styles.ratingText}>{rating}</Text>
-      </View>
-    )}
-  </TouchableOpacity>
-);
+
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8F9FA",
+    backgroundColor: "#F8FAFC",
   },
   contentContainer: {
-    paddingBottom: 24,
+    paddingBottom: 40,
   },
-  balanceCard: {
-    marginTop: 20,
-    marginHorizontal: 16,
-    borderRadius: 24,
-    overflow: "hidden",
-    elevation: 4,
-    shadowColor: "#FF6B6B",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+  
+  // Header Section
+  headerSection: {
+    paddingTop: 20,
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    backgroundColor: "#FFFFFF",
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    shadowColor: "#64748B",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.06,
+    shadowRadius: 24,
+    elevation: 5,
   },
-  balanceGradient: {
-    padding: 24,
-  },
-  balanceHeader: {
+  greetingContainer: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
     marginBottom: 24,
   },
-  balanceLabel: {
+  greetingText: {
     fontSize: 16,
-    color: "rgba(255, 255, 255, 0.9)",
-    marginBottom: 8,
+    color: "#64748B",
+    fontWeight: "500",
+    marginBottom: 4,
   },
-  balanceAmount: {
-    fontSize: 32,
-    fontWeight: "600",
-    color: "#ffffff",
+  welcomeText: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#0F172A",
+    letterSpacing: -0.5,
   },
-  avatarContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
+  
+  // Balance Card - Redesigned
+  balanceCard: {
+    marginHorizontal: 24,
+    marginTop: -20,
+    borderRadius: 24,
+    overflow: "hidden",
+    shadowColor: "#6366F1",
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 8,
+    zIndex: 10,
+  },
+  balanceGradient: {
+    padding: 32,
+    position: "relative",
+  },
+  balanceContent: {
     alignItems: "center",
   },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  balanceLabel: {
+    fontSize: 14,
+    color: "rgba(255, 255, 255, 0.8)",
+    fontWeight: "500",
+    marginBottom: 8,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  balanceAmount: {
+    fontSize: 42,
+    fontWeight: "800",
+    color: "#FFFFFF",
+    letterSpacing: -1,
+    marginBottom: 24,
   },
   quickActions: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    marginTop: 16,
-    paddingHorizontal: 20,
+    justifyContent: "center",
+    gap: 16,
   },
   actionButton: {
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingVertical: 14,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backdropFilter: 'blur(20px)',
+    minWidth: 90,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   actionText: {
-    color: "#ffffff",
+    color: "#FFFFFF",
     marginTop: 8,
     fontSize: 12,
-    fontWeight: '500',
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
-  statsContainer: {
-    padding: 10,
-  },
-  statsTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: "#2D3436",
-    marginBottom: 16,
-    paddingHorizontal: 6,
-  },
-  statsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-  },
-  statCard: {
-    width: "47%",
-    height: 150,
-    marginBottom: 10,
-    backgroundColor: "#FFF",
-    borderRadius: 16,
-    padding: 0,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  statContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-  },
-  iconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+  
+  // Avatar Redesigned
+  avatarContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 10,
+    backgroundColor: '#F8FAFC',
+    shadowColor: "#64748B",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 3,
   },
-  statInfo: {
+  avatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+  },
+  
+  // Stats Section - Complete Redesign
+  statsSection: {
+    paddingHorizontal: 24,
+    marginTop: 32,
+  },
+  sectionHeader: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 24,
+    fontWeight: "700",
+    color: "#0F172A",
+    letterSpacing: -0.3,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: "#64748B",
+    marginTop: 4,
+    fontWeight: "500",
+  },
+  
+  // Modern Stats Grid
+  statsGrid: {
+    gap: 16,
+  },
+  statsRow: {
+    flexDirection: "row",
+    gap: 16,
+  },
+  statCard: {
     flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: "#64748B",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 2,
+    position: "relative",
+    overflow: "hidden",
   },
-  statLabel: {
-    fontSize: 12,
-    color: "#636E72",
-    marginBottom: 4,
+  statCardAccent: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+  },
+  statHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 16,
+  },
+  statIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
   },
   statValue: {
-    fontSize: 16,
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#0F172A",
+    letterSpacing: -0.5,
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 13,
+    color: "#64748B",
     fontWeight: "600",
-    color: "#2D3436",
+    letterSpacing: 0.3,
+  },
+  trendContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
   },
   trendBadge: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-start",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
   },
   trendText: {
     fontSize: 12,
-    fontWeight: "500",
+    fontWeight: "700",
     marginLeft: 4,
+    letterSpacing: 0.2,
   },
-  chartContainer: {
-    margin: 24,
-    padding: 20,
-    backgroundColor: "#FFF",
-    borderRadius: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
+  
+  // Chart Section - Modern Design
+  chartSection: {
+    marginHorizontal: 24,
+    marginTop: 32,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: 28,
+    shadowColor: "#64748B",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.04,
+    shadowRadius: 20,
+    elevation: 3,
   },
   chartHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 28,
+  },
+  chartTitleContainer: {
+    flex: 1,
   },
   chartTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#2D3436",
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#0F172A",
+    letterSpacing: -0.3,
+  },
+  chartSubtitle: {
+    fontSize: 14,
+    color: "#64748B",
+    marginTop: 4,
+    fontWeight: "500",
   },
   periodSelector: {
     flexDirection: "row",
-    backgroundColor: "#F8F9FA",
-    borderRadius: 12,
+    backgroundColor: "#F8FAFC",
+    borderRadius: 16,
     padding: 4,
   },
   periodButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
   },
   periodButtonActive: {
-    backgroundColor: "#ff4500",
+    backgroundColor: "#6366F1",
+    shadowColor: "#6366F1",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
   periodButtonText: {
-    fontSize: 13,
-    color: "#636E72",
+    fontSize: 14,
+    color: "#64748B",
+    fontWeight: "600",
   },
   periodButtonTextActive: {
-    color: "#FFF",
-    fontWeight: "500",
+    color: "#FFFFFF",
+    fontWeight: "700",
   },
   chart: {
-    marginTop: 8,
+    marginTop: 16,
     borderRadius: 16,
     marginLeft: -20,
-  },
-  activityContainer: {
-    paddingHorizontal: 20,
-    paddingTop: 15,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 15,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#2D3436",
-  },
-  seeAllButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 8,
-  },
-  seeAllText: {
-    color: "#ff4500",
-    fontSize: 14,
-    marginRight: 4,
-  },
-  activityItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    padding: 15,
-    borderRadius: 15,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  activityLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  activityIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  bookingIcon: {
-    backgroundColor: "#4834d4",
-  },
-  paymentIcon: {
-    backgroundColor: "#20bf6b",
-  },
-  reviewIcon: {
-    backgroundColor: "#FFB800",
-  },
-  activityInfo: {
-    flex: 1,
-  },
-  activityTitle: {
-    fontSize: 16,
-    fontWeight: "500",
-    color: "#2D3436",
-    marginBottom: 4,
-  },
-  activityDescription: {
-    fontSize: 14,
-    color: "#636E72",
-    marginBottom: 4,
-  },
-  activityTime: {
-    fontSize: 12,
-    color: "#95a5a6",
-  },
-  activityAmount: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#2D3436",
-  },
-  ratingContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  ratingText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#2D3436",
-    marginLeft: 4,
-  },
-  statCardNew: {
-    width: "50%",
-    borderRadius: 16,
-    padding: 16,
-  },
-  statGradient: {
-    padding: 16,
-    borderRadius: 16,
   },
   chartLoader: {
     marginTop: 20,
     marginBottom: 20,
   },
+  
+  // Activity Section - Complete Redesign
+  activitySection: {
+    paddingHorizontal: 24,
+    marginTop: 32,
+  },
+  activityHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  seeAllButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 16,
+    backgroundColor: "#F8FAFC",
+  },
+  seeAllText: {
+    color: "#6366F1",
+    fontSize: 14,
+    marginRight: 6,
+    fontWeight: "600",
+  },
+  
+  activityCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: "#64748B",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 16,
+    elevation: 2,
+  },
+  activityContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  activityIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+  },
+  activityDetails: {
+    flex: 1,
+  },
+  activityTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#0F172A",
+    marginBottom: 4,
+    letterSpacing: -0.2,
+  },
+  activityDescription: {
+    fontSize: 14,
+    color: "#64748B",
+    marginBottom: 6,
+    lineHeight: 20,
+    fontWeight: "500",
+  },
+  activityTime: {
+    fontSize: 12,
+    color: "#94A3B8",
+    fontWeight: "600",
+  },
+  activityAmount: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#0F172A",
+    letterSpacing: -0.3,
+  },
+  ratingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+  },
+  ratingText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#F59E0B",
+    marginLeft: 6,
+  },
+  
+  // Activity Icons
+  bookingIcon: {
+    backgroundColor: "#EEF2FF",
+  },
+  paymentIcon: {
+    backgroundColor: "#ECFDF5",
+  },
+  reviewIcon: {
+    backgroundColor: "#FEF3C7",
+  },
+  
   activityLoader: {
     marginTop: 20,
     marginBottom: 20,
   },
   noActivitiesText: {
     textAlign: 'center',
-    color: '#636E72',
+    color: '#64748B',
     fontSize: 16,
     marginTop: 20,
+    fontWeight: "600",
   },
 });
 
 export default DashboardScreen;
-// import React, { useEffect } from "react";
-// import { View, Text } from "react-native";
-// import { useAuth } from "../../contexts/AuthContext";
-
-// const DashboardScreen = () => {
-//   const { user, loading } = useAuth();
-
-//   useEffect(() => {
-//     if (user) {
-//       console.log("Logged-in User Info:", user);
-//     }
-//   }, [user]);
-
-//   if (loading) return <Text>Loading...</Text>;
-
-//   return (
-//     <View>
-//       <Text>Welcome, {user?.name || "Guest"}!</Text>
-//     </View>
-//   );
-// };
-
-// export default DashboardScreen;
-

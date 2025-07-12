@@ -7,21 +7,18 @@ import {
   Animated,
   ActivityIndicator,
   RefreshControl,
+  ScrollView,
+  Text as RNText,
+  TextInput,
 } from 'react-native';
-import { Text, SearchBar, Icon, Button } from 'react-native-elements';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { getVendorCustomers } from '../../services/api';
 
-const CUSTOMER_FILTERS = [
-  { id: 'all', label: 'All Customers' },
-  { id: 'active', label: 'Active' },
-  { id: 'new', label: 'New' },
-  { id: 'vip', label: 'VIP' }
-];
+
 
 const CustomersListScreen = ({ navigation }) => {
-  const [selectedFilter, setSelectedFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -76,70 +73,110 @@ const CustomersListScreen = ({ navigation }) => {
   };
 
   const filteredCustomers = customers.filter(customer => {
-    const matchesFilter = selectedFilter === 'all' || customer.status === selectedFilter;
     const matchesSearch = searchQuery.trim() === '' || 
       (customer.name && customer.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (customer.email && customer.email.toLowerCase().includes(searchQuery.toLowerCase())) ||
       (customer.phone_number && customer.phone_number.includes(searchQuery));
-    return matchesFilter && matchesSearch;
+    return matchesSearch;
   });
 
   const handleMessageCustomer = (customer) => {
-    navigation.navigate('Chat', {
-      customerId: customer.id,
-      customerName: customer.name,
-      customerAvatar: customer.avatar || `https://ui-avatars.com/api/?name=${customer.name[0]}&background=FF6B6B&color=fff`,
+    navigation.navigate('ChatDetails', {
+      conversationId: null,
+      userId: customer.id,
+      userName: customer.name,
+      userImage: customer.avatar || null,
     });
   };
 
-  const handleCustomerPress = (customer) => {
-    navigation.navigate('CustomerDetails', { customerId: customer.id });
+  // const handleCustomerPress = (customer) => {
+  //   navigation.navigate('CustomerDetails', { customerId: customer.id });
+  // };
+
+  const getStatusStyles = (status) => {
+    const styles = {
+      vip: {
+        badge: { backgroundColor: '#FEF3C7' },
+        text: { color: '#F59E0B' },
+        avatar: { backgroundColor: '#F59E0B' },
+      },
+      active: {
+        badge: { backgroundColor: '#DCFCE7' },
+        text: { color: '#16A34A' },
+        avatar: { backgroundColor: '#16A34A' },
+      },
+      new: {
+        badge: { backgroundColor: '#DBEAFE' },
+        text: { color: '#2563EB' },
+        avatar: { backgroundColor: '#2563EB' },
+      }
+    };
+    return styles[status] || styles.new;
   };
 
   const CustomerCard = ({ customer }) => (
     <TouchableOpacity
       style={styles.customerCard}
-      onPress={() => handleCustomerPress(customer)}
+      // onPress={() => handleCustomerPress(customer)}
+      activeOpacity={0.7}
     >
-      <View style={styles.customerHeader}>
-        <View style={styles.customerInfo}>
-          <View
-            style={[styles.avatarContainer, styles[`${customer.status}Avatar`]]}
-          >
-            <Text style={styles.avatarText}>{customer.name[0]}</Text>
+      <View style={styles.cardHeader}>
+        <View style={styles.customerSection}>
+          <View style={[styles.avatarContainer, getStatusStyles(customer.status).avatar]}>
+            <RNText style={styles.avatarText}>{customer.name[0]}</RNText>
           </View>
-          <View style={styles.customerDetails}>
-            <Text style={styles.customerName}>{customer.name}</Text>
-            <Text style={styles.customerContact}>{customer.email}</Text>
-            <Text style={styles.customerContact}>{customer.phone_number}</Text>
+          <View style={styles.customerInfo}>
+            <RNText style={styles.customerName}>{customer.name}</RNText>
+            <RNText style={styles.customerEmail}>{customer.email}</RNText>
+            <RNText style={styles.customerPhone}>{customer.phone_number}</RNText>
           </View>
         </View>
-      </View>
-
-      <View style={styles.statsContainer}>
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Total Orders</Text>
-          <Text style={styles.statValue}>{customer.totalOrders}</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Total Spent</Text>
-          <Text style={styles.statValue}>{customer.totalSpent}</Text>
-        </View>
-        <View style={styles.statDivider} />
-        <View style={styles.statItem}>
-          <Text style={styles.statLabel}>Last Order</Text>
-          <Text style={styles.statValue}>{customer.lastOrder}</Text>
-        </View>
-      </View>
-
-      <View style={styles.customerFooter}>
-        <View style={[styles.statusBadge, styles[`${customer.status}Badge`]]}>
-          <Text style={[styles.statusText, styles[`${customer.status}Text`]]}>
+        
+        <View style={[styles.statusBadge, getStatusStyles(customer.status).badge]}>
+          <RNText style={[styles.statusText, getStatusStyles(customer.status).text]}>
             {customer.status.toUpperCase()}
-          </Text>
+          </RNText>
         </View>
       </View>
+
+      <View style={styles.statsGrid}>
+        <View style={styles.statCard}>
+          <View style={styles.statIconContainer}>
+            <Ionicons name="receipt-outline" size={20} color="#6366F1" />
+          </View>
+          <View style={styles.statInfo}>
+            <RNText style={styles.statValue}>{customer.totalOrders}</RNText>
+            <RNText style={styles.statLabel}>Orders</RNText>
+          </View>
+        </View>
+
+        <View style={styles.statCard}>
+          <View style={styles.statIconContainer}>
+            <Ionicons name="cash-outline" size={20} color="#6366F1" />
+          </View>
+          <View style={styles.statInfo}>
+            <RNText style={styles.statValue}>{customer.totalSpent}</RNText>
+            <RNText style={styles.statLabel}>Spent</RNText>
+          </View>
+        </View>
+
+        <View style={styles.statCard}>
+          <View style={styles.statIconContainer}>
+            <Ionicons name="time-outline" size={20} color="#6366F1" />
+          </View>
+          <View style={styles.statInfo}>
+            <RNText style={styles.statValue} numberOfLines={1}>{customer.lastOrder}</RNText>
+            <RNText style={styles.statLabel}>Last Order</RNText>
+          </View>
+        </View>
+      </View>
+
+      <TouchableOpacity 
+        style={styles.chatButton}
+        onPress={() => handleMessageCustomer(customer)}
+      >
+        <Ionicons name="chatbubble-outline" size={20} color="#6366F1" />
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 
@@ -148,75 +185,85 @@ const CustomersListScreen = ({ navigation }) => {
     fetchCustomers();
   }, []);
 
+  const EmptyListComponent = () => (
+    <View style={styles.emptyContainer}>
+      <View style={styles.emptyIconContainer}>
+        <Ionicons name="people-outline" size={60} color="#94A3B8" />
+      </View>
+      <RNText style={styles.emptyTitle}>No customers found</RNText>
+      <RNText style={styles.emptySubtitle}>
+        You don't have any customers yet
+      </RNText>
+    </View>
+  );
+
   if (loading && !refreshing) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#ff4500" />
+          <ActivityIndicator size="large" color="#6366F1" />
+          <RNText style={styles.loadingText}>Loading customers...</RNText>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Animated.View style={styles.header}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      {/* Modern Header */}
+      <View style={styles.headerContainer}>
         <LinearGradient
-          colors={["#ff4500", "#cc3700"]}
+          colors={["#6366F1", "#8B5CF6", "#A855F7"]}
           style={styles.headerGradient}
         >
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          >
-            <Icon name="arrow-back" size={24} color="#FFF" />
-          </TouchableOpacity>
-
-          <Text style={styles.title}>Customers</Text>
-        </LinearGradient>
-
-        <View style={styles.searchWrapper}>
-          <SearchBar
-            placeholder="Search customers..."
-            onChangeText={setSearchQuery}
-            value={searchQuery}
-            containerStyle={styles.searchContainer}
-            inputContainerStyle={styles.searchInputContainer}
-            inputStyle={styles.searchInput}
-            lightTheme
-            round
-          />
-        </View>
-      </Animated.View>
-
-      <View style={styles.filterContainer}>
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={CUSTOMER_FILTERS}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[
-                styles.filterButton,
-                selectedFilter === item.id && styles.filterButtonActive,
-              ]}
-              onPress={() => setSelectedFilter(item.id)}
+          <View style={styles.headerContent}>
+            <TouchableOpacity 
+              style={styles.backButton} 
+              onPress={() => navigation.goBack()}
             >
-              <Text
-                style={[
-                  styles.filterButtonText,
-                  selectedFilter === item.id && styles.filterButtonTextActive,
-                ]}
-              >
-                {item.label}
-              </Text>
+              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
             </TouchableOpacity>
-          )}
-          contentContainerStyle={styles.filterList}
-        />
+            
+            <View style={styles.headerTitleSection}>
+              <RNText style={styles.headerTitle}>Customers</RNText>
+              <RNText style={styles.headerSubtitle}>
+                Manage your customer relationships
+              </RNText>
+            </View>
+            
+            <View style={styles.headerStats}>
+              <RNText style={styles.statsNumber}>{filteredCustomers.length}</RNText>
+              <RNText style={styles.statsLabel}>Total</RNText>
+            </View>
+          </View>
+
+          {/* Modern Search Bar */}
+          <View style={styles.searchSection}>
+            <View style={styles.searchContainer}>
+              <Ionicons name="search-outline" size={20} color="#94A3B8" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search customers..."
+                placeholderTextColor="#94A3B8"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity 
+                  onPress={() => setSearchQuery('')}
+                  style={styles.clearButton}
+                >
+                  <Ionicons name="close-circle" size={20} color="#94A3B8" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </LinearGradient>
       </View>
 
+
+
+      {/* Customers List */}
       <FlatList
         data={filteredCustomers}
         renderItem={({ item }) => <CustomerCard customer={item} />}
@@ -226,12 +273,7 @@ const CustomersListScreen = ({ navigation }) => {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
-        ListEmptyComponent={() => (
-          <View style={styles.emptyContainer}>
-            <Icon name="people" type="material" size={50} color="#636E72" />
-            <Text style={styles.emptyText}>No customers found</Text>
-          </View>
-        )}
+        ListEmptyComponent={EmptyListComponent}
       />
     </SafeAreaView>
   );
@@ -240,225 +282,256 @@ const CustomersListScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: '#F8FAFC',
   },
-  header: {
-    marginBottom: 40, // Increased margin for overlap effect
+  headerContainer: {
+    marginBottom: 24,
   },
   headerGradient: {
     padding: 20,
-    paddingBottom: 50, // Increased padding to make space for SearchBar
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    shadowColor: "#6366F1",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   backButton: {
-    position: "absolute",
-    top: 20,
-    left: 15,
-    zIndex: 1,
+    padding: 8,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#FFF",
-    textAlign: "center",
+  headerTitleSection: {
+    flex: 1,
+    marginLeft: 16,
   },
-  searchWrapper: {
-    position: "absolute",
-    top: "75%", // Moves the search bar down
-    left: "5%",
-    right: "5%",
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  headerStats: {
+    alignItems: 'center',
+  },
+  statsNumber: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  statsLabel: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  searchSection: {
+    marginTop: 10,
   },
   searchContainer: {
-    backgroundColor: "transparent",
-    borderTopWidth: 0,
-    borderBottomWidth: 0,
-    paddingHorizontal: 0,
-  },
-  searchInputContainer: {
-    backgroundColor: "#FFF",
-    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingHorizontal: 16,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  searchIcon: {
+    marginRight: 12,
   },
   searchInput: {
-    fontSize: 16,
-  },
-  filterContainer: {
-    backgroundColor: "#FFF",
+    flex: 1,
     paddingVertical: 12,
-    marginBottom: 12,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    color: '#0F172A',
+    fontWeight: '500',
   },
-  filterList: {
-    paddingHorizontal: 20,
-  },
-  filterButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: "#F5F6FA",
-    marginRight: 8,
-  },
-  filterButtonActive: {
-    backgroundColor: "#ff4500",
-  },
-  filterButtonText: {
-    color: "#636E72",
-    fontSize: 14,
-  },
-  filterButtonTextActive: {
-    color: "#FFF",
-    fontWeight: "500",
+  clearButton: {
+    padding: 4,
   },
   customersList: {
-    padding: 20,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
   },
   customerCard: {
-    backgroundColor: "#FFF",
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: "#64748B",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 3,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  customerSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  avatarContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  avatarText: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  customerInfo: {
+    flex: 1,
+  },
+  customerName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 4,
+    letterSpacing: -0.2,
+  },
+  customerEmail: {
+    fontSize: 14,
+    color: '#6366F1',
+    marginBottom: 2,
+    fontWeight: '500',
+  },
+  customerPhone: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: "#000",
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  statCard: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  statIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#EEF2FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  statInfo: {
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 2,
+    letterSpacing: -0.2,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  chatButton: {
+    position: 'absolute',
+    bottom: 15,
+    right: 15,
+    backgroundColor: '#FFF',
+    borderRadius: 25,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
-  customerHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 16,
-  },
-  customerInfo: {
-    flexDirection: "row",
-    flex: 1,
-  },
-  avatarContainer: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  vipAvatar: {
-    backgroundColor: "#FF6B6B",
-  },
-  activeAvatar: {
-    backgroundColor: "#4CAF50",
-  },
-  newAvatar: {
-    backgroundColor: "#2196F3",
-  },
-  avatarText: {
-    color: "#FFF",
-    fontSize: 20,
-    fontWeight: "bold",
-  },
-  customerDetails: {
-    flex: 1,
-  },
-  customerName: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#2D3436",
-    marginBottom: 4,
-  },
-  customerContact: {
-    fontSize: 14,
-    color: "#636E72",
-    marginBottom: 2,
-  },
-  statsContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: "#F5F6FA",
-  },
-  statItem: {
-    flex: 1,
-    alignItems: "center",
-  },
-  statLabel: {
-    fontSize: 12,
-    color: "#636E72",
-    marginBottom: 4,
-  },
-  statValue: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#2D3436",
-  },
-  statDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: "#F5F6FA",
-    marginHorizontal: 10,
-  },
-  customerFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 12,
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  vipBadge: {
-    backgroundColor: "#FFE9E9",
-  },
-  activeBadge: {
-    backgroundColor: "#E8F5E9",
-  },
-  newBadge: {
-    backgroundColor: "#E3F2FD",
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  vipText: {
-    color: "#FF6B6B",
-  },
-  activeText: {
-    color: "#4CAF50",
-  },
-  newText: {
-    color: "#2196F3",
-  },
-  viewProfileText: {
-    color: "#FF6B6B",
-    fontSize: 14,
-    marginRight: 4,
-  },
-  messageButton: {
-    padding: 8,
-    backgroundColor: "#ffe0cc",
-    borderRadius: 8,
-  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#64748B',
+    marginTop: 12,
+    fontWeight: '500',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    paddingVertical: 60,
+    paddingHorizontal: 20,
   },
-  emptyText: {
-    fontSize: 16,
-    color: '#636E72',
-    marginTop: 10,
+  emptyIconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 8,
+    letterSpacing: -0.2,
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 20,
+    fontWeight: '500',
   },
 });
 

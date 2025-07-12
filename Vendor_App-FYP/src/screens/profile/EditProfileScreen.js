@@ -8,9 +8,13 @@ import {
   TouchableOpacity,
   Alert,
   Animated,
+  Text,
+  TextInput,
+  Image,
+  ActivityIndicator,
 } from 'react-native';
-import { Text, Input, Button, Avatar, Icon } from 'react-native-elements';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -20,6 +24,8 @@ import { updateProfile, apiClient } from '../../services/api';
 const EditProfileScreen = ({ navigation, route }) => {
   const { user, updateUser } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [imageUploading, setImageUploading] = useState(false);
   const [profileImage, setProfileImage] = useState(
     user?.profile_image || 'https://cdn-icons-png.flaticon.com/512/1077/1077114.png'
   );
@@ -32,7 +38,7 @@ const EditProfileScreen = ({ navigation, route }) => {
     profile_image: user?.profile_image || profileImage,
   });
   const [errors, setErrors] = useState({});
-  const fadeAnim = React.useRef(new Animated.Value(1)).current;
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
   // Add useEffect to fetch profile data
   useEffect(() => {
@@ -62,12 +68,15 @@ const EditProfileScreen = ({ navigation, route }) => {
     };
 
     fetchProfile();
+    
+    // Animate form entrance
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
   }, [user?.id]);
 
-  React.useEffect(() => {
-    // Start with form already visible
-    fadeAnim.setValue(1);
-  }, []);
   const pickImage = async () => {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -80,11 +89,13 @@ const EditProfileScreen = ({ navigation, route }) => {
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
         aspect: [1, 1],
-        quality: 0.8, // Slightly reduced quality for better performance
+        quality: 0.8,
       });
 
-      console.log('Image picker result:', result);      if (!result.canceled && result.assets[0]) {
-        setLoading(true);
+      console.log('Image picker result:', result);
+      
+      if (!result.canceled && result.assets[0]) {
+        setImageUploading(true);
         try {
           // Upload to Cloudinary
           const uploadResult = await uploadImageToCloudinary(result.assets[0].uri);
@@ -93,7 +104,6 @@ const EditProfileScreen = ({ navigation, route }) => {
           if (uploadResult.success) {
             const newImageUrl = uploadResult.imageUrl;
             setProfileImage(newImageUrl);
-            // Store the Cloudinary URL to be saved with other profile data
             setFormData(prev => ({ 
               ...prev, 
               profile_image: newImageUrl 
@@ -113,15 +123,16 @@ const EditProfileScreen = ({ navigation, route }) => {
           console.error('Image upload error:', uploadError);
           Alert.alert('Error', 'Failed to upload image to cloud storage.');
         }
-        fadeAnim.setValue(1);
       }
     } catch (error) {
       console.error('Image picker error:', error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
     } finally {
-      setLoading(false);
+      setImageUploading(false);
     }
-  };  const validateForm = () => {
+  };
+
+  const validateForm = () => {
     let newErrors = {};
     
     // Required field validations
@@ -143,18 +154,17 @@ const EditProfileScreen = ({ navigation, route }) => {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  const handleSave = async () => {
-    if (loading) return; // Prevent multiple submissions while loading
 
-    // Validate form before submission
+  const handleSave = async () => {
+    if (saving || imageUploading) return;
+
     if (!validateForm()) {
-      Alert.alert('Required Fields', 'Please fill in all required fields.');
+      Alert.alert('Invalid Information', 'Please check the highlighted fields and try again.');
       return;
     }
 
-    setLoading(true);
+    setSaving(true);
     try {
-      // Ensure we have the latest profile image
       const currentProfileImage = formData.profile_image || profileImage;
       
       const profileData = {
@@ -165,44 +175,30 @@ const EditProfileScreen = ({ navigation, route }) => {
         profile_image: currentProfileImage
       };
 
-      // Check for empty required fields before submission
-      const requiredFields = ['name', 'business_name', 'phone_number', 'address'];
-      const emptyFields = requiredFields.filter(field => !profileData[field]);
-      
-      if (emptyFields.length > 0) {
-        Alert.alert('Required Fields', `Please fill in: ${emptyFields.join(', ')}`);
-        setLoading(false);
-        return;
-      }
-
       console.log('Submitting form data:', profileData);
 
       const response = await updateProfile(profileData);
-
       console.log('Profile update response:', response);
       
       if (response.success) {
-        // Update local user context if available
         if (updateUser) {
-          // Ensure we're updating the user context with the latest data
           const updatedUser = {
             ...user,
             ...profileData,
-            profile_image: profileData.profile_image // Explicitly set profile image
+            profile_image: profileData.profile_image
           };
           console.log('Updating user context with:', updatedUser);
           await updateUser(updatedUser);
         }
         
-        // Call the onProfileUpdate callback if it exists
         if (route.params?.onProfileUpdate) {
           route.params.onProfileUpdate();
         }
         
-        // Add a small delay to ensure state updates are processed
         setTimeout(() => {
-          Alert.alert('Success', 'Profile updated successfully');
-          navigation.goBack();
+          Alert.alert('Success', 'Profile updated successfully', [
+            { text: 'OK', onPress: () => navigation.goBack() }
+          ]);
         }, 100);
       } else {
         const errorMessage = response.error || response.message || 'Failed to update profile';
@@ -212,26 +208,84 @@ const EditProfileScreen = ({ navigation, route }) => {
       console.error('Profile update error:', error);
       Alert.alert('Error', error.message || 'Failed to save profile changes. Please try again.');
     } finally {
-      setLoading(false);
+      setSaving(false);
     }
   };
 
-  const renderInput = (placeholder, value, onChange, icon, keyboardType = 'default', disabled = false) => (
-    <Input
-      placeholder={placeholder}
-      value={value}
-      onChangeText={(text) => {
-        onChange(text);
-        setErrors({ ...errors, [placeholder.toLowerCase()]: '' });
-      }}
-      leftIcon={<Icon name={icon} type="material" size={24} color="#B2BEC3" />}
-      containerStyle={styles.inputContainer}
-      inputContainerStyle={styles.input}
-      errorStyle={{ color: '#FF6B6B' }}
-      errorMessage={errors[placeholder.toLowerCase()] || ''}
-      keyboardType={keyboardType}
-      disabled={disabled}
-    />
+  const handleReset = () => {
+    Alert.alert(
+      'Reset Changes',
+      'Are you sure you want to reset all changes?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Reset', 
+          style: 'destructive',
+          onPress: () => {
+            setFormData({
+              name: user?.name || '',
+              email: user?.email || '',
+              business_name: user?.business_name || '',
+              phone_number: user?.phone_number || '',
+              address: user?.address || '',
+              profile_image: user?.profile_image || profileImage,
+            });
+            setProfileImage(user?.profile_image || 'https://cdn-icons-png.flaticon.com/512/1077/1077114.png');
+            setErrors({});
+          }
+        },
+      ]
+    );
+  };
+
+  const renderInput = ({ 
+    label, 
+    value, 
+    onChangeText, 
+    icon, 
+    keyboardType = 'default', 
+    editable = true,
+    multiline = false,
+    placeholder,
+    fieldKey
+  }) => (
+    <View style={styles.inputGroup}>
+      <Text style={styles.inputLabel}>{label}</Text>
+      <View style={[
+        styles.inputContainer, 
+        errors[fieldKey] && styles.inputContainerError,
+        !editable && styles.inputContainerDisabled
+      ]}>
+        <View style={styles.inputIconContainer}>
+          <Ionicons name={icon} size={20} color={editable ? "#6366F1" : "#94A3B8"} />
+        </View>
+        <TextInput
+          style={[styles.textInput, multiline && styles.textInputMultiline]}
+          placeholder={placeholder || label}
+          value={value}
+          onChangeText={(text) => {
+            onChangeText(text);
+            if (errors[fieldKey]) {
+              setErrors(prev => ({ ...prev, [fieldKey]: '' }));
+            }
+          }}
+          keyboardType={keyboardType}
+          editable={editable}
+          multiline={multiline}
+          numberOfLines={multiline ? 3 : 1}
+          textAlignVertical={multiline ? 'top' : 'center'}
+          placeholderTextColor="#94A3B8"
+        />
+        {!editable && (
+          <View style={styles.lockedIndicator}>
+            <Ionicons name="lock-closed" size={16} color="#94A3B8" />
+          </View>
+        )}
+      </View>
+      {errors[fieldKey] && (
+        <Text style={styles.errorText}>{errors[fieldKey]}</Text>
+      )}
+    </View>
   );
 
   return (
@@ -240,99 +294,167 @@ const EditProfileScreen = ({ navigation, route }) => {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardAvoid}
       >
-        <ScrollView style={styles.content}>
-          <Animated.View style={styles.header}>
+        <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Header and Profile Image Section */}
+          <Animated.View style={[styles.imageSection, { opacity: fadeAnim }]}>
             <LinearGradient
-              colors={["#ff4500", "#cc3700"]}
-              style={styles.gradientBackground}
+              colors={["#6366F1", "#8B5CF6", "#A855F7"]}
+              style={styles.imageGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
             >
-              {/* Back Button */}
-              <TouchableOpacity
-                onPress={() => navigation.goBack()}
-                style={styles.backButton}
-              >
-                <Icon name="arrow-back" size={28} color="#FFF" />
-              </TouchableOpacity>
+              {/* Header */}
+              <View style={styles.header}>
+                <TouchableOpacity 
+                  style={styles.headerButton} 
+                  onPress={() => navigation.goBack()}
+                >
+                  <Ionicons name="arrow-back" size={24} color="white" />
+                </TouchableOpacity>
+                
+                <View style={styles.headerCenter}>
+                  <Text style={styles.headerTitle}>Edit Profile</Text>
+                  <Text style={styles.headerSubtitle}>Update your information</Text>
+                </View>
+                
+                <View style={styles.headerButton} />
+              </View>
 
-              {/* Profile Image */}
               <TouchableOpacity
                 onPress={pickImage}
                 style={styles.avatarContainer}
+                disabled={imageUploading}
               >
-                <Avatar
-                  size={120}
-                  rounded
-                  source={{ uri: profileImage }}
-                  containerStyle={styles.avatar}
-                >
-                  <Avatar.Accessory size={36} onPress={pickImage} />
-                </Avatar>
+                <View style={styles.avatarWrapper}>
+                  <Image
+                    source={{ uri: profileImage }}
+                    style={styles.avatar}
+                  />
+                  {imageUploading && (
+                    <View style={styles.uploadingOverlay}>
+                      <ActivityIndicator size="large" color="#FFFFFF" />
+                    </View>
+                  )}
+                  <View style={styles.avatarAccessory}>
+                    <Ionicons name="camera" size={20} color="white" />
+                  </View>
+                </View>
               </TouchableOpacity>
-
-              {/* Change Photo Text */}
-              <Text style={styles.changePhotoText}>Tap to change photo</Text>
+              
+              <Text style={styles.changePhotoText}>
+                {imageUploading ? 'Uploading...' : 'Tap to change photo'}
+              </Text>
+              <Text style={styles.changePhotoSubtext}>
+                Choose a professional photo for your business
+              </Text>
             </LinearGradient>
           </Animated.View>
-          <Animated.View style={[styles.form, { opacity: fadeAnim }]}>            <View style={styles.formSection}>
-              <Text style={styles.sectionTitle}>Business Information</Text>
-              {renderInput(
-                "Full Name",
-                formData.name,
-                (text) => setFormData({ ...formData, name: text }),
-                "person"
-              )}
-              {renderInput(
-                "Business Name",
-                formData.business_name,
-                (text) => setFormData({ ...formData, business_name: text }),
-                "business"
-              )}
-              {renderInput(
-                "Email",
-                formData.email,
-                (text) => setFormData({ ...formData, email: text }),
-                "email",
-                "email-address",
-                true
-              )}
-              {renderInput(
-                "Phone Number",
-                formData.phone_number,
-                (text) => setFormData({ ...formData, phone_number: text }),
-                "phone",
-                "phone-pad"
-              )}
-            </View>
 
+          <Animated.View style={[styles.form, { opacity: fadeAnim }]}>
+            {/* Personal Information */}
             <View style={styles.formSection}>
-              <Text style={styles.sectionTitle}>Location</Text>
-              {renderInput(
-                "Business Address",
-                formData.address,
-                (text) => setFormData({ ...formData, address: text }),
-                "home"
-              )}
-            </View>
-          </Animated.View>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="person-outline" size={20} color="#6366F1" style={styles.sectionIcon} />
+                <Text style={styles.sectionTitle}>Personal Information</Text>
+              </View>
+              
+              {renderInput({
+                label: "Full Name",
+                value: formData.name,
+                onChangeText: (text) => setFormData({ ...formData, name: text }),
+                icon: "person-outline",
+                placeholder: "Enter your full name",
+                fieldKey: "name"
+              })}
 
-          <View style={styles.buttonContainer}>
-            <Button
-              title="Cancel"
-              type="outline"
-              onPress={() => navigation.goBack()}
-              buttonStyle={styles.cancelButton}
-              titleStyle={styles.cancelButtonText}
-              containerStyle={styles.buttonWrapper}
-            />
-            <Button
-              title={loading ? "Saving..." : "Save Changes"}
-              onPress={handleSave}
-              loading={loading}
-              buttonStyle={styles.saveButton}
-              containerStyle={styles.buttonWrapper}
-            />
-          </View>
+              {renderInput({
+                label: "Email Address",
+                value: formData.email,
+                onChangeText: (text) => setFormData({ ...formData, email: text }),
+                icon: "mail-outline",
+                keyboardType: "email-address",
+                editable: false,
+                placeholder: "Your email address",
+                fieldKey: "email"
+              })}
+
+              {renderInput({
+                label: "Phone Number",
+                value: formData.phone_number,
+                onChangeText: (text) => setFormData({ ...formData, phone_number: text }),
+                icon: "call-outline",
+                keyboardType: "phone-pad",
+                placeholder: "Enter your phone number",
+                fieldKey: "phone_number"
+              })}
+            </View>
+
+            {/* Business Information */}
+            <View style={styles.formSection}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="business-outline" size={20} color="#6366F1" style={styles.sectionIcon} />
+                <Text style={styles.sectionTitle}>Business Information</Text>
+              </View>
+              
+              {renderInput({
+                label: "Business Name",
+                value: formData.business_name,
+                onChangeText: (text) => setFormData({ ...formData, business_name: text }),
+                icon: "storefront-outline",
+                placeholder: "Enter your business name",
+                fieldKey: "business_name"
+              })}
+
+              {renderInput({
+                label: "Business Address",
+                value: formData.address,
+                onChangeText: (text) => setFormData({ ...formData, address: text }),
+                icon: "location-outline",
+                multiline: true,
+                placeholder: "Enter your complete business address",
+                fieldKey: "address"
+              })}
+            </View>
+
+            <View style={styles.spacing} />
+          </Animated.View>
         </ScrollView>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <TouchableOpacity
+            style={[styles.cancelButton, saving && styles.buttonDisabled]}
+            onPress={() => navigation.goBack()}
+            disabled={saving}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="close" size={18} color="#EF4444" />
+            <Text style={styles.cancelButtonText}>Cancel</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.saveButton, (saving || imageUploading) && styles.buttonDisabled]}
+            onPress={handleSave}
+            disabled={saving || imageUploading}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={saving ? ['#94A3B8', '#94A3B8'] : ['#6366F1', '#8B5CF6']}
+              style={styles.saveButtonGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <Ionicons name="checkmark" size={18} color="white" />
+              )}
+              <Text style={styles.saveButtonText}>
+                {saving ? 'Saving...' : 'Save Changes'}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -341,7 +463,38 @@ const EditProfileScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: '#F8FAFC',
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 15,
+    paddingBottom: 25,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 16,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: 'white',
+  },
+  headerSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginTop: 2,
   },
   keyboardAvoid: {
     flex: 1,
@@ -349,96 +502,204 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  header: {
-    alignItems: "center",
+  imageSection: {
     marginBottom: 20,
   },
-  gradientBackground: {
-    width: "100%",
-    alignItems: "center",
-    paddingVertical: 50,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    position: "relative",
-  },
-  backButton: {
-    position: "absolute",
-    top: 15,
-    left: 15,
-    zIndex: 1,
+  imageGradient: {
+    paddingBottom: 40,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
   },
   avatarContainer: {
-    marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 5,
+    marginTop: 20,
+    marginBottom: 16,
+  },
+  avatarWrapper: {
+    position: 'relative',
   },
   avatar: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
     borderWidth: 4,
-    borderColor: "#FFFFFF",
+    borderColor: '#FFFFFF',
+  },
+  uploadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 60,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarAccessory: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#6366F1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
   },
   changePhotoText: {
-    color: "#FFFFFF",
+    color: '#FFFFFF',
     fontSize: 16,
-    marginTop: 10,
-    fontWeight: "500",
-    letterSpacing: 0.5,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  changePhotoSubtext: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '500',
   },
   form: {
-    marginBottom: 20,
     paddingHorizontal: 20,
   },
   formSection: {
-    marginBottom: 20,
-    backgroundColor: "#FFFFFF",
-    borderRadius: 15,
-    padding: 15,
-    shadowColor: "#000",
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 8,
     elevation: 3,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  sectionIcon: {
+    marginRight: 8,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "bold",
-    marginBottom: 15,
-    color: "#2D3436",
+    fontWeight: '600',
+    color: '#0F172A',
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginBottom: 8,
   },
   inputContainer: {
-    marginBottom: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
-  input: {
-    borderBottomWidth: 0,
-    backgroundColor: "#F0F3F5",
-    borderRadius: 10,
-    paddingHorizontal: 10,
+  inputContainerError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
   },
-  buttonContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 30,
-    paddingHorizontal: 20,
+  inputContainerDisabled: {
+    backgroundColor: '#F1F5F9',
+    borderColor: '#CBD5E1',
   },
-  buttonWrapper: {
+  inputIconContainer: {
+    marginRight: 12,
+  },
+  textInput: {
     flex: 1,
-    marginHorizontal: 5,
+    fontSize: 16,
+    color: '#0F172A',
+    fontWeight: '500',
+    paddingVertical: 0,
+  },
+  textInputMultiline: {
+    height: 80,
+    textAlignVertical: 'top',
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+  lockedIndicator: {
+    marginLeft: 8,
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 12,
+    marginTop: 8,
+    fontWeight: '500',
+  },
+  footer: {
+    flexDirection: 'row',
+    padding: 20,
+    gap: 12,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
   },
   cancelButton: {
-    borderColor: "#ff4500",
-    borderWidth: 1,
-    paddingVertical: 12,
+    flex: 1,
+    backgroundColor: 'white',
     borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#EF4444',
   },
   cancelButtonText: {
-    color: "#ff4500",
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#EF4444',
+    marginLeft: 8,
   },
   saveButton: {
-    backgroundColor: "#ff4500",
-    paddingVertical: 12,
+    flex: 2,
     borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  saveButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+    marginLeft: 8,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  spacing: {
+    height: 24,
   },
 });
 

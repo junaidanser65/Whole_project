@@ -9,11 +9,12 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
+  Text as RNText,
+  TextInput,
 } from 'react-native';
-import { SearchBar, Icon } from 'react-native-elements';
-import { Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import Animated, {
   useAnimatedStyle,
   withSpring,
@@ -23,11 +24,11 @@ import Animated, {
 import { getAllMenus, deleteMenu, updateMenu } from '../../services/menuService';
 
 const MENU_FILTERS = [
-  { id: 'all', label: 'All Items' },
-  { id: 'appetizers', label: 'Appetizers' },
-  { id: 'main', label: 'Main Course' },
-  { id: 'desserts', label: 'Desserts' },
-  { id: 'drinks', label: 'Drinks' },
+  { id: 'all', label: 'All Items', icon: 'restaurant' },
+  { id: 'appetizers', label: 'Appetizers', icon: 'leaf' },
+  { id: 'main', label: 'Main Course', icon: 'pizza' },
+  { id: 'desserts', label: 'Desserts', icon: 'ice-cream' },
+  { id: 'drinks', label: 'Drinks', icon: 'wine' },
 ];
 
 const MenuScreen = ({ navigation, route }) => {
@@ -86,6 +87,7 @@ const MenuScreen = ({ navigation, route }) => {
       navigation.setParams({ newItem: null });
     }
   }, [route.params?.newItem]);
+
   const [isExpanded, setIsExpanded] = useState(false);
   const buttonWidth = useSharedValue(56);
   const textOpacity = useSharedValue(0);
@@ -223,6 +225,7 @@ const MenuScreen = ({ navigation, route }) => {
       <TouchableOpacity
         style={styles.menuItemCard}
         onPress={() => navigation.navigate('MenuItemDetails', { itemId: item.id })}
+        activeOpacity={0.7}
       >
         <View style={styles.menuItemImageContainer}>
           <Image
@@ -232,41 +235,78 @@ const MenuScreen = ({ navigation, route }) => {
           />
           {!item.is_available && (
             <View style={styles.inactiveOverlay}>
-              <Text style={styles.inactiveText}>Unavailable</Text>
+              <Ionicons name="eye-off" size={24} color="#FFFFFF" />
+              <RNText style={styles.inactiveText}>Unavailable</RNText>
             </View>
           )}
+          <View style={styles.availabilityBadge}>
+            <View style={[
+              styles.availabilityIndicator,
+              item.is_available ? styles.availableIndicator : styles.unavailableIndicator
+            ]} />
+          </View>
         </View>
+        
         <View style={styles.menuItemContent}>
           <View style={styles.menuItemHeader}>
-            <Text style={styles.menuItemName}>{item.name}</Text>
-            <Text style={styles.menuItemPrice}>${parseFloat(item.price).toFixed(2)}</Text>
+            <RNText style={styles.menuItemName} numberOfLines={1}>{item.name}</RNText>
+            <View style={styles.priceContainer}>
+              <RNText style={styles.menuItemPrice}>${parseFloat(item.price).toFixed(2)}</RNText>
+            </View>
           </View>
-          <Text style={styles.menuItemCategory}>
-            {item.category ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : 'Other'}
-          </Text>
-          <Text numberOfLines={2} style={styles.menuItemDescription}>
+          
+          <View style={styles.categoryContainer}>
+            <Ionicons 
+              name={MENU_FILTERS.find(f => f.id === item.category)?.icon || 'restaurant'} 
+              size={14} 
+              color="#6366F1" 
+            />
+            <RNText style={styles.menuItemCategory}>
+              {item.category ? item.category.charAt(0).toUpperCase() + item.category.slice(1) : 'Other'}
+            </RNText>
+          </View>
+          
+          <RNText numberOfLines={2} style={styles.menuItemDescription}>
             {item.description || 'No description available'}
-          </Text>
+          </RNText>
+          
           <View style={styles.menuItemActions}>
             <TouchableOpacity
               style={styles.actionButton}
               onPress={() => navigation.navigate('EditMenuItem', { itemId: item.id })}
+              activeOpacity={0.7}
             >
-              <Icon name="edit" size={18} color="#555" />
-              <Text style={styles.actionText}>Edit</Text>
+              <Ionicons name="create-outline" size={16} color="#6366F1" />
+              <RNText style={styles.actionText}>Edit</RNText>
             </TouchableOpacity>
+            
             <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => handleDeleteMenuItem(item.id)}
+              style={styles.toggleButton}
+              onPress={() => toggleItemAvailability(item.id)}
+              activeOpacity={0.7}
             >
-              <Icon
-                name="delete"
-                size={18}
-                color="#FF4500"
+              <Ionicons 
+                name={item.is_available ? "eye-outline" : "eye-off-outline"} 
+                size={16} 
+                color={item.is_available ? "#10B981" : "#F59E0B"} 
               />
-              <Text style={[styles.actionText, {color: '#FF4500'}]}>
+              <RNText style={[
+                styles.actionText,
+                { color: item.is_available ? "#10B981" : "#F59E0B" }
+              ]}>
+                {item.is_available ? "Hide" : "Show"}
+              </RNText>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={() => handleDeleteMenuItem(item.id)}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="trash-outline" size={16} color="#EF4444" />
+              <RNText style={[styles.actionText, { color: '#EF4444' }]}>
                 Delete
-              </Text>
+              </RNText>
             </TouchableOpacity>
           </View>
         </View>
@@ -275,32 +315,64 @@ const MenuScreen = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <TouchableOpacity 
         activeOpacity={1} 
         style={styles.screenPressable}
         onPress={handleScreenPress}
       >
-        <View style={styles.header}>
+        {/* Modern Header */}
+        <View style={styles.headerContainer}>
           <LinearGradient
-            colors={['#ff4500', '#cc3700']}
+            colors={["#6366F1", "#8B5CF6", "#A855F7"]}
             style={styles.headerGradient}
           >
-            <Text style={styles.title}>Menu</Text>
-            <SearchBar
-              placeholder="Search menu items..."
-              onChangeText={setSearchQuery}
-              value={searchQuery}
-              containerStyle={styles.searchContainer}
-              inputContainerStyle={styles.searchInputContainer}
-              inputStyle={styles.searchInput}
-              lightTheme
-              round
-            />
+            <View style={styles.headerContent}>
+              <TouchableOpacity 
+                style={styles.backButton}
+                onPress={() => navigation.goBack()}
+              >
+                <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+              
+              <View style={styles.headerTitleSection}>
+                <RNText style={styles.headerTitle}>Menu Management</RNText>
+                <RNText style={styles.headerSubtitle}>
+                  {menuItems.length} items • {filteredMenuItems.length} visible
+                </RNText>
+              </View>
+              
+              <TouchableOpacity 
+                style={styles.statsButton}
+                onPress={() => navigation.navigate('AddMenuItem')}
+              >
+                <Ionicons name="add" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Modern Search Bar */}
+            <View style={styles.searchContainer}>
+              <View style={styles.searchInputContainer}>
+                <Ionicons name="search" size={20} color="#94A3B8" />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholder="Search menu items..."
+                  placeholderTextColor="#94A3B8"
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')}>
+                    <Ionicons name="close-circle" size={20} color="#94A3B8" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
           </LinearGradient>
         </View>
 
-        <View style={styles.filterContainer}>
+        {/* Filter Section */}
+        <View style={styles.filterSection}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -314,67 +386,84 @@ const MenuScreen = ({ navigation, route }) => {
                   selectedFilter === filter.id && styles.filterButtonActive,
                 ]}
                 onPress={() => setSelectedFilter(filter.id)}
+                activeOpacity={0.7}
               >
-                <Text
+                <Ionicons 
+                  name={filter.icon} 
+                  size={16} 
+                  color={selectedFilter === filter.id ? "#FFFFFF" : "#6366F1"} 
+                />
+                <RNText
                   style={[
                     styles.filterButtonText,
                     selectedFilter === filter.id && styles.filterButtonTextActive,
                   ]}
                 >
                   {filter.label}
-                </Text>
+                </RNText>
               </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
 
+        {/* Content */}
         {loading && !refreshing ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#FF4500" />
-          <Text style={styles.loadingText}>Loading menu items...</Text>
-        </View>
-      ) : error && menuItems.length === 0 ? (
-        <View style={styles.errorContainer}>
-          <Icon name="error-outline" type="material" size={60} color="#FF4500" />
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity 
-            style={styles.retryButton}
-            onPress={fetchMenuItems}
-          >
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableOpacity>
-        </View>
-      ) : filteredMenuItems.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Icon name="restaurant-menu" type="material" size={60} color="#CCCCCC" />
-          <Text style={styles.emptyText}>
-            {searchQuery ? 'No items match your search' : 'No menu items found'}
-          </Text>
-          <TouchableOpacity 
-            style={styles.addFirstButton}
-            onPress={() => navigation.navigate('AddMenuItem')}
-          >
-            <Text style={styles.addFirstButtonText}>Add Your First Item</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <FlatList
-          data={filteredMenuItems}
-          renderItem={renderMenuItem}
-          keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={styles.menuList}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              colors={['#FF4500']}
-            />
-          }
-        />
-      )}
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#6366F1" />
+            <RNText style={styles.loadingText}>Loading your menu...</RNText>
+          </View>
+        ) : error && menuItems.length === 0 ? (
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+            <RNText style={styles.errorTitle}>Something went wrong</RNText>
+            <RNText style={styles.errorText}>{error}</RNText>
+            <TouchableOpacity 
+              style={styles.retryButton}
+              onPress={fetchMenuItems}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={["#6366F1", "#8B5CF6"]}
+                style={styles.retryButtonGradient}
+              >
+                <Ionicons name="refresh" size={16} color="#FFFFFF" />
+                <RNText style={styles.retryButtonText}>Try Again</RNText>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        ) : filteredMenuItems.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="restaurant-outline" size={64} color="#CBD5E1" />
+            <RNText style={styles.emptyTitle}>
+              {searchQuery ? 'No items found' : 'No menu items yet'}
+            </RNText>
+            <RNText style={styles.emptyText}>
+              {searchQuery 
+                ? `No items match "${searchQuery}". Try a different search term.`
+                : 'Start building your menu by adding your first delicious item using the + button!'
+              }
+            </RNText>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredMenuItems}
+            renderItem={renderMenuItem}
+            keyExtractor={(item) => item.id.toString()}
+            contentContainerStyle={styles.menuList}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={['#6366F1']}
+                tintColor="#6366F1"
+              />
+            }
+          />
+        )}
       </TouchableOpacity>
 
+      {/* Modern Floating Action Button */}
       <Animated.View style={[styles.fab, animatedStyles]}>
         <TouchableOpacity
           onPress={handleFABPress}
@@ -382,16 +471,15 @@ const MenuScreen = ({ navigation, route }) => {
           style={styles.fabTouchable}
         >
           <LinearGradient
-            colors={['#ff4500', '#cc3700']}
+            colors={['#6366F1', '#8B5CF6']}
             style={styles.fabGradient}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           >
             <View style={styles.fabContent}>
-              <Icon
+              <Ionicons
                 name="add"
-                type="material"
-                color="#FFF"
+                color="#FFFFFF"
                 size={24}
               />
               <Animated.Text style={[styles.fabText, textStyles]}>
@@ -408,174 +496,370 @@ const MenuScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F8FAFC',
   },
+  screenPressable: {
+    flex: 1,
+  },
+  
+  // Header Styles
+  headerContainer: {
+    marginBottom: 20,
+  },
+  headerGradient: {
+    padding: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: "#6366F1",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 8,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitleSection: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  statsButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  // Search Styles
+  searchContainer: {
+    marginTop: 8,
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    color: '#0F172A',
+    fontWeight: '500',
+  },
+  
+  // Filter Styles
+  filterSection: {
+    marginBottom: 8,
+  },
+  filterList: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F1F5F9',
+    marginRight: 10,
+  },
+  filterButtonActive: {
+    backgroundColor: '#6366F1',
+  },
+  filterButtonText: {
+    color: '#64748B',
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  filterButtonTextActive: {
+    color: '#FFFFFF',
+  },
+  
+  // Content States
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 40,
   },
   loadingText: {
-    marginTop: 10,
+    marginTop: 16,
     fontSize: 16,
-    color: '#555',
+    color: '#64748B',
+    fontWeight: '500',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 40,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: 16,
+    marginBottom: 8,
   },
   errorText: {
-    marginTop: 10,
     fontSize: 16,
-    color: '#555',
+    color: '#64748B',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
+    lineHeight: 22,
   },
   retryButton: {
-    backgroundColor: '#FF4500',
-    paddingHorizontal: 30,
-    paddingVertical: 10,
-    borderRadius: 5,
+    borderRadius: 12,
+    shadowColor: "#6366F1",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  retryButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
   },
   retryButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
+    color: '#FFFFFF',
+    fontWeight: '700',
+    marginLeft: 8,
+    fontSize: 16,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
+    padding: 40,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: 16,
+    marginBottom: 8,
   },
   emptyText: {
-    marginTop: 10,
     fontSize: 16,
-    color: '#555',
+    color: '#64748B',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
+    lineHeight: 22,
   },
-  addFirstButton: {
-    backgroundColor: '#FF4500',
-    paddingHorizontal: 30,
-    paddingVertical: 10,
-    borderRadius: 5,
-  },
-  addFirstButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  header: {
-    marginBottom: 20,
-  },
-  headerGradient: {
-    padding: 20,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFF',
-    marginBottom: 15,
-  },
-  searchContainer: {
-    backgroundColor: 'transparent',
-    borderBottomColor: 'transparent',
-    borderTopColor: 'transparent',
-    paddingHorizontal: 0,
-  },
-  searchInputContainer: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-  },
+  
+  // Menu List
   menuList: {
-    padding: 16,
-    paddingBottom: 80, // Add padding to avoid FAB overlap
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 100, // Space for FAB
   },
+  
+  // Menu Item Card
   menuItemCard: {
-    backgroundColor: '#FFF',
-    borderRadius: 12,
-    marginBottom: 15,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    marginBottom: 20,
+    marginHorizontal: 4,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowColor: "#64748B",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
     flexDirection: 'row',
   },
-  menuItem: {
-    backgroundColor: '#FFF',
+  menuItemImageContainer: {
+    width: 120,
+    height: 120,
+    position: 'relative',
+  },
+  menuItemImage: {
+    width: '100%',
+    height: '100%',
+    borderTopLeftRadius: 20,
+    borderBottomLeftRadius: 20,
+  },
+  inactiveOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderTopLeftRadius: 20,
+    borderBottomLeftRadius: 20,
+  },
+  inactiveText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 12,
+    marginTop: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  availabilityBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    marginBottom: 15,
-    overflow: 'hidden',
-    shadowColor: '#000',
+    padding: 4,
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
   },
+  availabilityIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  availableIndicator: {
+    backgroundColor: '#10B981',
+  },
+  unavailableIndicator: {
+    backgroundColor: '#F59E0B',
+  },
+  
+  // Menu Item Content
   menuItemContent: {
-    padding: 15,
-  },
-  menuItemInfo: {
     flex: 1,
+    padding: 20,
+    justifyContent: 'space-between',
+  },
+  menuItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
   },
   menuItemName: {
+    flex: 1,
     fontSize: 18,
-    fontWeight: '600',
-    color: '#2D3436',
-    marginBottom: 4,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginRight: 12,
+    letterSpacing: -0.2,
   },
-  menuItemDescription: {
-    fontSize: 14,
-    color: '#636E72',
-    marginBottom: 8,
-    lineHeight: 20,
+  priceContainer: {
+    backgroundColor: '#EEF2FF',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   menuItemPrice: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#ff4500',
+    fontWeight: '700',
+    color: '#6366F1',
   },
+  categoryContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  menuItemCategory: {
+    fontSize: 12,
+    color: '#6366F1',
+    marginLeft: 6,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  menuItemDescription: {
+    fontSize: 14,
+    color: '#64748B',
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  
+  // Actions
   menuItemActions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginTop: 8,
+    gap: 10,
   },
   actionButton: {
-    padding: 8,
-    marginLeft: 8,
-    backgroundColor: '#ffe0cc',
-    borderRadius: 8,
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#EEF2FF',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  toggleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FEF2F2',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
   },
   actionText: {
     fontSize: 12,
-    marginLeft: 4,
-    fontWeight: '500',
+    marginLeft: 6,
+    fontWeight: '600',
+    color: '#6366F1',
   },
+  
+  // Floating Action Button
   fab: {
     position: 'absolute',
-    right: 16,
-    bottom: 16,
+    right: 20,
+    bottom: 20,
     height: 56,
     minWidth: 56,
     borderRadius: 28,
     overflow: 'hidden',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    backgroundColor: '#ff4500',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 8,
     zIndex: 1000,
   },
   fabTouchable: {
@@ -595,80 +879,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   fabText: {
-    color: '#FFF',
+    color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     marginLeft: 8,
-  },
-  filterContainer: {
-    backgroundColor: '#FFF',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F5F6FA',
-  },
-  filterList: {
-    paddingHorizontal: 15,
-  },
-  filterButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#F5F6FA',
-    marginRight: 8,
-    minWidth: 80,
-    alignItems: 'center',
-  },
-  filterButtonActive: {
-    backgroundColor: '#ff4500',
-  },
-  filterButtonText: {
-    color: '#636E72',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  filterButtonTextActive: {
-    color: '#FFF',
-  },
-  menuItemImage: {
-    width: '100%',
-    height: 150,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
-  },
-  screenPressable: {
-    flex: 1,
-  },
-  menuItemImageContainer: {
-    width: 120,
-    height: 120,
-    position: 'relative',
-  },
-  inactiveOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  inactiveText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  menuItemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  menuItemCategory: {
-    fontSize: 12,
-    color: '#888',
-    marginBottom: 4,
-    textTransform: 'capitalize',
   },
 });
 

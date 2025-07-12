@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, Alert, Animated, Switch } from 'react-native';
+import { StyleSheet, View, ScrollView, Alert, Animated, Switch, TouchableOpacity } from 'react-native';
 import { Text, Avatar, ListItem, Icon, Button } from 'react-native-elements';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -8,6 +8,7 @@ import { locationService } from '../../services/locationService';
 import { websocketService } from '../../services/websocketService';
 import { apiClient, getTotalBookings, getVendorReviews } from '../../services/api';
 import { useFocusEffect } from '@react-navigation/native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 
 const menuItems = [
   {
@@ -45,7 +46,7 @@ const menuItems = [
 ];
 
 const ProfileScreen = ({ navigation }) => {
-  const { user, logout, loading } = useAuth();
+  const { user, logout, loading, updateUser } = useAuth();
   const [pressedItem, setPressedItem] = useState(null);
   const scaleAnim = new Animated.Value(1);
   const [isAvailable, setIsAvailable] = useState(user?.isAvailable || false);
@@ -117,6 +118,13 @@ const ProfileScreen = ({ navigation }) => {
     console.log('Profile image URL:', user?.profile_image);
   }, [user]);
 
+  // Sync availability state with user context
+  useEffect(() => {
+    if (user?.isAvailable !== undefined) {
+      setIsAvailable(user.isAvailable);
+    }
+  }, [user?.isAvailable]);
+
   // Initialize WebSocket connection
   useEffect(() => {
     websocketService.connect();
@@ -144,10 +152,30 @@ const ProfileScreen = ({ navigation }) => {
         await locationService.stopLocationUpdates();
       }
       
+      // Update local state
       setIsAvailable(value);
+      
+      // Persist availability state in user context and backend
+      if (updateUser) {
+        const updatedUser = {
+          ...user,
+          isAvailable: value
+        };
+        await updateUser(updatedUser);
+        
+        // Also update in backend if there's an update profile endpoint
+        try {
+          await apiClient.updateProfile({ isAvailable: value });
+        } catch (apiError) {
+          console.warn('Failed to update availability in backend:', apiError);
+          // Don't throw error here as local state is already updated
+        }
+      }
     } catch (error) {
       console.error('Error toggling availability:', error);
       Alert.alert('Error', 'Failed to update availability status');
+      // Revert local state on error
+      setIsAvailable(!value);
     }
   };
 
@@ -206,145 +234,216 @@ const ProfileScreen = ({ navigation }) => {
     }).start();
   };
 
+  const getIconBackground = (iconName) => {
+    switch (iconName) {
+      case 'payment':
+        return '#EEF2FF';
+      case 'notifications':
+        return '#E0F2FE';
+      case 'help':
+        return '#FDE68A';
+      case 'privacy-tip':
+        return '#E0F2FE';
+      default:
+        return '#EEF2FF';
+    }
+  };
+
+  const getIconColor = (iconName) => {
+    switch (iconName) {
+      case 'payment':
+        return '#6366F1';
+      case 'notifications':
+        return '#3B82F6';
+      case 'help':
+        return '#D97706';
+      case 'privacy-tip':
+        return '#3B82F6';
+      default:
+        return '#6366F1';
+    }
+  };
+
+  const getIoniconName = (iconName) => {
+    switch (iconName) {
+      case 'payment':
+        return 'card';
+      case 'notifications':
+        return 'notifications';
+      case 'help':
+        return 'help-circle';
+      case 'privacy-tip':
+        return 'shield-checkmark';
+      default:
+        return 'person';
+    }
+  };
+
+  const getMenuSubtitle = (title) => {
+    switch (title) {
+      case 'Payment Methods':
+        return 'Manage your payment methods and billing details';
+      case 'Notifications':
+        return 'Customize your notification preferences';
+      case 'Help & Support':
+        return 'Get help and support from our team';
+      case 'Privacy Policy':
+        return 'Review our privacy policy and terms of service';
+      default:
+        return '';
+    }
+  };
+
   return (
-    <SafeAreaView style={styles.container} edges={["left", "right"]}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header with Gradient */}
         <LinearGradient
-          colors={["#ff4500", "#cc3700"]}
+          colors={["#6366F1", "#8B5CF6", "#A855F7"]}
           style={styles.headerGradient}
         >
-          <View style={styles.header}>
-            <View style={styles.avatarContainer}>
-              <Avatar
-                size={100}
-                rounded
-                source={
-                  profileData?.profile_image
-                    ? { uri: profileData.profile_image }
-                    : undefined
-                }
-                icon={!profileData?.profile_image ? { name: 'store', type: 'material' } : undefined}
-                containerStyle={styles.avatar}
-                onPress={() => console.log('Avatar pressed, current image URL:', profileData?.profile_image)}
-              >
-                <Avatar.Accessory
-                  size={25}
-                  onPress={handleEditProfile}
-                  containerStyle={styles.avatarAccessory}
-                />
-              </Avatar>
+          {/* Back Button */}
+          <View style={styles.headerTop}>
+            <TouchableOpacity 
+              style={styles.backButton} 
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Profile</Text>
+            <View style={styles.headerRight} />
+          </View>
+
+          {/* Profile Header Content */}
+          <View style={styles.profileHeader}>
+            <View style={styles.avatarSection}>
+              <View style={styles.avatarContainer}>
+                <Avatar
+                  size={120}
+                  rounded
+                  source={
+                    profileData?.profile_image
+                      ? { uri: profileData.profile_image }
+                      : undefined
+                  }
+                  icon={!profileData?.profile_image ? { name: 'store', type: 'material' } : undefined}
+                  containerStyle={styles.avatar}
+                >
+                  <Avatar.Accessory
+                    size={28}
+                    onPress={handleEditProfile}
+                    containerStyle={styles.avatarAccessory}
+                  />
+                </Avatar>
+              </View>
+              
+              <View style={styles.userInfo}>
+                <Text style={styles.userName}>
+                  {profileData?.name || user?.name || "User"}
+                </Text>
+                <Text style={styles.userEmail}>
+                  {profileData?.email || user?.email || "email@example.com"}
+                </Text>
+              </View>
             </View>
-            <Text h3 style={styles.name}>
-              {profileData?.name || user?.name || "User"}
-            </Text>
-            <Text style={styles.email}>
-              {profileData?.email || user?.email || "email@example.com"}
-            </Text>
-            <View style={styles.statsContainer}>
-              <View style={styles.statItem}>
+
+            {/* Stats Cards */}
+            <View style={styles.statsSection}>
+              <View style={styles.statCard}>
                 <Text style={styles.statNumber}>{stats.totalBookings}</Text>
-                <Text style={styles.statLabel}>Orders</Text>
+                <Text style={styles.statLabel}>ORDERS</Text>
               </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
+              <View style={styles.statCard}>
                 <Text style={styles.statNumber}>{stats.totalReviews}</Text>
-                <Text style={styles.statLabel}>Reviews</Text>
+                <Text style={styles.statLabel}>REVIEWS</Text>
               </View>
             </View>
-            <View style={styles.availabilityContainer}>
-              <Text style={styles.availabilityText}>
-                {isAvailable ? 'Available' : 'Unavailable'}
-              </Text>
-              <Switch
-                trackColor={{ false: '#767577', true: '#81b0ff' }}
-                thumbColor={isAvailable ? '#ff4500' : '#f4f3f4'}
-                ios_backgroundColor="#3e3e3e"
-                onValueChange={handleAvailabilityToggle}
-                value={isAvailable}
-                style={styles.switch}
-              />
+
+            {/* Availability Toggle */}
+            <View style={styles.availabilityCard}>
+              <View style={styles.availabilityContent}>
+                <View>
+                  <Text style={styles.availabilityTitle}>Availability Status</Text>
+                  <Text style={styles.availabilitySubtitle}>
+                    {isAvailable ? 'You are currently available for orders' : 'You are currently unavailable'}
+                  </Text>
+                </View>
+                <Switch
+                  trackColor={{ false: 'rgba(255, 255, 255, 0.3)', true: 'rgba(255, 255, 255, 0.4)' }}
+                  thumbColor={isAvailable ? '#FFFFFF' : 'rgba(255, 255, 255, 0.8)'}
+                  ios_backgroundColor="rgba(255, 255, 255, 0.3)"
+                  onValueChange={handleAvailabilityToggle}
+                  value={isAvailable}
+                  style={styles.switch}
+                />
+              </View>
             </View>
           </View>
         </LinearGradient>
 
-        <View style={styles.menuContainer}>
+        {/* Content Sections */}
+        <View style={styles.contentContainer}>
           {menuItems.map((section, sectionIndex) => (
             <View key={sectionIndex} style={styles.section}>
-              <Text style={styles.sectionTitle}>{section.section}</Text>
-              {section.items.map((item, index) => (
-                <Animated.View
-                  key={index}
-                  style={[
-                    styles.menuItemContainer,
-                    {
-                      transform: [
-                        {
-                          scale:
-                            pressedItem === `${sectionIndex}-${index}`
-                              ? scaleAnim
-                              : 1,
-                        },
-                      ],
-                    },
-                  ]}
-                >
-                  <ListItem
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>{section.section}</Text>
+                <Text style={styles.sectionSubtitle}>
+                  {section.section === 'Account' ? 'Manage your account settings' : 'App preferences and support'}
+                </Text>
+              </View>
+              
+              <View style={styles.menuGrid}>
+                {section.items.map((item, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.modernMenuItem}
                     onPress={() => navigation.navigate(item.screen)}
-                    onPressIn={() => handlePressIn(`${sectionIndex}-${index}`)}
-                    onPressOut={handlePressOut}
-                    containerStyle={styles.menuItem}
+                    activeOpacity={0.7}
                   >
-                    <Icon
-                      name={item.icon}
-                      type="material"
-                      color="#ff4500"
-                      containerStyle={styles.menuIcon}
-                    />
-                    <ListItem.Content>
-                      <ListItem.Title style={styles.menuTitle}>
-                        {item.title}
-                      </ListItem.Title>
-                    </ListItem.Content>
-                    {item.badge && (
-                      <View style={styles.badge}>
-                        <Text style={styles.badgeText}>{item.badge}</Text>
+                    <View style={styles.menuItemContent}>
+                      <View style={[styles.menuIconContainer, { backgroundColor: getIconBackground(item.icon) }]}>
+                        <Ionicons 
+                          name={getIoniconName(item.icon)} 
+                          size={24} 
+                          color={getIconColor(item.icon)} 
+                        />
                       </View>
-                    )}
-                    {item.rightIcon ? (
-                      <Icon
-                        name={item.rightIcon}
-                        type="material"
-                        color="#636E72"
-                        size={20}
-                      />
-                    ) : (
-                      <ListItem.Chevron color="#636E72" />
-                    )}
-                  </ListItem>
-                </Animated.View>
-              ))}
+                      
+                      <View style={styles.menuTextContainer}>
+                        <Text style={styles.menuItemTitle}>{item.title}</Text>
+                        <Text style={styles.menuItemSubtitle}>
+                          {getMenuSubtitle(item.title)}
+                        </Text>
+                      </View>
+
+                      <View style={styles.menuItemRight}>
+                        {item.badge && (
+                          <View style={styles.modernBadge}>
+                            <Text style={styles.badgeText}>{item.badge}</Text>
+                          </View>
+                        )}
+                        <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           ))}
-        </View>
 
-        <Button
-          title="Logout"
-          type="clear"
-          icon={
-            <Icon
-              name="logout"
-              type="material"
-              size={20}
-              color="#ff4500"
-              style={{ marginRight: 10 }}
-            />
-          }
-          titleStyle={styles.logoutButtonText}
-          containerStyle={styles.logoutButtonContainer}
-          onPress={handleLogout}
-          loading={loading}
-          disabled={loading}
-        />
+          {/* Logout Section */}
+          <View style={styles.logoutSection}>
+            <TouchableOpacity
+              style={styles.logoutButton}
+              onPress={handleLogout}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="log-out-outline" size={24} color="#EF4444" />
+              <Text style={styles.logoutButtonText}>Logout</Text>
+              <Ionicons name="chevron-forward" size={20} color="#EF4444" />
+            </TouchableOpacity>
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -353,156 +452,261 @@ const ProfileScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#F8FAFC",
   },
   headerGradient: {
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    elevation: 5,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    elevation: 8,
+    shadowColor: "#6366F1",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
   },
-  header: {
-    alignItems: "center",
-    paddingTop: 30,
-    paddingBottom: 40,
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 40,
+    paddingBottom: 20,
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    flex: 1,
+    textAlign: 'center',
+  },
+  headerRight: {
+    width: 40,
+  },
+  profileHeader: {
+    paddingHorizontal: 24,
+    paddingBottom: 24,
+  },
+  avatarSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   avatarContainer: {
-    marginBottom: 15,
-    elevation: 10,
+    marginRight: 15,
+    elevation: 12,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.34,
-    shadowRadius: 6.27,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
   },
   avatar: {
     borderWidth: 4,
     borderColor: "#FFF",
   },
   avatarAccessory: {
-    backgroundColor: "#ff4500",
+    backgroundColor: "#6366F1",
     borderColor: "#FFF",
-    borderRadius: 12,
+    borderWidth: 2,
+    borderRadius: 14,
+    elevation: 4,
+    shadowColor: "#6366F1",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
-  name: {
-    color: "#FFF",
-    marginBottom: 5,
-    fontWeight: "bold",
-    textShadowColor: "rgba(0, 0, 0, 0.1)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+  userInfo: {
+    flex: 1,
   },
-  email: {
-    color: "#FFF",
+  userName: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  userEmail: {
     fontSize: 16,
-    marginBottom: 20,
-    opacity: 0.9,
+    color: 'rgba(255, 255, 255, 0.9)',
   },
-  statsContainer: {
-    flexDirection: "row",
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    borderRadius: 15,
-    paddingVertical: 15,
-    paddingHorizontal: 30,
+  statsSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 32,
+    backdropFilter: 'blur(20px)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    marginBottom: 24,
   },
-  statItem: {
-    alignItems: "center",
-    paddingHorizontal: 15,
+  statCard: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
   },
   statNumber: {
-    color: "#FFF",
-    fontSize: 20,
-    fontWeight: "bold",
-    marginBottom: 5,
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 6,
   },
   statLabel: {
-    color: "#FFF",
-    fontSize: 12,
-    opacity: 0.9,
+    fontSize: 13,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    color: 'rgba(255, 255, 255, 0.8)',
   },
-  statDivider: {
-    width: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.3)",
-    marginHorizontal: 10,
-  },
-  menuContainer: {
+  availabilityCard: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 20,
+    backdropFilter: 'blur(20px)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
     marginTop: 20,
-    paddingHorizontal: 15,
   },
-  section: {
-    marginBottom: 25,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#2D3436",
-    marginBottom: 10,
-    paddingLeft: 10,
-  },
-  menuItemContainer: {
-    marginBottom: 8,
-  },
-  menuItem: {
-    backgroundColor: "#FFF",
-    borderRadius: 15,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.22,
-    shadowRadius: 2.22,
-  },
-  menuIcon: {
-    backgroundColor: "#ffe0cc",
-    padding: 8,
-    borderRadius: 10,
-  },
-  menuTitle: {
-    color: "#2D3436",
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  badge: {
-    backgroundColor: "#ff4500",
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    marginRight: 10,
-  },
-  badgeText: {
-    color: "#FFF",
-    fontSize: 12,
-    fontWeight: "bold",
-  },
-  logoutButtonContainer: {
-    marginTop: 10,
-    marginBottom: 30,
-    paddingHorizontal: 15,
-  },
-  logoutButtonText: {
-    color: "#ff4500",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  availabilityContainer: {
+  availabilityContent: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    backgroundColor: '#F0F3F5',
-    borderRadius: 10,
-    marginTop: 20,
+    alignItems: 'center',
   },
-  availabilityText: {
-    fontSize: 16,
-    color: '#2D3436',
-    fontWeight: '500',
+  availabilityTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  availabilitySubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
   switch: {
     transform: [{ scaleX: 1.1 }, { scaleY: 1.1 }],
   },
+  
+  // Content Section
+  contentContainer: {
+    flex: 1,
+    paddingTop: 24,
+    paddingHorizontal: 24,
+  },
+  section: {
+    marginBottom: 32,
+  },
+  sectionHeader: {
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: "700",
+    color: "#0F172A",
+    letterSpacing: -0.3,
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    color: "#64748B",
+    marginTop: 4,
+    fontWeight: "500",
+  },
+  
+     // Menu Grid
+   menuGrid: {
+     // Simple vertical stack for full-width items
+   },
+     modernMenuItem: {
+     width: '100%', // Full width for better readability
+     backgroundColor: "#FFFFFF",
+     borderRadius: 16,
+     elevation: 2,
+     shadowColor: "#64748B",
+     shadowOffset: { width: 0, height: 2 },
+     shadowOpacity: 0.04,
+     shadowRadius: 16,
+     marginBottom: 12,
+     overflow: 'hidden',
+   },
+   menuItemContent: {
+     flexDirection: 'row',
+     alignItems: 'center',
+     paddingVertical: 20,
+     paddingHorizontal: 20,
+   },
+   menuIconContainer: {
+     width: 56,
+     height: 56,
+     borderRadius: 16,
+     justifyContent: 'center',
+     alignItems: 'center',
+     marginRight: 16,
+   },
+   menuTextContainer: {
+     flex: 1,
+   },
+   menuItemTitle: {
+     fontSize: 16,
+     fontWeight: "700",
+     color: "#0F172A",
+     letterSpacing: -0.2,
+     marginBottom: 4,
+   },
+   menuItemSubtitle: {
+     fontSize: 14,
+     color: "#64748B",
+     marginTop: 2,
+     lineHeight: 20,
+   },
+   menuItemRight: {
+     flexDirection: 'row',
+     alignItems: 'center',
+   },
+  modernBadge: {
+    backgroundColor: "#6366F1",
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginRight: 12,
+    elevation: 2,
+    shadowColor: "#6366F1",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  badgeText: {
+    color: "#FFF",
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+  },
+  
+     // Logout Section
+   logoutSection: {
+     marginTop: 20,
+     marginBottom: 40,
+   },
+   logoutButton: {
+     flexDirection: 'row',
+     alignItems: 'center',
+     justifyContent: 'space-between',
+     backgroundColor: "#FFFFFF",
+     borderRadius: 16,
+     elevation: 2,
+     shadowColor: "#64748B",
+     shadowOffset: { width: 0, height: 2 },
+     shadowOpacity: 0.04,
+     shadowRadius: 16,
+     paddingVertical: 20,
+     paddingHorizontal: 20,
+   },
+   logoutButtonText: {
+     color: "#EF4444",
+     fontSize: 16,
+     fontWeight: "700",
+     letterSpacing: -0.2,
+     flex: 1,
+     marginLeft: 16,
+   },
 });
 
 export default ProfileScreen;

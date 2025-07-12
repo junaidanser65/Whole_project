@@ -9,18 +9,20 @@ import {
   ActivityIndicator,
   RefreshControl,
   ScrollView,
+  TextInput,
+  Alert,
 } from 'react-native';
-import { SearchBar, Icon, Button } from 'react-native-elements';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getRecentActivities, getVendorReviews, getAllRecentActivities } from '../../services/api';
 
 const ACTIVITY_FILTERS = [
-  { id: 'all', label: 'All Activities' },
-  { id: 'booking', label: 'Bookings' },
-  { id: 'payment', label: 'Payments' },
-  { id: 'review', label: 'Reviews' },
-  { id: 'chat', label: 'Chats' }
+  { id: 'all', label: 'All Activities', icon: 'grid-outline' },
+  { id: 'booking', label: 'Bookings', icon: 'calendar-outline' },
+  { id: 'payment', label: 'Payments', icon: 'wallet-outline' },
+  { id: 'review', label: 'Reviews', icon: 'star-outline' },
+  { id: 'chat', label: 'Chats', icon: 'chatbubble-outline' }
 ];
 
 const AllActivitiesScreen = ({ navigation }) => {
@@ -136,6 +138,7 @@ const AllActivitiesScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error fetching activities:', error);
+      Alert.alert('Error', 'Failed to load activities. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -153,40 +156,6 @@ const AllActivitiesScreen = ({ navigation }) => {
     return matchesFilter && matchesSearch;
   });
 
-  const renderActivityItem = ({ item }) => (
-    <ActivityItem
-      activity={item}
-      onPress={() => {
-        switch (item.type) {
-          case 'booking':
-            navigation.navigate('Bookings', { 
-              initialTab: 'pending',
-              bookingId: item.data.id 
-            });
-            break;
-          case 'payment':
-            navigation.navigate('Bookings', { 
-              initialTab: 'completed',
-              bookingId: item.data.id 
-            });
-            break;
-          case 'review':
-            navigation.navigate('ReviewDetails', {
-              reviewId: item.data.id,
-              title: `Review - ${item.data.user_name}`,
-            });
-            break;
-          case 'chat':
-            navigation.navigate('Chat', {
-              conversationId: item.data.conversation_id,
-              userName: item.data.user_name
-            });
-            break;
-        }
-      }}
-    />
-  );
-
   const getActivityIcon = (type) => {
     switch (type) {
       case 'booking':
@@ -199,6 +168,21 @@ const AllActivitiesScreen = ({ navigation }) => {
         return 'chatbubble-outline';
       default:
         return 'notifications-outline';
+    }
+  };
+
+  const getActivityColor = (type) => {
+    switch (type) {
+      case 'booking':
+        return '#10B981'; // Emerald
+      case 'payment':
+        return '#3B82F6'; // Blue
+      case 'review':
+        return '#F59E0B'; // Amber
+      case 'chat':
+        return '#8B5CF6'; // Purple
+      default:
+        return '#6B7280'; // Gray
     }
   };
 
@@ -234,10 +218,9 @@ const AllActivitiesScreen = ({ navigation }) => {
         }
       }}
     >
-      <View style={[styles.iconContainer, styles[`${activity.type}Icon`]]}>
-        <Icon
+      <View style={[styles.iconContainer, { backgroundColor: getActivityColor(activity.type) }]}>
+        <Ionicons
           name={getActivityIcon(activity.type)}
-          type="material"
           size={24}
           color="#FFF"
         />
@@ -249,14 +232,19 @@ const AllActivitiesScreen = ({ navigation }) => {
         </View>
         <Text style={styles.activityDescription}>{activity.description}</Text>
         {activity.type === 'payment' && (
-          <Text style={styles.activityAmount}>{activity.amount}</Text>
+          <View style={styles.amountContainer}>
+            <Text style={styles.activityAmount}>{activity.amount}</Text>
+          </View>
         )}
         {activity.type === 'review' && (
           <View style={styles.ratingContainer}>
-            <Icon name="star" type="material" size={16} color="#FFB800" />
+            <Ionicons name="star" size={16} color="#F59E0B" />
             <Text style={styles.ratingText}>{activity.rating}</Text>
           </View>
         )}
+      </View>
+      <View style={styles.chevronContainer}>
+        <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
       </View>
     </TouchableOpacity>
   );
@@ -266,83 +254,123 @@ const AllActivitiesScreen = ({ navigation }) => {
     fetchActivities().finally(() => setRefreshing(false));
   }, []);
 
+  const clearSearch = () => {
+    setSearchQuery('');
+  };
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.headerContainer}>
-        <LinearGradient
-          colors={["#ff4500", "#cc3700"]}
-          style={styles.headerGradient}
-        >
-          <View style={styles.headerTop}>
-            <TouchableOpacity 
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
-            >
-              <Icon name="arrow-back" type="material" size={24} color="#FFF" />
-            </TouchableOpacity>
-            <Text style={styles.title}>Activities</Text>
+      {/* Header */}
+      <LinearGradient
+        colors={["#6366F1", "#8B5CF6", "#A855F7"]}
+        style={styles.header}
+      >
+        <View style={styles.headerContent}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#FFF" />
+          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>All Activities</Text>
+            <Text style={styles.headerSubtitle}>
+              {filteredActivities.length} {filteredActivities.length === 1 ? 'activity' : 'activities'}
+            </Text>
           </View>
-          <SearchBar
-            placeholder="Search activities..."
-            onChangeText={setSearchQuery}
-            value={searchQuery}
-            containerStyle={styles.searchContainer}
-            inputContainerStyle={styles.searchInputContainer}
-            inputStyle={styles.searchInput}
-            lightTheme
-            round
-          />
-        </LinearGradient>
-      </View>
+          <TouchableOpacity 
+            style={styles.refreshButton}
+            onPress={onRefresh}
+          >
+            <Ionicons name="refresh" size={24} color="#FFF" />
+          </TouchableOpacity>
+        </View>
 
-      <View style={styles.filterContainer}>
-        <FlatList
-          horizontal
+        {/* Search Bar */}
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputContainer}>
+            <Ionicons name="search" size={20} color="#94A3B8" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search activities..."
+              placeholderTextColor="#94A3B8"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={clearSearch}>
+                <Ionicons name="close-circle" size={20} color="#94A3B8" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      </LinearGradient>
+
+      {/* Filter Tabs */}
+      <View style={styles.filterSection}>
+        <ScrollView 
+          horizontal 
           showsHorizontalScrollIndicator={false}
-          data={ACTIVITY_FILTERS}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
+          contentContainerStyle={styles.filterList}
+        >
+          {ACTIVITY_FILTERS.map((filter) => (
             <TouchableOpacity
+              key={filter.id}
               style={[
                 styles.filterButton,
-                selectedFilter === item.id && styles.filterButtonActive,
+                selectedFilter === filter.id && styles.filterButtonActive,
               ]}
-              onPress={() => setSelectedFilter(item.id)}
+              onPress={() => setSelectedFilter(filter.id)}
+              activeOpacity={0.7}
             >
+              <Ionicons
+                name={filter.icon}
+                size={16}
+                color={selectedFilter === filter.id ? "#FFFFFF" : "#6366F1"}
+              />
               <Text
                 style={[
                   styles.filterButtonText,
-                  selectedFilter === item.id && styles.filterButtonTextActive,
+                  selectedFilter === filter.id && styles.filterButtonTextActive,
                 ]}
               >
-                {item.label}
+                {filter.label}
               </Text>
             </TouchableOpacity>
-          )}
-          contentContainerStyle={styles.filterList}
-        />
+          ))}
+        </ScrollView>
       </View>
 
+      {/* Activities List */}
       {loading && !refreshing ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#ff4500" />
+          <ActivityIndicator size="large" color="#6366F1" />
+          <Text style={styles.loadingText}>Loading activities...</Text>
         </View>
       ) : (
         <FlatList
           data={filteredActivities}
           keyExtractor={(item) => item.id.toString()}
-          renderItem={renderActivityItem}
+          renderItem={({ item }) => <ActivityItem activity={item} />}
           contentContainerStyle={styles.activitiesList}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
-            <Text style={styles.noActivitiesText}>No activities found</Text>
+            <View style={styles.emptyContainer}>
+              <Ionicons name="notifications-outline" size={64} color="#CBD5E1" />
+              <Text style={styles.emptyTitle}>No Activities Found</Text>
+              <Text style={styles.emptySubtitle}>
+                {searchQuery 
+                  ? "Try adjusting your search terms" 
+                  : "Your recent activities will appear here"}
+              </Text>
+            </View>
           }
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={["#ff4500"]}
-              tintColor="#ff4500"
+              colors={["#6366F1"]}
+              tintColor="#6366F1"
             />
           }
         />
@@ -354,84 +382,120 @@ const AllActivitiesScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#F8FAFC",
   },
-  headerContainer: {
-    overflow: 'hidden',
-    backgroundColor: "#ff4500",
+  header: {
+    paddingTop: 10,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  headerGradient: {
-    padding: 20,
-    borderBottomRightRadius: 20,
-    borderBottomLeftRadius: 20,
-  },
-  headerTop: {
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
+    justifyContent: 'space-between',
+    marginBottom: 20,
   },
   backButton: {
-    padding: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  title: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#FFF",
-    marginLeft: 10,
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#FFF',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
+  },
+  refreshButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   searchContainer: {
-    backgroundColor: "transparent",
-    borderTopWidth: 0,
-    borderBottomWidth: 0,
-    paddingHorizontal: 0,
+    marginTop: 8,
   },
   searchInputContainer: {
-    backgroundColor: "#FFF",
-    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
   },
   searchInput: {
-    fontSize: 16,
-  },
-  filterContainer: {
-    backgroundColor: "#FFF",
+    flex: 1,
     paddingVertical: 12,
-    marginBottom: 12,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    color: '#0F172A',
+    fontWeight: '500',
+  },
+  filterSection: {
+    marginBottom: 8,
   },
   filterList: {
     paddingHorizontal: 20,
+    paddingVertical: 10,
   },
   filterButton: {
-    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: "#F5F6FA",
-    marginRight: 8,
+    backgroundColor: '#F1F5F9',
+    marginRight: 10,
   },
   filterButtonActive: {
-    backgroundColor: "#ff4500",
+    backgroundColor: '#6366F1',
   },
   filterButtonText: {
-    color: "#636E72",
+    color: '#64748B',
     fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
   },
   filterButtonTextActive: {
-    color: "#FFF",
-    fontWeight: "500",
+    color: '#FFFFFF',
   },
   activitiesList: {
     padding: 20,
   },
   activityItem: {
     flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#FFF",
     borderRadius: 16,
-    padding: 16,
+    padding: 20,
     marginBottom: 12,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
   iconContainer: {
     width: 48,
@@ -441,18 +505,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 16,
   },
-  bookingIcon: {
-    backgroundColor: "#4CAF50",
-  },
-  paymentIcon: {
-    backgroundColor: "#2196F3",
-  },
-  reviewIcon: {
-    backgroundColor: "#FFB800",
-  },
-  messageIcon: {
-    backgroundColor: "#ff4500",
-  },
   activityContent: {
     flex: 1,
   },
@@ -460,42 +512,32 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: 4,
+    marginBottom: 6,
   },
   activityTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#2D3436",
+    color: "#0F172A",
+    flex: 1,
   },
   activityTime: {
-    fontSize: 14,
-    color: "#636E72",
+    fontSize: 12,
+    color: "#64748B",
+    fontWeight: '500',
   },
   activityDescription: {
     fontSize: 14,
-    color: "#636E72",
-    marginBottom: 4,
+    color: "#64748B",
+    lineHeight: 20,
+    marginBottom: 8,
+  },
+  amountContainer: {
+    marginTop: 4,
   },
   activityAmount: {
     fontSize: 16,
-    fontWeight: "600",
-    color: "#2196F3",
-  },
-  messagePreview: {
-    fontSize: 14,
-    color: "#636E72",
-    fontStyle: "italic",
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  noActivitiesText: {
-    textAlign: 'center',
-    color: '#636E72',
-    fontSize: 16,
-    marginTop: 20,
+    fontWeight: "700",
+    color: "#10B981",
   },
   ratingContainer: {
     flexDirection: 'row',
@@ -505,11 +547,41 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#2D3436',
+    color: '#0F172A',
     marginLeft: 4,
   },
-  chatIcon: {
-    backgroundColor: '#00b894',
+  chevronContainer: {
+    marginLeft: 12,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#64748B',
+    marginTop: 12,
+    fontWeight: '500',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 24,
   },
 });
 

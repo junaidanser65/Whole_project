@@ -10,8 +10,12 @@ import {
   StatusBar,
   SafeAreaView,
   Platform,
+  Text,
+  TextInput,
+  Animated,
 } from 'react-native';
-import { Text, Icon } from '@rneui/themed';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../contexts/AuthContext';
 import { getVendorConversations } from '../../services/api';
 import { formatDistanceToNow } from 'date-fns';
@@ -22,6 +26,9 @@ export default function ChatScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
   const fetchConversations = async () => {
     try {
@@ -44,6 +51,13 @@ export default function ChatScreen({ navigation }) {
 
   useEffect(() => {
     fetchConversations();
+    
+    // Animate entrance
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
   }, []);
 
   const onRefresh = () => {
@@ -59,57 +73,151 @@ export default function ChatScreen({ navigation }) {
     });
   };
 
-  const renderConversation = ({ item }) => {
+  const handleSearchToggle = () => {
+    setShowSearch(!showSearch);
+    if (showSearch) {
+      setSearchQuery('');
+    }
+  };
+
+  const filteredConversations = conversations.filter(conversation => {
+    if (!searchQuery.trim()) return true;
+    
+    const query = searchQuery.toLowerCase();
+    return (
+      conversation.user_name?.toLowerCase().includes(query) ||
+      conversation.last_message?.toLowerCase().includes(query)
+    );
+  });
+
+  const formatTime = (timestamp) => {
+    if (!timestamp) return '';
+    
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInHours = (now - date) / (1000 * 60 * 60);
+    
+    if (diffInHours < 24) {
+      return formatDistanceToNow(date, { addSuffix: true });
+    } else {
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    }
+  };
+
+  const renderConversation = ({ item, index }) => {
     const unreadCount = item.unread_count || 0;
+    const hasUnread = unreadCount > 0;
 
     return (
-      <TouchableOpacity
-        style={styles.conversationItem}
-        onPress={() => handleConversationPress(item)}
+      <Animated.View 
+        style={[
+          styles.conversationWrapper,
+          { 
+            opacity: fadeAnim,
+            transform: [{ 
+              translateY: fadeAnim.interpolate({
+                inputRange: [0, 1],
+                outputRange: [50, 0]
+              })
+            }]
+          }
+        ]}
       >
-        <View style={styles.avatarContainer}>
-          {item.user_image ? (
-            <Image source={{ uri: item.user_image }} style={styles.avatar} />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarText}>
-                {item.user_name?.charAt(0).toUpperCase() || 'U'}
-              </Text>
-            </View>
-          )}
-          {unreadCount > 0 && (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadCount}>{unreadCount}</Text>
-            </View>
-          )}
-        </View>
-        <View style={styles.conversationInfo}>
-          <View style={styles.nameTimeContainer}>
-            <Text style={styles.name}>{item.user_name}</Text>
-            {item.last_message_at && (
-              <Text style={styles.time}>
-                {formatDistanceToNow(new Date(item.last_message_at), { addSuffix: true })}
-      </Text>
+        <TouchableOpacity
+          style={[styles.conversationItem, hasUnread && styles.unreadConversation]}
+          onPress={() => handleConversationPress(item)}
+          activeOpacity={0.7}
+        >
+          <View style={styles.avatarContainer}>
+            {item.user_image ? (
+              <Image source={{ uri: item.user_image }} style={styles.avatar} />
+            ) : (
+              <LinearGradient
+                colors={["#6366F1", "#8B5CF6"]}
+                style={styles.avatarPlaceholder}
+              >
+                <Text style={styles.avatarText}>
+                  {item.user_name?.charAt(0).toUpperCase() || 'U'}
+                </Text>
+              </LinearGradient>
+            )}
+            {hasUnread && (
+              <View style={styles.onlineIndicator}>
+                <View style={styles.onlineDot} />
+              </View>
             )}
           </View>
-          <Text style={styles.lastMessage} numberOfLines={1}>
-            {item.last_message || 'No messages yet'}
-      </Text>
-    </View>
-      </TouchableOpacity>
-  );
+          
+          <View style={styles.conversationInfo}>
+            <View style={styles.nameTimeContainer}>
+              <Text style={[styles.name, hasUnread && styles.unreadName]}>
+                {item.user_name}
+              </Text>
+              {item.last_message_at && (
+                <Text style={styles.time}>
+                  {formatTime(item.last_message_at)}
+                </Text>
+              )}
+            </View>
+            
+            <View style={styles.messageContainer}>
+              <Text 
+                style={[styles.lastMessage, hasUnread && styles.unreadMessage]} 
+                numberOfLines={1}
+              >
+                {item.last_message || 'No messages yet'}
+              </Text>
+              {hasUnread && (
+                <View style={styles.unreadBadge}>
+                  <Text style={styles.unreadCount}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
+            </View>
+          </View>
+          
+          <View style={styles.chevronContainer}>
+            <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+    );
   };
 
   if (loading) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar
-          barStyle="dark-content"
-          backgroundColor="#fff"
-          translucent={true}
-        />
+        <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
+        
+        {/* Header */}
+        <LinearGradient
+          colors={["#6366F1", "#8B5CF6", "#A855F7"]}
+          style={styles.header}
+        >
+          <View style={styles.headerContent}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={24} color="#FFF" />
+            </TouchableOpacity>
+            
+            <View style={styles.headerCenter}>
+              <Text style={styles.headerTitle}>Messages</Text>
+              <Text style={styles.headerSubtitle}>Stay connected with customers</Text>
+            </View>
+            
+            <View style={styles.headerRight} />
+          </View>
+        </LinearGradient>
+        
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#ff4500" />
+          <ActivityIndicator size="large" color="#6366F1" />
+          <Text style={styles.loadingText}>Loading conversations...</Text>
         </View>
       </SafeAreaView>
     );
@@ -118,16 +226,46 @@ export default function ChatScreen({ navigation }) {
   if (error) {
     return (
       <SafeAreaView style={styles.safeArea}>
-        <StatusBar
-          barStyle="dark-content"
-          backgroundColor="#fff"
-          translucent={true}
-        />
+        <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
+        
+        {/* Header */}
+        <LinearGradient
+          colors={["#6366F1", "#8B5CF6", "#A855F7"]}
+          style={styles.header}
+        >
+          <View style={styles.headerContent}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={24} color="#FFF" />
+            </TouchableOpacity>
+            
+            <View style={styles.headerCenter}>
+              <Text style={styles.headerTitle}>Messages</Text>
+              <Text style={styles.headerSubtitle}>Stay connected with customers</Text>
+            </View>
+            
+            <View style={styles.headerRight} />
+          </View>
+        </LinearGradient>
+        
         <View style={styles.errorContainer}>
-          <Icon name="error-outline" type="material" size={48} color="#ff4500" />
+          <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+          <Text style={styles.errorTitle}>Something went wrong</Text>
           <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity style={styles.retryButton} onPress={fetchConversations}>
-            <Text style={styles.retryButtonText}>Retry</Text>
+          <TouchableOpacity 
+            style={styles.retryButton} 
+            onPress={fetchConversations}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={["#6366F1", "#8B5CF6"]}
+              style={styles.retryButtonGradient}
+            >
+              <Ionicons name="refresh" size={16} color="#FFF" />
+              <Text style={styles.retryButtonText}>Try Again</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -136,33 +274,85 @@ export default function ChatScreen({ navigation }) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar
-        barStyle="dark-content"
-        backgroundColor="#fff"
-        translucent={true}
-              />
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Messages</Text>
-              </View>
+      <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
+      
+      {/* Header */}
+      <LinearGradient
+        colors={["#6366F1", "#8B5CF6", "#A855F7"]}
+        style={styles.header}
+      >
+        <View style={styles.headerContent}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#FFF" />
+          </TouchableOpacity>
+          
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Messages</Text>
+            <Text style={styles.headerSubtitle}>
+              {conversations.length} {conversations.length === 1 ? 'conversation' : 'conversations'}
+            </Text>
+          </View>
+          
+          <TouchableOpacity 
+            style={styles.headerButton}
+            onPress={handleSearchToggle}
+          >
+            <Ionicons name={showSearch ? "close" : "search"} size={24} color="#FFF" />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+
+      {/* Search Bar */}
+      {showSearch && (
+        <View style={styles.searchContainer}>
+          <View style={styles.searchInputContainer}>
+            <Ionicons name="search" size={20} color="#94A3B8" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search conversations..."
+              placeholderTextColor="#94A3B8"
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoFocus={true}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={20} color="#94A3B8" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
+
       <View style={styles.container}>
         <FlatList
-          data={conversations}
+          data={filteredConversations}
           renderItem={renderConversation}
           keyExtractor={item => item.id.toString()}
           contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              colors={["#ff4500"]}
+              colors={["#6366F1"]}
+              tintColor="#6366F1"
             />
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Icon name="chat" type="material" size={48} color="#666" />
-              <Text style={styles.emptyText}>No conversations yet</Text>
-              <Text style={styles.emptySubText}>
-                Start chatting with users to see them here
+              <Ionicons name="chatbubbles-outline" size={64} color="#CBD5E1" />
+              <Text style={styles.emptyTitle}>
+                {searchQuery ? 'No matching conversations' : 'No conversations yet'}
+              </Text>
+              <Text style={styles.emptySubtitle}>
+                {searchQuery 
+                  ? `No conversations match "${searchQuery}"`
+                  : 'Start chatting with customers to see conversations here'
+                }
               </Text>
             </View>
           }
@@ -175,164 +365,282 @@ export default function ChatScreen({ navigation }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    backgroundColor: '#F8FAFC',
   },
   header: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    backgroundColor: '#fff',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    paddingTop: 10,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 16,
   },
   headerTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-    textAlign: 'center',
+    fontWeight: '700',
+    color: '#FFF',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerRight: {
+    width: 40,
   },
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8FAFC',
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
+    padding: 40,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#64748B',
+    marginTop: 16,
+    fontWeight: '500',
   },
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    padding: 20,
+    padding: 40,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: 16,
+    marginBottom: 8,
   },
   errorText: {
     fontSize: 16,
-    color: '#333',
+    color: '#64748B',
     textAlign: 'center',
-    marginTop: 16,
+    lineHeight: 24,
     marginBottom: 24,
   },
   retryButton: {
-    backgroundColor: '#ff4500',
-    paddingHorizontal: 24,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: "#6366F1",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  retryButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 12,
-    borderRadius: 8,
+    paddingHorizontal: 24,
   },
   retryButtonText: {
-    color: '#fff',
+    color: '#FFF',
     fontSize: 16,
     fontWeight: '600',
+    marginLeft: 8,
   },
   listContainer: {
-    padding: 8,
-    paddingBottom: 32,
+    padding: 20,
+  },
+  conversationWrapper: {
+    marginBottom: 12,
   },
   conversationItem: {
     flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderRadius: 16,
     padding: 16,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    marginBottom: 8,
-    elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  unreadConversation: {
+    borderColor: '#6366F1',
+    borderWidth: 1,
+    shadowColor: '#6366F1',
     shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
   avatarContainer: {
     position: 'relative',
     marginRight: 16,
-    width: 50,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 2,
+    borderColor: '#F1F5F9',
   },
   avatarPlaceholder: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#ff4500',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#F1F5F9',
   },
   avatarText: {
-    color: '#fff',
+    color: '#FFF',
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
-  unreadBadge: {
+  onlineIndicator: {
     position: 'absolute',
-    top: -5,
-    right: -5,
-    backgroundColor: '#ff4500',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
+    bottom: 2,
+    right: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#FFF',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 4,
   },
-  unreadCount: {
-    color: '#fff',
-    fontSize: 12,
-    fontWeight: 'bold',
+  onlineDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#10B981',
   },
   conversationInfo: {
     flex: 1,
-    justifyContent: 'center',
   },
   nameTimeContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   name: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: '#0F172A',
     flex: 1,
     marginRight: 8,
   },
+  unreadName: {
+    fontWeight: '700',
+    color: '#6366F1',
+  },
   time: {
     fontSize: 12,
-    color: '#666',
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  messageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   lastMessage: {
     fontSize: 14,
-    color: '#666',
+    color: '#64748B',
+    flex: 1,
+    marginRight: 8,
+  },
+  unreadMessage: {
+    color: '#0F172A',
+    fontWeight: '500',
+  },
+  unreadBadge: {
+    backgroundColor: '#6366F1',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    minWidth: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  unreadCount: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  chevronContainer: {
+    marginLeft: 12,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
-    marginTop: 32,
+    paddingVertical: 80,
   },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#666',
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0F172A',
     marginTop: 16,
-    textAlign: 'center',
+    marginBottom: 8,
   },
-  emptySubText: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 4,
+  emptySubtitle: {
+    fontSize: 16,
+    color: '#64748B',
     textAlign: 'center',
-    opacity: 0.8,
+    lineHeight: 24,
+  },
+  searchContainer: {
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  searchInput: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    color: '#0F172A',
+    fontWeight: '500',
   },
 });

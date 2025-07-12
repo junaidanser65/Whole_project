@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   StyleSheet,
   View,
-  Text,
+  Text as RNText,
   TextInput,
   TouchableOpacity,
   Image,
@@ -14,12 +14,21 @@ import {
   Keyboard,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { Picker } from '@react-native-picker/picker';
 import * as ImagePicker from 'expo-image-picker';
 import { createMenu } from '../../services/menuService';
 import { uploadImageToCloudinary } from '../../services/cloudinaryService';
-import { Icon } from 'react-native-elements';
-import * as Permissions from 'expo-permissions';
+
+const CATEGORIES = [
+  { value: 'appetizers', label: 'Appetizers', icon: 'leaf-outline' },
+  { value: 'main', label: 'Main Course', icon: 'pizza-outline' },
+  { value: 'desserts', label: 'Desserts', icon: 'ice-cream-outline' },
+  { value: 'drinks', label: 'Drinks', icon: 'wine-outline' },
+  { value: 'side', label: 'Side Dishes', icon: 'fast-food-outline' },
+];
 
 const AddMenuItemScreen = ({ navigation }) => {
   const [itemName, setItemName] = useState('');
@@ -183,259 +192,396 @@ const AddMenuItemScreen = ({ navigation }) => {
     }
   };
 
-  return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={{ flex: 1 }}
-    >
-      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Add New Menu Item</Text>
-          </View>
+  const resetForm = () => {
+    setItemName("");
+    setDescription("");
+    setPrice("");
+    setCategory("main");
+    setImage(null);
+    setPreparationTime("");
+    setIsVegetarian(false);
+    setIsSpicy(false);
+    setErrors({});
+  };
 
-          <View style={styles.formContainer}>
-            <TouchableOpacity style={styles.imageUpload} onPress={pickImage}>
-              {image ? (
-                <View style={styles.imageContainer}>
-                  <Image source={{ uri: image }} style={styles.uploadedImage} />
-                  {isUploading && (
-                    <View style={styles.uploadingOverlay}>
-                      <ActivityIndicator size="large" color="#FFFFFF" />
-                      <Text style={styles.uploadingText}>Uploading...</Text>
+  return (
+    <SafeAreaView style={styles.container} edges={["top"]}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <ScrollView
+            style={styles.scrollContainer}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Modern Header */}
+            <View style={styles.headerContainer}>
+              <LinearGradient
+                colors={["#6366F1", "#8B5CF6", "#A855F7"]}
+                style={styles.headerGradient}
+              >
+                <View style={styles.headerContent}>
+                  <TouchableOpacity 
+                    style={styles.backButton}
+                    onPress={() => navigation.goBack()}
+                  >
+                    <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
+                  </TouchableOpacity>
+                  
+                  <View style={styles.headerTitleSection}>
+                    <RNText style={styles.headerTitle}>Add Menu Item</RNText>
+                    <RNText style={styles.headerSubtitle}>
+                      Create a delicious new dish for your menu
+                    </RNText>
+                  </View>
+                  
+                  <TouchableOpacity 
+                    style={styles.resetButton}
+                    onPress={resetForm}
+                  >
+                    <Ionicons name="refresh-outline" size={20} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+            </View>
+
+            <View style={styles.formContainer}>
+              {/* Image Upload Section */}
+              <View style={styles.imageSection}>
+                <RNText style={styles.sectionTitle}>Item Photo</RNText>
+                <TouchableOpacity 
+                  style={[styles.imageUpload, errors.image && styles.imageUploadError]} 
+                  onPress={pickImage}
+                  activeOpacity={0.7}
+                >
+                  {image ? (
+                    <View style={styles.imageContainer}>
+                      <Image source={{ uri: image }} style={styles.uploadedImage} />
+                      {isUploading && (
+                        <View style={styles.uploadingOverlay}>
+                          <ActivityIndicator size="large" color="#FFFFFF" />
+                          <RNText style={styles.uploadingText}>Uploading...</RNText>
+                        </View>
+                      )}
+                      <View style={styles.imageActions}>
+                        <TouchableOpacity 
+                          style={styles.changeImageButton}
+                          onPress={pickImage}
+                        >
+                          <Ionicons name="camera-outline" size={16} color="#6366F1" />
+                          <RNText style={styles.changeImageText}>Change</RNText>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={styles.uploadPlaceholder}>
+                      <View style={styles.uploadIconContainer}>
+                        <Ionicons name="camera-outline" size={32} color="#6366F1" />
+                      </View>
+                      <RNText style={styles.uploadTitle}>Add Photo</RNText>
+                      <RNText style={styles.uploadSubtitle}>Tap to upload an image of your dish</RNText>
                     </View>
                   )}
-                </View>
-              ) : (
-                <View style={styles.uploadPlaceholder}>
-                  <Icon
-                    name="add-photo-alternate"
-                    type="material"
-                    size={40}
-                    color="#FF8C42"
-                    style={styles.uploadIcon}
-                  />
-                  <Text style={styles.uploadText}>Tap to upload image</Text>
-                </View>
-              )}
-            </TouchableOpacity>
-            {errors.image && <Text style={styles.errorText}>{errors.image}</Text>}
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Item Name*</Text>
-              <TextInput
-                style={[styles.input, styles.textInput, errors.itemName && styles.inputError]}
-                value={itemName}
-                onChangeText={setItemName}
-                placeholder="Enter item name"
-                placeholderTextColor="#999"
-              />
-              {errors.itemName && <Text style={styles.errorText}>{errors.itemName}</Text>}
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Description*</Text>
-              <TextInput
-                style={[styles.input, styles.textArea, errors.description && styles.inputError]}
-                value={description}
-                onChangeText={setDescription}
-                placeholder="Enter item description"
-                placeholderTextColor="#999"
-                multiline
-              />
-              {errors.description && <Text style={styles.errorText}>{errors.description}</Text>}
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Price*</Text>
-              <TextInput
-                style={[styles.input, errors.price && styles.inputError]}
-                value={price}
-                onChangeText={setPrice}
-                placeholder="Enter price"
-                placeholderTextColor="#999"
-                keyboardType="numeric"
-              />
-              {errors.price && <Text style={styles.errorText}>{errors.price}</Text>}
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Category</Text>
-              <View style={styles.pickerContainer}>
-                <Picker
-                  selectedValue={category}
-                  onValueChange={(itemValue) => setCategory(itemValue)}
-                  style={styles.picker}
-                >
-                  <Picker.Item label="Appetizer" value="appetizer" />
-                  <Picker.Item label="Main Course" value="main" />
-                  <Picker.Item label="Dessert" value="dessert" />
-                  <Picker.Item label="Beverage" value="beverage" />
-                  <Picker.Item label="Side Dish" value="side" />
-                </Picker>
+                </TouchableOpacity>
+                {errors.image && <RNText style={styles.errorText}>{errors.image}</RNText>}
               </View>
-            </View>
 
-            <TouchableOpacity 
-              style={[styles.submitButton, isUploading && styles.submitButtonDisabled]} 
-              onPress={handleSubmit}
-              disabled={isUploading}
-            >
-              {isUploading ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.submitButtonText}>Add Menu Item</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </TouchableWithoutFeedback>
-    </KeyboardAvoidingView>
+              {/* Basic Information */}
+              <View style={styles.formSection}>
+                <RNText style={styles.sectionTitle}>Basic Information</RNText>
+                
+                <View style={styles.inputGroup}>
+                  <RNText style={styles.inputLabel}>Item Name *</RNText>
+                  <View style={[styles.inputContainer, errors.itemName && styles.inputContainerError]}>
+                    <Ionicons name="restaurant-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.textInput}
+                      value={itemName}
+                      onChangeText={setItemName}
+                      placeholder="Enter item name"
+                      placeholderTextColor="#94A3B8"
+                    />
+                  </View>
+                  {errors.itemName && <RNText style={styles.errorText}>{errors.itemName}</RNText>}
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <RNText style={styles.inputLabel}>Description *</RNText>
+                  <View style={[styles.inputContainer, styles.textAreaContainer, errors.description && styles.inputContainerError]}>
+                    <Ionicons name="document-text-outline" size={20} color="#94A3B8" style={[styles.inputIcon, styles.textAreaIcon]} />
+                    <TextInput
+                      style={[styles.textInput, styles.textArea]}
+                      value={description}
+                      onChangeText={setDescription}
+                      placeholder="Describe your dish..."
+                      placeholderTextColor="#94A3B8"
+                      multiline
+                      numberOfLines={4}
+                    />
+                  </View>
+                  {errors.description && <RNText style={styles.errorText}>{errors.description}</RNText>}
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <RNText style={styles.inputLabel}>Price *</RNText>
+                  <View style={[styles.inputContainer, errors.price && styles.inputContainerError]}>
+                    <Ionicons name="cash-outline" size={20} color="#94A3B8" style={styles.inputIcon} />
+                    <RNText style={styles.currencySymbol}>$</RNText>
+                    <TextInput
+                      style={[styles.textInput, styles.priceInput]}
+                      value={price}
+                      onChangeText={setPrice}
+                      placeholder="0.00"
+                      placeholderTextColor="#94A3B8"
+                      keyboardType="numeric"
+                    />
+                  </View>
+                  {errors.price && <RNText style={styles.errorText}>{errors.price}</RNText>}
+                </View>
+              </View>
+
+              {/* Category Selection */}
+              <View style={styles.formSection}>
+                <RNText style={styles.sectionTitle}>Category</RNText>
+                <View style={styles.categoryGrid}>
+                  {CATEGORIES.map((cat) => (
+                    <TouchableOpacity
+                      key={cat.value}
+                      style={[
+                        styles.categoryCard,
+                        category === cat.value && styles.categoryCardActive,
+                      ]}
+                      onPress={() => setCategory(cat.value)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={[
+                        styles.categoryIconContainer,
+                        category === cat.value && styles.categoryIconContainerActive,
+                      ]}>
+                        <Ionicons 
+                          name={cat.icon} 
+                          size={24} 
+                          color={category === cat.value ? "#FFFFFF" : "#6366F1"} 
+                        />
+                      </View>
+                      <RNText style={[
+                        styles.categoryLabel,
+                        category === cat.value && styles.categoryLabelActive,
+                      ]}>
+                        {cat.label}
+                      </RNText>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Dietary Options */}
+              <View style={styles.formSection}>
+                <RNText style={styles.sectionTitle}>Dietary Options</RNText>
+                <View style={styles.optionsRow}>
+                  <TouchableOpacity
+                    style={[styles.optionCard, isVegetarian && styles.optionCardActive]}
+                    onPress={() => setIsVegetarian(!isVegetarian)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.optionIconContainer, isVegetarian && styles.optionIconContainerActive]}>
+                      <Ionicons 
+                        name="leaf-outline" 
+                        size={20} 
+                        color={isVegetarian ? "#FFFFFF" : "#10B981"} 
+                      />
+                    </View>
+                    <RNText style={[styles.optionText, isVegetarian && styles.optionTextActive]}>
+                      Vegetarian
+                    </RNText>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.optionCard, isSpicy && styles.optionCardActive]}
+                    onPress={() => setIsSpicy(!isSpicy)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.optionIconContainer, isSpicy && styles.optionIconContainerActive]}>
+                      <Ionicons 
+                        name="flame-outline" 
+                        size={20} 
+                        color={isSpicy ? "#FFFFFF" : "#EF4444"} 
+                      />
+                    </View>
+                    <RNText style={[styles.optionText, isSpicy && styles.optionTextActive]}>
+                      Spicy
+                    </RNText>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Submit Button */}
+              <TouchableOpacity 
+                style={[styles.submitButton, isUploading && styles.submitButtonDisabled]} 
+                onPress={handleSubmit}
+                disabled={isUploading}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={isUploading ? ["#94A3B8", "#94A3B8"] : ["#6366F1", "#8B5CF6"]}
+                  style={styles.submitButtonGradient}
+                >
+                  {isUploading ? (
+                    <View style={styles.loadingContainer}>
+                      <ActivityIndicator color="#FFFFFF" size="small" />
+                      <RNText style={styles.submitButtonText}>Creating Item...</RNText>
+                    </View>
+                  ) : (
+                    <View style={styles.submitButtonContent}>
+                      <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
+                      <RNText style={styles.submitButtonText}>Add to Menu</RNText>
+                    </View>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF8F2',
+    backgroundColor: '#F8FAFC',
+  },
+  scrollContainer: {
+    flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
     paddingBottom: 30,
   },
-  header: {
-    backgroundColor: '#FF8C42',
-    paddingVertical: 20,
-    paddingHorizontal: 16,
+  
+  // Header Styles
+  headerContainer: {
     marginBottom: 20,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    textAlign: 'center',
+  headerGradient: {
+    padding: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    shadowColor: "#6366F1",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 8,
   },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  backButton: {
+    padding: 8,
+  },
+  headerTitleSection: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: -0.3,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.9)',
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  resetButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  
+  // Form Styles
   formContainer: {
-    paddingHorizontal: 16,
-    paddingBottom: 30,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+  },
+  formSection: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: "#64748B",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 16,
+    elevation: 3,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 16,
+    letterSpacing: -0.2,
+  },
+  
+  // Image Upload Styles
+  imageSection: {
+    marginBottom: 20,
   },
   imageUpload: {
     width: '100%',
     height: 200,
-    borderRadius: 10,
-    marginBottom: 20,
+    borderRadius: 20,
     overflow: 'hidden',
     borderWidth: 2,
-    borderColor: '#FF8C42',
+    borderColor: '#E2E8F0',
     borderStyle: 'dashed',
-    backgroundColor: '#FFF',
+    backgroundColor: '#FFFFFF',
+  },
+  imageUploadError: {
+    borderColor: '#EF4444',
   },
   uploadPlaceholder: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FFF0E6',
+    backgroundColor: '#F8FAFC',
+  },
+  uploadIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#EEF2FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  uploadTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 8,
+  },
+  uploadSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+    textAlign: 'center',
+    fontWeight: '500',
   },
   uploadedImage: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
-  },
-  uploadText: {
-    color: '#FF8C42',
-    fontSize: 16,
-    fontWeight: '500',
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  uploadIcon: {
-    marginBottom: 8,
-  },
-  inputGroup: {
-    marginBottom: 16,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 8,
-    color: '#333',
-  },
-  input: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: '#333',
-    minHeight: 48,
-  },
-  inputError: {
-    borderColor: '#FF3B30',
-  },
-  errorText: {
-    color: '#FF3B30',
-    fontSize: 14,
-    marginTop: 4,
-  },
-  textArea: {
-    height: 100,
-    textAlignVertical: 'top',
-  },
-  pickerContainer: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  picker: {
-    height: 50,
-    width: '100%',
-  },
-  attributesContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-  },
-  attributeButton: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#FF8C42',
-    borderRadius: 8,
-    padding: 12,
-    marginHorizontal: 5,
-    alignItems: 'center',
-  },
-  attributeButtonActive: {
-    backgroundColor: '#FF8C42',
-  },
-  attributeText: {
-    color: '#FF8C42',
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  attributeTextActive: {
-    color: '#FFFFFF',
-  },
-  submitButton: {
-    backgroundColor: '#FF8C42',
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  submitButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  submitButtonDisabled: {
-    opacity: 0.7,
   },
   imageContainer: {
     width: '100%',
@@ -448,7 +594,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    backgroundColor: 'rgba(15, 23, 42, 0.8)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -456,6 +602,221 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginTop: 10,
     fontSize: 16,
+    fontWeight: '600',
+  },
+  imageActions: {
+    position: 'absolute',
+    bottom: 12,
+    right: 12,
+  },
+  changeImageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  changeImageText: {
+    color: '#6366F1',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  
+  // Input Styles
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 8,
+    color: '#0F172A',
+    letterSpacing: -0.1,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    padding: 16,
+  },
+  inputContainerError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#0F172A',
+    fontWeight: '500',
+    paddingVertical: 0,
+  },
+  textAreaContainer: {
+    height: 120,
+    alignItems: 'flex-start',
+  },
+  textAreaIcon: {
+    marginRight: 12,
+    marginTop: 4,
+  },
+  textArea: {
+    textAlignVertical: 'top',
+    paddingTop: 4,
+    paddingBottom: 4,
+  },
+  priceInput: {
+    paddingLeft: 8,
+  },
+  currencySymbol: {
+    fontSize: 16,
+    color: '#6366F1',
+    fontWeight: '700',
+    marginRight: 8,
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 14,
+    marginTop: 8,
+    fontWeight: '500',
+  },
+  
+  // Category Styles
+  categoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  categoryCard: {
+    width: '48%',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  categoryCardActive: {
+    backgroundColor: '#EEF2FF',
+    borderColor: '#6366F1',
+    borderWidth: 2,
+  },
+  categoryIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: '#E2E8F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  categoryIconContainerActive: {
+    backgroundColor: '#6366F1',
+  },
+  categoryLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+    textAlign: 'center',
+  },
+  categoryLabelActive: {
+    color: '#6366F1',
+    fontWeight: '700',
+  },
+  
+  // Dietary Options Styles
+  optionsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  optionCard: {
+    width: '48%',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  optionCardActive: {
+    backgroundColor: '#EEF2FF',
+    borderColor: '#6366F1',
+    borderWidth: 2,
+  },
+  optionIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: '#E2E8F0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  optionIconContainerActive: {
+    backgroundColor: '#6366F1',
+  },
+  optionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#64748B',
+    textAlign: 'center',
+  },
+  optionTextActive: {
+    color: '#6366F1',
+    fontWeight: '700',
+  },
+  
+  // Submit Button Styles
+  submitButton: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginTop: 20,
+    shadowColor: "#6366F1",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  submitButtonGradient: {
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+    marginLeft: 8,
+    letterSpacing: -0.1,
+  },
+  submitButtonDisabled: {
+    shadowOpacity: 0.1,
+    elevation: 2,
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 
