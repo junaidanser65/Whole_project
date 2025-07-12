@@ -282,13 +282,6 @@ const EditMenuItemScreen = ({ route, navigation }) => {
           <Text style={styles.headerTitle}>Edit Menu Item</Text>
           <Text style={styles.headerSubtitle}>Update item details</Text>
         </View>
-        
-        <TouchableOpacity 
-          style={styles.headerButton} 
-          onPress={handleReset}
-        >
-          <Ionicons name="refresh" size={24} color="white" />
-        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>

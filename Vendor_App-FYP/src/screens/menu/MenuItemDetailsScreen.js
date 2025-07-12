@@ -116,13 +116,6 @@ const MenuItemDetailsScreen = ({ route, navigation }) => {
           <Text style={styles.headerTitle}>Menu Item Details</Text>
           <Text style={styles.headerSubtitle}>Item information</Text>
         </View>
-        
-        <TouchableOpacity 
-          style={styles.headerButton} 
-          onPress={() => navigation.navigate('EditMenuItem', { itemId })}
-        >
-          <Ionicons name="create-outline" size={24} color="white" />
-        </TouchableOpacity>
       </View>
 
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>

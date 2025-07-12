@@ -316,8 +316,6 @@ const EditProfileScreen = ({ navigation, route }) => {
                   <Text style={styles.headerTitle}>Edit Profile</Text>
                   <Text style={styles.headerSubtitle}>Update your information</Text>
                 </View>
-                
-                <View style={styles.headerButton} />
               </View>
 
               <TouchableOpacity
