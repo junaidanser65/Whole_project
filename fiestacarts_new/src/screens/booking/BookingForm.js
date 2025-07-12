@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, Alert, Animated } from 'react-native';
-import { Button, Input, Card } from '@rneui/themed';
-import { colors, spacing, typography } from '../../styles/theme';
+import React, { useState, useEffect, useRef } from 'react';
+import { StyleSheet, View, Text, ScrollView, Alert, Animated, TextInput, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useBooking } from '../../contexts/BookingContext';
 import { useAuth } from '../../contexts/AuthContext';
 import TimeSlotPicker from '../../components/booking/TimeSlotPicker';
@@ -16,6 +16,15 @@ const BookingForm = ({ route, navigation }) => {
   const [isLoading, setIsLoading] = useState(false);
   const { addBooking } = useBooking();
   const { user } = useAuth();
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   // Update total price when guest count changes
   useEffect(() => {
@@ -159,166 +168,264 @@ const BookingForm = ({ route, navigation }) => {
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <Card containerStyle={styles.card}>
-        <Text style={styles.title}>Booking Details</Text>
-        
-        <View style={styles.dateContainer}>
-          <Text style={styles.label}>Event Date</Text>
-          <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
-        </View>
+    <Animated.View 
+      style={[
+        styles.container,
+        { opacity: fadeAnim }
+      ]}
+    >
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.card}>
+          <Text style={styles.title}>Booking Details</Text>
+          
+          <View style={styles.dateContainer}>
+            <Text style={styles.label}>Event Date</Text>
+            <View style={styles.dateDisplay}>
+              <Ionicons name="calendar-outline" size={20} color="#6366F1" />
+              <Text style={styles.dateText}>{formatDate(selectedDate)}</Text>
+            </View>
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Select Time</Text>
-          <TimeSlotPicker
-            availableSlots={availableSlots}
-            selectedSlot={selectedTime}
-            onSelectSlot={setSelectedTime}
-          />
-        </View>
+          <View style={styles.section}>
+            <Text style={styles.label}>Select Time</Text>
+            <TimeSlotPicker
+              availableSlots={availableSlots}
+              selectedSlot={selectedTime}
+              onSelectSlot={setSelectedTime}
+            />
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Number of Guests</Text>
-          <Input
-            placeholder="Enter number of guests"
-            keyboardType="number-pad"
-            value={guestCount}
-            onChangeText={setGuestCount}
-          />
-        </View>
+          <View style={styles.section}>
+            <Text style={styles.label}>Number of Guests</Text>
+            <View style={styles.inputContainer}>
+              <TextInput
+                placeholder="Enter number of guests"
+                placeholderTextColor="#94A3B8"
+                keyboardType="number-pad"
+                value={guestCount}
+                onChangeText={setGuestCount}
+                style={styles.textInput}
+              />
+            </View>
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Special Requests</Text>
-          <Input
-            placeholder="Any special requests or notes"
-            multiline
-            numberOfLines={3}
-            value={specialRequests}
-            onChangeText={setSpecialRequests}
-          />
-        </View>
+          <View style={styles.section}>
+            <Text style={styles.label}>Special Requests</Text>
+            <View style={styles.inputContainer}>
+              <TextInput
+                placeholder="Any special requests or notes"
+                placeholderTextColor="#94A3B8"
+                multiline
+                numberOfLines={3}
+                value={specialRequests}
+                onChangeText={setSpecialRequests}
+                style={[styles.textInput, styles.multilineInput]}
+              />
+            </View>
+          </View>
 
-        <View style={styles.section}>
-          <Text style={styles.label}>Selected Services</Text>
-          {selectedServices.map(service => (
-            <View key={service.id} style={styles.serviceItem}>
-              <View style={styles.serviceInfo}>
-                <Text style={styles.serviceName}>{service.name}</Text>
-                <Text style={styles.serviceDescription}>
-                  ${service.price.toLocaleString()} × {guestCount} guests
+          <View style={styles.section}>
+            <Text style={styles.label}>Selected Services</Text>
+            {selectedServices.map(service => (
+              <View key={service.id} style={styles.serviceItem}>
+                <View style={styles.serviceInfo}>
+                  <Text style={styles.serviceName}>{service.name}</Text>
+                  <Text style={styles.serviceDescription}>
+                    ${service.price.toLocaleString()} × {guestCount} guests
+                  </Text>
+                </View>
+                <Text style={styles.servicePrice}>
+                  ${(service.price * parseInt(guestCount)).toLocaleString()}
                 </Text>
               </View>
-              <Text style={styles.servicePrice}>
-                ${(service.price * parseInt(guestCount)).toLocaleString()}
-              </Text>
+            ))}
+            <View style={styles.totalContainer}>
+              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalAmount}>${totalPrice.toLocaleString()}</Text>
             </View>
-          ))}
-          <View style={styles.totalContainer}>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalAmount}>${totalPrice.toLocaleString()}</Text>
           </View>
-        </View>
 
-        <Button
-          title="Confirm Booking"
-          onPress={handleSubmit}
-          loading={isLoading}
-          disabled={isLoading || !selectedTime}
-          buttonStyle={[
-            styles.confirmButton,
-            (!selectedTime || isLoading) && styles.disabledButton
-          ]}
-          titleStyle={styles.confirmButtonText}
-        />
-      </Card>
-    </ScrollView>
+          <TouchableOpacity
+            style={[
+              styles.confirmButton,
+              (!selectedTime || isLoading) && styles.disabledButton
+            ]}
+            onPress={handleSubmit}
+            disabled={isLoading || !selectedTime}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={
+                (!selectedTime || isLoading)
+                  ? ["#94A3B8", "#94A3B8"]
+                  : ["#6366F1", "#8B5CF6"]
+              }
+              style={styles.confirmButtonGradient}
+            >
+              {isLoading ? (
+                <Ionicons name="hourglass-outline" size={20} color="#FFF" />
+              ) : (
+                <Ionicons name="checkmark-circle" size={20} color="#FFF" />
+              )}
+              <Text style={styles.confirmButtonText}>
+                {isLoading ? 'Processing...' : 'Confirm Booking'}
+              </Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </Animated.View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#F8FAFC',
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40,
   },
   card: {
-    borderRadius: 12,
-    marginHorizontal: spacing.sm,
-    marginVertical: spacing.md,
-    padding: spacing.md,
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
   title: {
-    ...typography.h2,
-    marginBottom: spacing.lg,
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 24,
+    textAlign: 'center',
   },
   dateContainer: {
-    marginBottom: spacing.md,
+    marginBottom: 20,
   },
   section: {
-    marginBottom: spacing.lg,
+    marginBottom: 24,
   },
   label: {
-    ...typography.subtitle,
-    color: colors.text,
-    marginBottom: spacing.sm,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginBottom: 12,
+  },
+  dateDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   dateText: {
-    ...typography.body,
-    color: colors.primary,
+    fontSize: 16,
+    color: '#6366F1',
+    fontWeight: '600',
+    marginLeft: 12,
+  },
+  inputContainer: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 16,
+  },
+  textInput: {
+    fontSize: 16,
+    color: '#0F172A',
+  },
+  multilineInput: {
+    textAlignVertical: 'top',
+    minHeight: 80,
   },
   serviceItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: spacing.xs,
-    marginBottom: spacing.xs,
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   serviceInfo: {
     flex: 1,
   },
   serviceName: {
-    ...typography.body,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: spacing.xs / 2,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginBottom: 4,
   },
   serviceDescription: {
-    ...typography.caption,
-    color: colors.textLight,
+    fontSize: 14,
+    color: '#64748B',
   },
   servicePrice: {
-    ...typography.body,
-    color: colors.primary,
-    fontWeight: 'bold',
-    marginLeft: spacing.md,
+    fontSize: 16,
+    color: '#6366F1',
+    fontWeight: '700',
+    marginLeft: 16,
   },
   totalContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: spacing.md,
-    paddingTop: spacing.sm,
+    alignItems: 'center',
+    marginTop: 16,
+    paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: '#E2E8F0',
   },
   totalLabel: {
-    ...typography.h3,
-    color: colors.text,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#0F172A',
   },
   totalAmount: {
-    ...typography.h2,
-    color: colors.primary,
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#6366F1',
   },
   confirmButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    paddingVertical: spacing.md,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+    marginTop: 8,
+  },
+  confirmButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
   },
   confirmButtonText: {
-    ...typography.h3,
-    color: colors.white,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFF',
+    marginLeft: 8,
   },
   disabledButton: {
-    backgroundColor: colors.primaryLight,
-    opacity: 0.6,
+    opacity: 0.5,
   },
 });
 

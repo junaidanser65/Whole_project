@@ -170,7 +170,7 @@ const OnboardingScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient colors={["#ff4500", "#cc3700"]} style={styles.gradient}>
+      <LinearGradient colors={["#6366F1", "#8B5CF6", "#A855F7"]} style={styles.gradient}>
         <FlatList
           ref={slideRef}
           data={onboardingData}
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   primaryButton: {
-    backgroundColor: '#ff4500',
+    backgroundColor: '#6366F1',
     borderRadius: 25,
     paddingVertical: 15,
   },
@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   nextButton: {
-    backgroundColor: '#ff4500',
+    backgroundColor: '#6366F1',
     paddingHorizontal: 30,
     paddingVertical: 15,
     borderRadius: 25,

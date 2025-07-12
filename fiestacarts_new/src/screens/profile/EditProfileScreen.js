@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView, Alert, TouchableOpacity, Text } from 'react-native';
-import { Button, Input, Icon, Avatar } from '@rneui/themed';
+import { StyleSheet, View, ScrollView, Alert, TouchableOpacity, Text, SafeAreaView, StatusBar, Platform, TextInput, KeyboardAvoidingView, Image } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as ImagePicker from 'expo-image-picker';
-import { colors, spacing, typography } from '../../styles/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { uploadImageToCloudinary } from '../../services/cloudinaryService';
 
@@ -57,8 +57,8 @@ export default function EditProfileScreen({ navigation }) {
   };
 
   const handleSave = async () => {
-    if (!formData.name) {
-      Alert.alert('Error', 'Please fill in all required fields');
+    if (!formData.name.trim()) {
+      Alert.alert('Error', 'Please enter your name');
       return;
     }
 
@@ -79,215 +79,357 @@ export default function EditProfileScreen({ navigation }) {
     }
   };
 
+  const getUserInitials = () => {
+    const name = formData.name || user?.name || 'Guest';
+    return name.split(' ').map(n => n.charAt(0)).join('').toUpperCase().slice(0, 2);
+  };
+
   return (
-    <View style={styles.container}>
-      <View style={styles.headerBackground} />
-      <TouchableOpacity style={styles.backButtonContainer} onPress={() => navigation.goBack()}>
-        <View style={styles.backButtonCircle}>
-          <Icon name="arrow-back" size={24} color={colors.primary} />
-        </View>
-      </TouchableOpacity>
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
       
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.avatarContainer}>
+      {/* Header */}
+      <LinearGradient
+        colors={["#6366F1", "#8B5CF6", "#A855F7"]}
+        style={styles.header}
+      >
+        <SafeAreaView>
+          <View style={styles.headerContent}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={24} color="#FFF" />
+            </TouchableOpacity>
+            
+            <Text style={styles.headerTitle}>Edit Profile</Text>
+            
+            <TouchableOpacity 
+              style={styles.saveHeaderButton}
+              onPress={handleSave}
+              disabled={loading}
+            >
+              {loading ? (
+                <Ionicons name="hourglass-outline" size={24} color="#FFF" />
+              ) : (
+                <Ionicons name="checkmark" size={24} color="#FFF" />
+              )}
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </LinearGradient>
+
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Avatar Section */}
+        <View style={styles.avatarSection}>
           <TouchableOpacity 
-            style={styles.avatarWrapper} 
+            style={styles.avatarContainer}
             onPress={handleImagePick}
             disabled={loading}
           >
-            <Avatar
-              size={120}
-              rounded
-              source={formData.avatar_url ? { uri: formData.avatar_url } : undefined}
-              icon={!formData.avatar_url ? { name: 'person', type: 'material' } : undefined}
-              containerStyle={styles.avatar}
-            >
-              <Avatar.Accessory 
-                size={36} 
-                style={styles.avatarAccessory}
+            {formData.avatar_url ? (
+              <Image
+                source={{ uri: formData.avatar_url }}
+                style={styles.avatar}
               />
-            </Avatar>
-            <Text style={styles.changePhotoText}>Change Photo</Text>
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarText}>{getUserInitials()}</Text>
+              </View>
+            )}
+            <View style={styles.cameraIcon}>
+              <Ionicons name="camera" size={20} color="#8B5CF6" />
+            </View>
+          </TouchableOpacity>
+          <Text style={styles.changePhotoText}>Tap to change photo</Text>
+        </View>
+
+        {/* Form Section */}
+        <View style={styles.formSection}>
+          <Text style={styles.sectionTitle}>Personal Information</Text>
+          
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Full Name *</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="person-outline" size={20} color="#6B7280" style={styles.inputIcon} />
+              <TextInput
+                style={styles.textInput}
+                value={formData.name}
+                onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
+                placeholder="Enter your full name"
+                placeholderTextColor="#9CA3AF"
+                autoCapitalize="words"
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Email</Text>
+            <View style={[styles.inputContainer, styles.disabledInput]}>
+              <Ionicons name="mail-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+              <TextInput
+                style={[styles.textInput, styles.disabledText]}
+                value={formData.email}
+                placeholder="Email address"
+                placeholderTextColor="#9CA3AF"
+                editable={false}
+              />
+              <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" />
+            </View>
+            <Text style={styles.helperText}>Email cannot be changed</Text>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Phone Number</Text>
+            <View style={styles.inputContainer}>
+              <Ionicons name="call-outline" size={20} color="#6B7280" style={styles.inputIcon} />
+              <TextInput
+                style={styles.textInput}
+                value={formData.phone_number}
+                onChangeText={(text) => setFormData(prev => ({ ...prev, phone_number: text }))}
+                placeholder="Enter your phone number"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="phone-pad"
+              />
+            </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Address</Text>
+            <View style={[styles.inputContainer, styles.textAreaContainer]}>
+              <Ionicons name="location-outline" size={20} color="#6B7280" style={styles.inputIcon} />
+              <TextInput
+                style={[styles.textInput, styles.textArea]}
+                value={formData.address}
+                onChangeText={(text) => setFormData(prev => ({ ...prev, address: text }))}
+                placeholder="Enter your address"
+                placeholderTextColor="#9CA3AF"
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* Save Button */}
+        <View style={styles.buttonSection}>
+          <TouchableOpacity
+            style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+            onPress={handleSave}
+            disabled={loading}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={loading ? ["#9CA3AF", "#6B7280"] : ["#6366F1", "#8B5CF6"]}
+              style={styles.saveButtonGradient}
+            >
+              {loading ? (
+                <View style={styles.loadingContainer}>
+                  <Ionicons name="hourglass-outline" size={24} color="#FFF" />
+                  <Text style={styles.saveButtonText}>Saving...</Text>
+                </View>
+              ) : (
+                <Text style={styles.saveButtonText}>Save Changes</Text>
+              )}
+            </LinearGradient>
           </TouchableOpacity>
         </View>
 
-        <View style={styles.formContainer}>
-          <Text style={styles.sectionTitle}>Personal Information</Text>
-          <Input
-            label="Full Name"
-            value={formData.name}
-            onChangeText={(text) => setFormData(prev => ({ ...prev, name: text }))}
-            containerStyle={styles.inputContainer}
-            inputContainerStyle={styles.input}
-            labelStyle={styles.inputLabel}
-            autoCapitalize="words"
-            placeholder="Enter your full name"
-          />
-
-          <Input
-            label="Email"
-            value={formData.email}
-            disabled
-            containerStyle={styles.inputContainer}
-            inputContainerStyle={[styles.input, styles.disabledInput]}
-            labelStyle={styles.inputLabel}
-            inputStyle={styles.disabledText}
-            rightIcon={<Icon name="lock" size={20} color={colors.textLight} />}
-          />
-
-          <Input
-            label="Phone Number"
-            value={formData.phone_number}
-            onChangeText={(text) => setFormData(prev => ({ ...prev, phone_number: text }))}
-            containerStyle={styles.inputContainer}
-            inputContainerStyle={styles.input}
-            labelStyle={styles.inputLabel}
-            keyboardType="phone-pad"
-            placeholder="Enter your phone number"
-          />
-
-          <Input
-            label="Address"
-            value={formData.address}
-            onChangeText={(text) => setFormData(prev => ({ ...prev, address: text }))}
-            containerStyle={styles.inputContainer}
-            inputContainerStyle={styles.input}
-            labelStyle={styles.inputLabel}
-            multiline
-            numberOfLines={3}
-            placeholder="Enter your address"
-          />
-        </View>
-
-        <Button
-          title="Save Changes"
-          onPress={handleSave}
-          loading={loading}
-          buttonStyle={styles.saveButton}
-          containerStyle={styles.saveButtonContainer}
-          titleStyle={styles.saveButtonText}
-          loadingProps={{ color: colors.white }}
-        />
+        <View style={styles.bottomPadding} />
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#F8FAFC',
   },
-  headerBackground: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 200,
-    backgroundColor: colors.primary,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
+  header: {
+    marginTop: 20,
+    paddingBottom: 16,
   },
-  backButtonContainer: {
-    position: 'absolute',
-    top: spacing.xl + spacing.xs,
-    left: spacing.md,
-    zIndex: 1,
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'android' ? 20 : 0,
   },
-  backButtonCircle: {
+  backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.white,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
   },
-  content: {
-    paddingTop: spacing.xl * 2,
-    paddingHorizontal: spacing.lg,
-    flexGrow: 1,
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  saveHeaderButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  avatarSection: {
+    alignItems: 'center',
+    paddingTop: 32,
+    paddingBottom: 24,
   },
   avatarContainer: {
-    alignItems: 'center',
-    marginTop: spacing.xl,
-    marginBottom: spacing.lg,
-  },
-  avatarWrapper: {
-    alignItems: 'center',
+    position: 'relative',
+    marginBottom: 12,
   },
   avatar: {
-    borderWidth: 4,
-    borderColor: colors.black,
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#FFF',
   },
-  avatarAccessory: {
-    backgroundColor: colors.primary,
-    borderColor: colors.black,
-  },
-  changePhotoText: {
-    ...typography.body,
-    color: colors.black,
-    marginTop: spacing.sm,
-    fontWeight: '500',
-  },
-  formContainer: {
-    marginTop: spacing.md,
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: spacing.lg,
-    elevation: 4,
+  avatarPlaceholder: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
+    elevation: 4,
+  },
+  avatarText: {
+    fontSize: 40,
+    fontWeight: '700',
+    color: '#8B5CF6',
+  },
+  cameraIcon: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  changePhotoText: {
+    fontSize: 16,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  formSection: {
+    paddingHorizontal: 20,
   },
   sectionTitle: {
-    ...typography.h3,
-    color: colors.text,
-    marginBottom: spacing.lg,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 24,
   },
-  inputContainer: {
-    paddingHorizontal: 0,
-    marginBottom: spacing.md,
+  inputGroup: {
+    marginBottom: 20,
   },
   inputLabel: {
-    ...typography.caption,
-    color: colors.textLight,
-    marginBottom: spacing.xs,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
   },
-  input: {
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    paddingHorizontal: spacing.md,
-    height: 48,
-    backgroundColor: colors.surface,
+    borderColor: '#E5E7EB',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  textAreaContainer: {
+    alignItems: 'flex-start',
+    paddingVertical: 12,
   },
   disabledInput: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    opacity: 0.7,
+    backgroundColor: '#F9FAFB',
+    borderColor: '#E5E7EB',
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  textInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#1F2937',
+    fontWeight: '500',
+  },
+  textArea: {
+    minHeight: 60,
+    textAlignVertical: 'top',
   },
   disabledText: {
-    color: colors.textLight,
+    color: '#9CA3AF',
+  },
+  helperText: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 4,
+    marginLeft: 4,
+  },
+  buttonSection: {
+    paddingHorizontal: 20,
+    paddingTop: 32,
   },
   saveButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: spacing.md,
-    height: 56,
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  saveButtonDisabled: {
+    opacity: 0.7,
+  },
+  saveButtonGradient: {
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   saveButtonText: {
-    ...typography.button,
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFF',
+    marginLeft: 8,
   },
-  saveButtonContainer: {
-    marginTop: spacing.xl,
-    marginBottom: spacing.xl,
+  bottomPadding: {
+    height: 100,
   },
 }); 

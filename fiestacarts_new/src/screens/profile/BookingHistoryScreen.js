@@ -1,10 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Modal, ActivityIndicator, TextInput, Alert } from 'react-native';
-import { Button, Card, Icon } from '@rneui/themed';
-import { colors, spacing, typography } from '../../styles/theme';
-import { useBooking } from '../../contexts/BookingContext';
-import BackButton from '../../components/common/BackButton';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Modal, ActivityIndicator, TextInput, Alert, SafeAreaView, StatusBar, Platform, Image } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { getUserBookings, submitReview, checkBookingReview } from '../../api/apiService';
+
+// Helper function to get status badge styling
+const getStatusBadgeStyle = (status) => {
+  switch (status?.toLowerCase()) {
+    case 'confirmed':
+      return { backgroundColor: '#10B981', color: '#FFF' };
+    case 'pending':
+      return { backgroundColor: '#F59E0B', color: '#FFF' };
+    case 'completed':
+      return { backgroundColor: '#8B5CF6', color: '#FFF' };
+    case 'cancelled':
+      return { backgroundColor: '#EF4444', color: '#FFF' };
+    default:
+      return { backgroundColor: '#6B7280', color: '#FFF' };
+  }
+};
 
 const StarRating = ({ rating, onRatingChange }) => {
   return (
@@ -14,11 +28,12 @@ const StarRating = ({ rating, onRatingChange }) => {
           key={star}
           onPress={() => onRatingChange(star)}
           style={styles.starButton}
+          activeOpacity={0.7}
         >
-          <Icon
-            name={star <= rating ? "star" : "star-border"}
-            size={30}
-            color={star <= rating ? colors.primary : colors.textLight}
+          <Ionicons
+            name={star <= rating ? "star" : "star-outline"}
+            size={28}
+            color={star <= rating ? "#FFD700" : "#9CA3AF"}
           />
         </TouchableOpacity>
       ))}
@@ -52,11 +67,11 @@ const ReviewModal = React.memo(({ visible, onClose, onSubmit, isSubmitting }) =>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Write a Review</Text>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <Icon name="close" size={24} color={colors.text} />
+              <Ionicons name="close" size={24} color="#6B7280" />
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalBody}>
+          <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
             <View style={styles.reviewSection}>
               <Text style={styles.reviewLabel}>Rating</Text>
               <StarRating
@@ -72,26 +87,188 @@ const ReviewModal = React.memo(({ visible, onClose, onSubmit, isSubmitting }) =>
                 multiline
                 numberOfLines={4}
                 placeholder="Share your experience..."
+                placeholderTextColor="#9CA3AF"
                 value={comment}
                 onChangeText={setComment}
+                textAlignVertical="top"
               />
             </View>
           </ScrollView>
 
           <View style={styles.modalFooter}>
-            <Button
-              title={isSubmitting ? "Submitting..." : "Submit Review"}
+            <TouchableOpacity
+              style={[styles.submitButton, isSubmitting && styles.submitButtonDisabled]}
               onPress={handleSubmit}
               disabled={isSubmitting || rating === 0}
-              buttonStyle={styles.submitReviewButton}
-              titleStyle={styles.submitReviewButtonText}
-            />
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={isSubmitting ? ["#9CA3AF", "#6B7280"] : ["#A5B4FC", "#8B5CF6", "#7C3AED"]}
+                style={styles.submitButtonGradient}
+              >
+                {isSubmitting ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color="#FFF" />
+                    <Text style={styles.submitButtonText}>Submitting...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.submitButtonText}>Submit Review</Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
         </View>
       </View>
     </Modal>
   );
 });
+
+const BookingDetailsModal = ({ booking, visible, onClose }) => {
+  if (!booking) return null;
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  };
+
+  const formatTime = (timeString) => {
+    try {
+      if (/^\d{2}:\d{2}:\d{2}$/.test(timeString)) {
+        const [hours, minutes] = timeString.split(':');
+        const time = new Date();
+        time.setHours(parseInt(hours, 10));
+        time.setMinutes(parseInt(minutes, 10));
+        return time.toLocaleTimeString([], { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: true 
+        });
+      }
+      const time = new Date(timeString);
+      return time.toLocaleTimeString([], { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+      });
+    } catch (error) {
+      return 'Invalid time';
+    }
+  };
+
+  const getGuestCount = () => {
+    // Calculate total quantity from booking items
+    console.log('Calculating guest count for booking:', booking.id);
+    console.log('Booking items:', booking.items);
+    
+    if (booking.items && booking.items.length > 0) {
+      const totalQuantity = booking.items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+      console.log('Total quantity calculated:', totalQuantity);
+      return totalQuantity || 'Not specified';
+    }
+    console.log('No items found, returning Not specified');
+    return 'Not specified';
+  };
+
+  return (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.detailsModalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Booking Details</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Ionicons name="close" size={24} color="#6B7280" />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+            <View style={styles.detailsSection}>
+              <Text style={styles.detailsTitle}>Vendor Information</Text>
+              <View style={styles.detailsCard}>
+                <View style={styles.detailsRow}>
+                  <Ionicons name="storefront-outline" size={20} color="#8B5CF6" />
+                  <Text style={styles.detailsLabel}>Vendor Name</Text>
+                  <Text style={styles.detailsValue}>{booking.vendor_name}</Text>
+                </View>
+                <View style={styles.detailsRow}>
+                  <Ionicons name="business-outline" size={20} color="#8B5CF6" />
+                  <Text style={styles.detailsLabel}>Business Name</Text>
+                  <Text style={styles.detailsValue}>{booking.business_name}</Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.detailsSection}>
+              <Text style={styles.detailsTitle}>Booking Information</Text>
+              <View style={styles.detailsCard}>
+                <View style={styles.detailsRow}>
+                  <Ionicons name="calendar-outline" size={20} color="#8B5CF6" />
+                  <Text style={styles.detailsLabel}>Date</Text>
+                  <Text style={styles.detailsValue}>{formatDate(booking.booking_date)}</Text>
+                </View>
+                <View style={styles.detailsRow}>
+                  <Ionicons name="time-outline" size={20} color="#8B5CF6" />
+                  <Text style={styles.detailsLabel}>Time</Text>
+                  <Text style={styles.detailsValue}>{formatTime(booking.booking_time)}</Text>
+                </View>
+                <View style={styles.detailsRow}>
+                  <Ionicons name="people-outline" size={20} color="#8B5CF6" />
+                  <Text style={styles.detailsLabel}>Guests</Text>
+                  <Text style={styles.detailsValue}>{getGuestCount()}</Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.detailsSection}>
+              <Text style={styles.detailsTitle}>Payment Information</Text>
+              <View style={styles.detailsCard}>
+                <View style={styles.detailsRow}>
+                  <Ionicons name="card-outline" size={20} color="#8B5CF6" />
+                  <Text style={styles.detailsLabel}>Total Amount</Text>
+                  <Text style={styles.detailsValueAmount}>${booking.total_amount?.toLocaleString() || '0'}</Text>
+                </View>
+                <View style={styles.detailsRow}>
+                  <Ionicons name="checkmark-circle-outline" size={20} color="#8B5CF6" />
+                  <Text style={styles.detailsLabel}>Status</Text>
+                  <View style={[styles.statusBadge, getStatusBadgeStyle(booking.status)]}>
+                    <Text style={styles.statusText}>{booking.status?.toUpperCase() || 'UNKNOWN'}</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            {booking.special_instructions && (
+              <View style={styles.detailsSection}>
+                <Text style={styles.detailsTitle}>Special Requests</Text>
+                <View style={styles.detailsCard}>
+                  <Text style={styles.specialRequestsText}>{booking.special_instructions}</Text>
+                </View>
+              </View>
+            )}
+          </ScrollView>
+
+          <View style={styles.modalFooter}>
+            <TouchableOpacity
+              style={styles.closeModalButton}
+              onPress={onClose}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.closeModalButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
 
 export default function BookingHistoryScreen({ route, navigation }) {
   const [activeTab, setActiveTab] = useState('upcoming');
@@ -108,7 +285,6 @@ export default function BookingHistoryScreen({ route, navigation }) {
     if (route.params?.initialTab) {
       setActiveTab(route.params.initialTab);
     }
-    
     fetchBookings();
   }, [route.params?.initialTab, route.params?.refresh]);
 
@@ -116,14 +292,13 @@ export default function BookingHistoryScreen({ route, navigation }) {
     try {
       setIsLoading(true);
       setError(null);
-      console.log('Fetching bookings from database...');
       const response = await getUserBookings();
       
       if (!response.success) {
         throw new Error('Failed to fetch bookings');
       }
 
-      console.log('Fetched bookings:', response.bookings);
+      console.log('Fetched bookings:', JSON.stringify(response.bookings, null, 2));
       setBookings(response.bookings || []);
 
       // Check review status for completed bookings
@@ -149,16 +324,14 @@ export default function BookingHistoryScreen({ route, navigation }) {
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
+      month: 'short',
       day: 'numeric',
+      year: 'numeric',
     });
   };
 
   const formatTime = (timeString) => {
     try {
-      // If timeString is in HH:mm:ss format, convert it to HH:mm
       if (/^\d{2}:\d{2}:\d{2}$/.test(timeString)) {
         const [hours, minutes] = timeString.split(':');
         const time = new Date();
@@ -170,359 +343,302 @@ export default function BookingHistoryScreen({ route, navigation }) {
           hour12: true 
         });
       }
-
-      // If it's a full datetime string, extract the time part
       const time = new Date(timeString);
-      if (isNaN(time.getTime())) {
-        console.error('Invalid time string:', timeString);
-        return 'Invalid time';
-      }
-      
       return time.toLocaleTimeString([], { 
         hour: '2-digit', 
         minute: '2-digit',
         hour12: true 
       });
     } catch (error) {
-      console.error('Error formatting time:', error);
       return 'Invalid time';
     }
   };
 
   const getFilteredBookings = () => {
     const now = new Date();
-    now.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
+    now.setHours(0, 0, 0, 0);
 
     return bookings.filter(booking => {
       const bookingDate = new Date(booking.booking_date);
-      bookingDate.setHours(0, 0, 0, 0); // Set to start of day for accurate comparison
+      bookingDate.setHours(0, 0, 0, 0);
       
       if (activeTab === 'upcoming') {
-        // Show future bookings that are pending or confirmed
-        return bookingDate >= now && 
-          (booking.status === 'confirmed' || booking.status === 'pending');
+        return bookingDate >= now || booking.status === 'confirmed' || booking.status === 'pending';
       } else {
-        // Show past bookings or completed/cancelled bookings
-        return bookingDate < now || 
-          booking.status === 'completed' || 
-          booking.status === 'cancelled';
+        return bookingDate < now || booking.status === 'completed' || booking.status === 'cancelled';
       }
-    }).sort((a, b) => {
-      const dateA = new Date(a.booking_date);
-      const dateB = new Date(b.booking_date);
-      return activeTab === 'upcoming' ? dateA - dateB : dateB - dateA;
     });
   };
 
-  const getStatusBadgeStyle = (status) => {
-    switch (status) {
-      case 'pending':
-        return {
-          container: styles.statusBadge,
-          style: styles.pendingBadge,
-          textStyle: styles.pendingText
-        };
-      case 'confirmed':
-        return {
-          container: styles.statusBadge,
-          style: styles.confirmedBadge,
-          textStyle: styles.confirmedText
-        };
-      case 'completed':
-        return {
-          container: styles.statusBadge,
-          style: styles.completedBadge,
-          textStyle: styles.completedText
-        };
-      case 'cancelled':
-        return {
-          container: styles.statusBadge,
-          style: styles.cancelledBadge,
-          textStyle: styles.cancelledText
-        };
-      default:
-        return {
-          container: styles.statusBadge,
-          style: styles.defaultBadge,
-          textStyle: styles.defaultText
-        };
-    }
-  };
-
   const handleViewDetails = (booking) => {
+    console.log('View Details pressed for booking:', booking.id);
     setSelectedBooking(booking);
     setIsModalVisible(true);
   };
 
-  const handleOpenReviewModal = (booking) => {
-    setSelectedBooking(booking);
-    setIsReviewModalVisible(true);
-  };
-
   const handleSubmitReview = async (rating, comment) => {
+    console.log('Submit Review called with rating:', rating, 'comment:', comment);
+    console.log('Selected booking:', selectedBooking);
+    
+    if (!selectedBooking) {
+      console.error('No selected booking found');
+      Alert.alert('Error', 'No booking selected');
+      return;
+    }
+
+    setIsSubmittingReview(true);
     try {
-      setIsSubmittingReview(true);
-      const response = await submitReview(selectedBooking.id, {
-        rating,
-        comment
-      });
+      console.log('Submitting review for booking ID:', selectedBooking.id);
+      const response = await submitReview(selectedBooking.id, { rating, comment });
+      console.log('Review submission response:', response);
       
       if (response && response.success) {
         setReviewedBookings(prev => new Set([...prev, selectedBooking.id]));
-        Alert.alert(
-          'Success',
-          'Review submitted successfully',
-          [{ text: 'OK', onPress: () => setIsReviewModalVisible(false) }]
-        );
+        setIsReviewModalVisible(false);
+        Alert.alert('Success', 'Review submitted successfully!');
       } else {
-        throw new Error(response?.message || 'Failed to submit review');
+        console.error('Review submission failed:', response);
+        Alert.alert('Error', response?.message || 'Failed to submit review');
       }
     } catch (error) {
       console.error('Error submitting review:', error);
-      Alert.alert(
-        'Error',
-        error.message || 'Failed to submit review. Please try again.'
-      );
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      Alert.alert('Error', 'Failed to submit review. Please try again.');
     } finally {
       setIsSubmittingReview(false);
     }
   };
 
-  const BookingDetailsModal = ({ booking, visible, onClose }) => {
-    if (!booking) return null;
+  const handleReviewPress = (booking) => {
+    console.log('Review button pressed for booking:', booking.id);
+    if (!reviewedBookings.has(booking.id)) {
+      setSelectedBooking(booking);
+      setIsReviewModalVisible(true);
+    }
+  };
+
+  const renderBookingCard = (booking) => {
+    // Calculate guest count from booking items
+    const getGuestCount = () => {
+      console.log('Card - Calculating guest count for booking:', booking.id);
+      console.log('Card - Booking items:', booking.items);
+      
+      if (booking.items && booking.items.length > 0) {
+        const totalQuantity = booking.items.reduce((sum, item) => sum + (item.quantity || 0), 0);
+        console.log('Card - Total quantity calculated:', totalQuantity);
+        return totalQuantity;
+      }
+      console.log('Card - No items found, returning 0');
+      return 0;
+    };
+
+    const guestCount = getGuestCount();
 
     return (
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={visible}
-        onRequestClose={onClose}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Booking Details</Text>
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Icon name="close" size={24} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView style={styles.modalBody}>
-              {/* Vendor Information */}
-              <View style={styles.detailSection}>
-                <Text style={styles.detailLabel}>Vendor</Text>
-                <Text style={styles.detailValue}>{booking.vendor_name}</Text>
-                <Text style={styles.detailSubtext}>{booking.business_name}</Text>
-              </View>
-
-              {/* Status */}
-              <View style={styles.detailSection}>
-                <Text style={styles.detailLabel}>Status</Text>
-                <View style={styles.statusContainer}>
-                  <View style={[
-                    getStatusBadgeStyle(booking.status).container,
-                    getStatusBadgeStyle(booking.status).style,
-                    styles.modalStatusBadge
-                  ]}>
-                    <Text style={getStatusBadgeStyle(booking.status).textStyle}>
-                      {booking.status.toUpperCase()}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-
-              {/* Date & Time */}
-              <View style={styles.detailSection}>
-                <Text style={styles.detailLabel}>Date & Time</Text>
-                <Text style={styles.detailValue}>
-                  {formatDate(booking.booking_date)}
-                </Text>
-                <Text style={styles.detailSubtext}>
-                  {formatTime(booking.booking_time)}
-                </Text>
-              </View>
-
-              {/* Items */}
-              <View style={styles.detailSection}>
-                <Text style={styles.detailLabel}>Items</Text>
-                {booking.items?.map((item, index) => (
-                  <View key={index} style={styles.itemRow}>
-                    <Text style={styles.itemName}>{item.menu_name}</Text>
-                    <Text style={styles.itemQuantity}>x{item.quantity}</Text>
-                    <Text style={styles.itemPrice}>
-                      ${(item.price_at_time * item.quantity).toLocaleString()}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-
-              {/* Total */}
-              <View style={styles.detailSection}>
-                <Text style={styles.detailLabel}>Total Amount</Text>
-                <Text style={styles.totalAmount}>
-                  ${booking.total_amount.toLocaleString()}
-                </Text>
-              </View>
-
-              {/* Special Instructions */}
-              {booking.special_instructions && (
-                <View style={styles.detailSection}>
-                  <Text style={styles.detailLabel}>Special Instructions</Text>
-                  <Text style={styles.detailValue}>{booking.special_instructions}</Text>
-                </View>
-              )}
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <Button
-                title="Close"
-                onPress={onClose}
-                buttonStyle={styles.closeModalButton}
-                titleStyle={styles.closeModalButtonText}
-              />
-            </View>
+      <View key={booking.id} style={styles.bookingCard}>
+        <View style={styles.bookingHeader}>
+          <View style={styles.vendorInfo}>
+            <Text style={styles.vendorName}>{booking.vendor_name}</Text>
+            <Text style={styles.businessName}>{booking.business_name}</Text>
+          </View>
+          <View style={[styles.statusBadge, getStatusBadgeStyle(booking.status)]}>
+            <Text style={styles.statusText}>{booking.status?.toUpperCase() || 'UNKNOWN'}</Text>
           </View>
         </View>
-      </Modal>
+
+        <View style={styles.bookingDetails}>
+          <View style={styles.detailRow}>
+            <Ionicons name="calendar-outline" size={16} color="#6B7280" />
+            <Text style={styles.detailText}>{formatDate(booking.booking_date)}</Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Ionicons name="time-outline" size={16} color="#6B7280" />
+            <Text style={styles.detailText}>{formatTime(booking.booking_time)}</Text>
+          </View>
+          {guestCount > 0 && (
+            <View style={styles.detailRow}>
+              <Ionicons name="people-outline" size={16} color="#6B7280" />
+              <Text style={styles.detailText}>{guestCount} {guestCount === 1 ? 'guest' : 'guests'}</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.amountContainer}>
+          <Text style={styles.amountLabel}>Total Amount</Text>
+          <Text style={styles.amountValue}>${booking.total_amount?.toLocaleString() || '0'}</Text>
+        </View>
+
+        <View style={styles.cardActions}>
+          <TouchableOpacity
+            style={styles.detailsButton}
+            onPress={() => handleViewDetails(booking)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.detailsButtonText}>View Details</Text>
+          </TouchableOpacity>
+
+          {booking.status === 'completed' && (
+            <TouchableOpacity
+              style={[
+                styles.reviewButton,
+                reviewedBookings.has(booking.id) && styles.reviewedButton
+              ]}
+              onPress={() => handleReviewPress(booking)}
+              disabled={reviewedBookings.has(booking.id)}
+              activeOpacity={0.7}
+            >
+              <Text style={[
+                styles.reviewButtonText,
+                reviewedBookings.has(booking.id) && styles.reviewedButtonText
+              ]}>
+                {reviewedBookings.has(booking.id) ? "Reviewed" : "Write Review"}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
     );
   };
 
-  const renderBookingCard = (booking) => (
-    <Card key={booking.id} containerStyle={styles.bookingCard}>
-      <View style={styles.bookingHeader}>
-        <View style={styles.vendorInfo}>
-          <Text style={styles.vendorName}>{booking.vendor_name}</Text>
-          <Text style={styles.vendorCategory}>{booking.business_name}</Text>
-        </View>
-        <View style={[
-          getStatusBadgeStyle(booking.status).container,
-          getStatusBadgeStyle(booking.status).style
-        ]}>
-          <Text style={getStatusBadgeStyle(booking.status).textStyle}>
-            {booking.status.toUpperCase()}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.dateTimeContainer}>
-        <Icon name="event" size={16} color={colors.textLight} />
-        <Text style={styles.dateTimeText}>
-          {formatDate(booking.booking_date)}
-        </Text>
-      </View>
-
-      <View style={styles.dateTimeContainer}>
-        <Icon name="access-time" size={16} color={colors.textLight} />
-        <Text style={styles.dateTimeText}>
-          {formatTime(booking.booking_time)}
-        </Text>
-      </View>
-
-      <View style={styles.totalContainer}>
-        <Text style={styles.totalLabel}>Total Amount</Text>
-        <Text style={styles.totalAmount}>
-          ${booking.total_amount.toLocaleString()}
-        </Text>
-      </View>
-
-      {booking.status === 'completed' && (
-        <Button
-          title={reviewedBookings.has(booking.id) ? "Already Reviewed" : "Write a Review"}
-          buttonStyle={[
-            styles.reviewButton,
-            reviewedBookings.has(booking.id) && styles.reviewedButton
-          ]}
-          titleStyle={styles.reviewButtonText}
-          onPress={() => {
-            if (!reviewedBookings.has(booking.id)) {
-              setSelectedBooking(booking);
-              setIsReviewModalVisible(true);
-            }
-          }}
-          disabled={reviewedBookings.has(booking.id)}
-        />
-      )}
-
-      <Button
-        title="View Details"
-        type="outline"
-        buttonStyle={styles.detailsButton}
-        titleStyle={styles.detailsButtonText}
-        onPress={() => handleViewDetails(booking)}
-      />
-    </Card>
-  );
-
   if (isLoading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.loadingText}>Loading bookings...</Text>
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
+        <LinearGradient
+          colors={["#6366F1", "#8B5CF6", "#A855F7"]}
+          style={styles.header}
+        >
+          <SafeAreaView>
+            <View style={styles.headerContent}>
+              <TouchableOpacity 
+                style={styles.backButton}
+                onPress={() => navigation.goBack()}
+              >
+                <Ionicons name="arrow-back" size={24} color="#FFF" />
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>Booking History</Text>
+              <View style={styles.headerRight} />
+            </View>
+          </SafeAreaView>
+        </LinearGradient>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#8B5CF6" />
+          <Text style={styles.loadingText}>Loading bookings...</Text>
+        </View>
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.errorContainer}>
-        <Icon name="error" size={64} color={colors.error} />
-        <Text style={styles.errorText}>{error}</Text>
-        <Button
-          title="Try Again"
-          onPress={fetchBookings}
-          buttonStyle={styles.retryButton}
-        />
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
+        <LinearGradient
+          colors={["#6366F1", "#8B5CF6", "#A855F7"]}
+          style={styles.header}
+        >
+          <SafeAreaView>
+            <View style={styles.headerContent}>
+              <TouchableOpacity 
+                style={styles.backButton}
+                onPress={() => navigation.goBack()}
+              >
+                <Ionicons name="arrow-back" size={24} color="#FFF" />
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>Booking History</Text>
+              <View style={styles.headerRight} />
+            </View>
+          </SafeAreaView>
+        </LinearGradient>
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity
+            style={styles.retryButton}
+            onPress={fetchBookings}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <View style={styles.backButtonCircle}>
-            <Icon name="arrow-back" size={24} color={colors.primary} />
+      <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
+      
+      {/* Header */}
+      <LinearGradient
+        colors={["#6366F1", "#8B5CF6", "#A855F7"]}
+        style={styles.header}
+      >
+        <SafeAreaView>
+          <View style={styles.headerContent}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={24} color="#FFF" />
+            </TouchableOpacity>
+            
+            <Text style={styles.headerTitle}>Booking History</Text>
+            
+            <View style={styles.headerRight} />
           </View>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Booking History</Text>
-      </View>
-      <View style={styles.content}>
-        <View style={styles.tabContainer}>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'upcoming' && styles.activeTab]}
-            onPress={() => setActiveTab('upcoming')}
-          >
-            <Text style={[styles.tabText, activeTab === 'upcoming' && styles.activeTabText]}>
-              Upcoming
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'past' && styles.activeTab]}
-            onPress={() => setActiveTab('past')}
-          >
-            <Text style={[styles.tabText, activeTab === 'past' && styles.activeTabText]}>
-              Past
-            </Text>
-          </TouchableOpacity>
-        </View>
+        </SafeAreaView>
+      </LinearGradient>
 
-        <ScrollView style={styles.content}>
-          {getFilteredBookings().length > 0 ? (
-            getFilteredBookings().map(renderBookingCard)
-          ) : (
-            <View style={styles.emptyState}>
-              <Icon 
-                name={activeTab === 'upcoming' ? 'event-busy' : 'history'} 
-                size={64} 
-                color={colors.textLight} 
-              />
-              <Text style={styles.emptyStateText}>
-                No {activeTab} bookings found
-              </Text>
-            </View>
-          )}
-        </ScrollView>
+      {/* Tabs */}
+      <View style={styles.tabContainer}>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'upcoming' && styles.activeTab]}
+          onPress={() => setActiveTab('upcoming')}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.tabText, activeTab === 'upcoming' && styles.activeTabText]}>
+            Upcoming
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.tab, activeTab === 'past' && styles.activeTab]}
+          onPress={() => setActiveTab('past')}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.tabText, activeTab === 'past' && styles.activeTabText]}>
+            Past
+          </Text>
+        </TouchableOpacity>
       </View>
+
+      {/* Content */}
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {getFilteredBookings().length > 0 ? (
+          <View style={styles.bookingsContainer}>
+            {getFilteredBookings().map(renderBookingCard)}
+          </View>
+        ) : (
+          <View style={styles.emptyState}>
+            <Ionicons 
+              name={activeTab === 'upcoming' ? 'calendar-outline' : 'time-outline'} 
+              size={64} 
+              color="#CBD5E1" 
+            />
+            <Text style={styles.emptyStateTitle}>No {activeTab} bookings</Text>
+            <Text style={styles.emptyStateText}>
+              {activeTab === 'upcoming' 
+                ? 'You have no upcoming bookings' 
+                : 'You have no past bookings'}
+            </Text>
+          </View>
+        )}
+        <View style={styles.bottomPadding} />
+      </ScrollView>
 
       <BookingDetailsModal
         booking={selectedBooking}
@@ -546,178 +662,239 @@ export default function BookingHistoryScreen({ route, navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#F8FAFC',
   },
   header: {
+    marginTop: 20,
+    paddingBottom: 16,
+  },
+  headerContent: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingTop: spacing.xl + spacing.xs,
-    paddingBottom: spacing.md,
-    paddingHorizontal: spacing.md,
-    backgroundColor: colors.background,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'android' ? 20 : 0,
   },
   backButton: {
-    marginRight: spacing.md,
-  },
-  backButtonCircle: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.white,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
   },
   headerTitle: {
-    ...typography.h2,
-    flex: 1,
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#FFF',
   },
-  content: {
-    flex: 1,
+  headerRight: {
+    width: 40,
   },
   tabContainer: {
     flexDirection: 'row',
-    padding: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    backgroundColor: '#FFF',
+    marginHorizontal: 20,
+    marginTop: 16,
+    borderRadius: 12,
+    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
   },
   tab: {
     flex: 1,
-    paddingVertical: spacing.sm,
+    paddingVertical: 12,
+    borderRadius: 8,
     alignItems: 'center',
   },
   activeTab: {
-    borderBottomWidth: 2,
-    borderBottomColor: colors.primary,
+    backgroundColor: '#8B5CF6',
   },
   tabText: {
-    ...typography.body,
-    color: colors.textLight,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6B7280',
   },
   activeTabText: {
-    color: colors.primary,
-    fontWeight: 'bold',
+    color: '#FFF',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  bookingsContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
   },
   bookingCard: {
-    borderRadius: 12,
-    padding: spacing.md,
-    marginHorizontal: spacing.sm,
-    marginBottom: spacing.sm,
-    elevation: 2,
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
   },
   bookingHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: spacing.md,
+    marginBottom: 16,
   },
   vendorInfo: {
     flex: 1,
+    marginRight: 12,
   },
   vendorName: {
-    ...typography.h3,
-    marginBottom: spacing.xs / 2,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 4,
   },
-  vendorCategory: {
-    ...typography.caption,
-    color: colors.textLight,
+  businessName: {
+    fontSize: 14,
+    color: '#6B7280',
   },
   statusBadge: {
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs / 2,
-    borderRadius: 12,
-    marginLeft: spacing.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
-  pendingBadge: {
-    backgroundColor: colors.warning + '20',
+  statusText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
-  pendingText: {
-    ...typography.caption,
-    fontWeight: 'bold',
-    color: colors.warning,
+  bookingDetails: {
+    marginBottom: 16,
   },
-  confirmedBadge: {
-    backgroundColor: colors.primary + '20',
-  },
-  confirmedText: {
-    ...typography.caption,
-    fontWeight: 'bold',
-    color: colors.primary,
-  },
-  completedBadge: {
-    backgroundColor: colors.success + '20',
-  },
-  completedText: {
-    ...typography.caption,
-    fontWeight: 'bold',
-    color: colors.success,
-  },
-  cancelledBadge: {
-    backgroundColor: colors.error + '20',
-  },
-  cancelledText: {
-    ...typography.caption,
-    fontWeight: 'bold',
-    color: colors.error,
-  },
-  defaultBadge: {
-    backgroundColor: colors.surface,
-  },
-  defaultText: {
-    ...typography.caption,
-    fontWeight: 'bold',
-    color: colors.textLight,
-  },
-  dateTimeContainer: {
+  detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.xs,
+    marginBottom: 8,
   },
-  dateTimeText: {
-    ...typography.body,
-    color: colors.textLight,
-    marginLeft: spacing.sm,
+  detailText: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginLeft: 8,
   },
-  totalContainer: {
+  amountContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
+    marginBottom: 16,
+    paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: '#F1F5F9',
   },
-  totalLabel: {
-    ...typography.h3,
+  amountLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
   },
-  totalAmount: {
-    ...typography.h2,
-    color: colors.primary,
+  amountValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#8B5CF6',
+  },
+  cardActions: {
+    flexDirection: 'row',
+    gap: 12,
   },
   detailsButton: {
-    marginTop: spacing.md,
-    borderColor: colors.primary,
+    flex: 1,
+    paddingVertical: 12,
     borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
   },
   detailsButtonText: {
-    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  reviewButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#8B5CF6',
+    alignItems: 'center',
+  },
+  reviewedButton: {
+    backgroundColor: '#E5E7EB',
+  },
+  reviewButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFF',
+  },
+  reviewedButtonText: {
+    color: '#6B7280',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginTop: 12,
+    fontWeight: '500',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  retryButton: {
+    backgroundColor: '#8B5CF6',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFF',
   },
   emptyState: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    padding: spacing.xl * 2,
+    paddingHorizontal: 40,
+    paddingTop: 100,
+  },
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#374151',
+    marginTop: 16,
+    marginBottom: 8,
   },
   emptyStateText: {
-    ...typography.body,
-    color: colors.textLight,
+    fontSize: 16,
+    color: '#6B7280',
     textAlign: 'center',
-    marginTop: spacing.md,
+    lineHeight: 24,
   },
+  bottomPadding: {
+    height: 100,
+  },
+  // Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -725,163 +902,158 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: colors.background,
-    borderRadius: 16,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
     width: '90%',
     maxHeight: '80%',
-    elevation: 5,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.25,
-    shadowRadius: 4,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  detailsModalContent: {
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    width: '90%',
+    maxHeight: '85%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 8,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: spacing.md,
+    padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: '#F1F5F9',
   },
   modalTitle: {
-    ...typography.h2,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F2937',
   },
   closeButton: {
-    padding: spacing.xs,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalBody: {
-    padding: spacing.md,
-  },
-  detailSection: {
-    marginBottom: spacing.md,
-  },
-  detailLabel: {
-    ...typography.caption,
-    color: colors.textLight,
-    marginBottom: spacing.xs,
-  },
-  detailValue: {
-    ...typography.h3,
-    color: colors.text,
-  },
-  detailSubtext: {
-    ...typography.body,
-    color: colors.textLight,
-  },
-  modalFooter: {
-    padding: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
-  closeModalButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    paddingVertical: spacing.sm,
-  },
-  closeModalButtonText: {
-    ...typography.button,
-    color: colors.white,
-  },
-  itemRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xs,
-  },
-  itemName: {
-    ...typography.body,
-    flex: 1,
-  },
-  itemQuantity: {
-    ...typography.body,
-    color: colors.primary,
-    fontWeight: 'bold',
-  },
-  itemPrice: {
-    ...typography.body,
-    color: colors.primary,
-    fontWeight: 'bold',
-  },
-  statusContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  modalStatusBadge: {
-    alignSelf: 'flex-start',
-    marginLeft: 0,
-    marginTop: spacing.xs,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    ...typography.body,
-    color: colors.textLight,
-    marginTop: spacing.md,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorText: {
-    ...typography.body,
-    color: colors.error,
-    marginTop: spacing.md,
-  },
-  retryButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    paddingVertical: spacing.sm,
-  },
-  reviewButton: {
-    marginTop: spacing.md,
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  reviewedButton: {
-    backgroundColor: colors.textLight,
-  },
-  reviewButtonText: {
-    ...typography.button,
-    color: colors.white,
+    padding: 20,
   },
   reviewSection: {
-    marginBottom: spacing.md,
+    marginBottom: 24,
   },
   reviewLabel: {
-    ...typography.caption,
-    color: colors.textLight,
-    marginBottom: spacing.xs,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 12,
   },
   starContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
+    gap: 8,
   },
   starButton: {
-    padding: spacing.xs,
+    padding: 4,
   },
   reviewInput: {
     borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 8,
-    padding: spacing.sm,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: '#1F2937',
     minHeight: 100,
-    textAlignVertical: 'top',
-    ...typography.body,
+    backgroundColor: '#F9FAFB',
   },
-  submitReviewButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    paddingVertical: spacing.sm,
+  modalFooter: {
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
   },
-  submitReviewButtonText: {
-    ...typography.button,
-    color: colors.white,
+  submitButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  submitButtonGradient: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  submitButtonDisabled: {
+    opacity: 0.7,
+  },
+  submitButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFF',
+    marginLeft: 8,
+  },
+  closeModalButton: {
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  closeModalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  // Details modal styles
+  detailsSection: {
+    marginBottom: 24,
+  },
+  detailsTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 12,
+  },
+  detailsCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 20,
+  },
+  detailsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingVertical: 4,
+  },
+  detailsLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginLeft: 12,
+    flex: 1,
+    minWidth: 80,
+  },
+  detailsValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
+    textAlign: 'right',
+    flex: 1.5,
+    flexWrap: 'wrap',
+  },
+  detailsValueAmount: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#8B5CF6',
+    textAlign: 'right',
+    flex: 1,
+  },
+  specialRequestsText: {
+    fontSize: 14,
+    color: '#374151',
+    lineHeight: 20,
   },
 }); 

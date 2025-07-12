@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, Alert, ActivityIndicator, TouchableOpacity, SafeAreaView, StatusBar, Platform } from 'react-native';
-import { Button, Card, Icon, CheckBox } from '@rneui/themed';
-import { colors, spacing, typography } from '../../styles/theme';
+import { StyleSheet, View, Text, ScrollView, Alert, ActivityIndicator, TouchableOpacity, SafeAreaView, StatusBar, Platform, Animated } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useBooking } from '../../contexts/BookingContext';
 import { getUserBookings, cancelBooking } from '../../api/apiService';
 import { useFocusEffect } from '@react-navigation/native';
@@ -13,12 +13,20 @@ export default function BookingCartScreen({ route, navigation }) {
   const [selectedBookings, setSelectedBookings] = useState([]);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const { removeBooking, clearBookings } = useBooking();
+  const fadeAnim = React.useRef(new Animated.Value(0)).current;
 
   // Refresh bookings when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       console.log('BookingCartScreen focused, refreshing bookings');
       fetchBookings();
+      
+      // Animate entrance
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }).start();
     }, [])
   );
 
@@ -305,638 +313,795 @@ export default function BookingCartScreen({ route, navigation }) {
            selectedBookingsData.every(booking => booking.status === 'confirmed');
   };
 
-  // Empty cart view
-  if (!isLoading && (!bookings || bookings.length === 0)) {
-    return (
-      <View style={styles.safeArea}>
-        <StatusBar
-          backgroundColor={colors.primary}
-          barStyle="light-content"
-        />
-      <View style={styles.emptyContainer}>
-        <Icon name="shopping-cart" size={64} color={colors.textLight} />
-        <Text style={styles.emptyText}>Your booking cart is empty</Text>
-        <Button
-          title="Browse Vendors"
-          onPress={() => navigation.navigate('Dashboard')}
-          buttonStyle={styles.browseButton}
-          containerStyle={styles.browseButtonContainer}
-        />
-        </View>
-      </View>
-    );
-  }
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'pending':
+        return '#F59E0B';
+      case 'confirmed':
+        return '#10B981';
+      case 'cancelled':
+        return '#EF4444';
+      case 'completed':
+        return '#6366F1';
+      default:
+        return '#64748B';
+    }
+  };
 
-  if (isLoading) {
-    return (
-      <View style={styles.safeArea}>
-        <StatusBar
-          backgroundColor={colors.primary}
-          barStyle="light-content"
-        />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-          <Text style={styles.loadingText}>Loading bookings...</Text>
-        </View>
-      </View>
-    );
-  }
-
-  if (error) {
-    return (
-      <View style={styles.safeArea}>
-        <StatusBar
-          backgroundColor={colors.primary}
-          barStyle="light-content"
-        />
-        <View style={styles.errorContainer}>
-          <Icon name="error" size={64} color={colors.error} />
-          <Text style={styles.errorText}>{error}</Text>
-          <Button
-            title="Try Again"
-            onPress={fetchBookings}
-            buttonStyle={styles.retryButton}
-          />
-        </View>
-      </View>
-    );
-  }
-
-  console.log('Rendering bookings:', bookings);
+  const getStatusBackground = (status) => {
+    switch (status) {
+      case 'pending':
+        return 'rgba(245, 158, 11, 0.1)';
+      case 'confirmed':
+        return 'rgba(16, 185, 129, 0.1)';
+      case 'cancelled':
+        return 'rgba(239, 68, 68, 0.1)';
+      case 'completed':
+        return 'rgba(99, 102, 241, 0.1)';
+      default:
+        return 'rgba(100, 116, 139, 0.1)';
+    }
+  };
 
   const formatTime = (time) => {
     if (!time) return '';
-    // The time comes in format "HH:MM:SS", we just want "HH:MM"
-    return time.split(':').slice(0, 2).join(':');
+    return time.substring(0, 5); // Extract HH:MM from HH:MM:SS
   };
 
   const formatDate = (date) => {
     if (!date) return '';
     const dateObj = new Date(date);
     return dateObj.toLocaleDateString('en-US', {
-      weekday: 'long',
+      weekday: 'short',
       year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+      month: 'short',
+      day: 'numeric'
     });
   };
 
-  return (
-    <View style={styles.safeArea}>
-      <StatusBar
-        backgroundColor={colors.primary}
-        barStyle="light-content"
-      />
-    <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Your Bookings</Text>
-          <Button
-            icon={<Icon name={isSelectionMode ? "close" : "check-box"} color={colors.primary} size={24} />}
-            type="clear"
-            onPress={toggleSelectionMode}
-            title={isSelectionMode ? "Done" : "Select"}
-          />
-        </View>
+  const formatCurrency = (amount) => {
+    if (!amount && amount !== 0) return '$0';
+    const numAmount = parseFloat(amount);
+    if (isNaN(numAmount)) return '$0';
+    return `$${numAmount.toLocaleString()}`;
+  };
 
-        <ScrollView 
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
+  const calculateServicePrice = (item) => {
+    if (!item) return 0;
+    const price = parseFloat(item.price_at_time);
+    const quantity = parseInt(item.quantity);
+    if (isNaN(price) || isNaN(quantity)) return 0;
+    return price * quantity;
+  };
+
+  const getGuestCount = (guests) => {
+    const count = parseInt(guests);
+    return isNaN(count) ? 1 : count;
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
+        
+        <LinearGradient
+          colors={["#6366F1", "#8B5CF6", "#A855F7"]}
+          style={styles.header}
         >
-          {bookings.map((booking) => {
-            console.log('Rendering booking:', booking);
-            if (!booking || !booking.vendor_name) {
-              console.log('Invalid booking data:', booking);
-              return null;
-            }
-          
-          return (
-            <Card key={booking.id} containerStyle={styles.bookingCard}>
-                {isSelectionMode && (
-                  <CheckBox
-                    checked={selectedBookings.includes(booking.id)}
-                    onPress={() => toggleBookingSelection(booking.id)}
-                    containerStyle={styles.checkboxContainer}
-                  />
-                )}
-                
-              {/* Vendor Info */}
-              <View style={styles.bookingHeader}>
-                <View style={styles.vendorInfo}>
-                    <Text style={styles.vendorName}>{booking.vendor_name}</Text>
-                    <Text style={styles.vendorCategory}>{booking.business_name}</Text>
-                </View>
-                  {!isSelectionMode && (
-                <Button
-                  icon={<Icon name="close" color={colors.error} size={20} />}
-                  type="clear"
-                  onPress={() => handleRemoveBooking(booking.id)}
-                  containerStyle={styles.removeButton}
-                />
-                  )}
-              </View>
-
-              {/* Status Badge */}
-              <View style={styles.statusContainer}>
-                <Text style={[
-                  styles.statusText,
-                    booking.status === 'pending' && styles.pendingStatus,
-                    booking.status === 'confirmed' && styles.confirmedStatus,
-                    booking.status === 'cancelled' && styles.cancelledStatus,
-                    booking.status === 'completed' && styles.completedStatus
-                  ]}>
-                    {booking.status.toUpperCase()}
-                </Text>
-              </View>
-
-              {/* Booking Details */}
-                <View style={styles.detailsContainer}>
-                <View style={styles.detailRow}>
-                  <Icon name="event" size={18} color={colors.textLight} />
-                  <Text style={styles.detailText}>
-                      {formatDate(booking.booking_date)}
-                  </Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Icon name="access-time" size={18} color={colors.textLight} />
-                  <Text style={styles.detailText}>
-                      {formatTime(booking.booking_time)}
-                  </Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Icon name="people" size={18} color={colors.textLight} />
-                  <Text style={styles.detailText}>
-                      {booking.guests || 1} guests
-                  </Text>
-                </View>
-              </View>
-
-              {/* Services */}
-              <View style={styles.servicesContainer}>
-                <Text style={styles.sectionTitle}>Selected Services</Text>
-                  {booking.items?.map((item, index) => (
-                    <View key={index} style={styles.serviceItem}>
-                      <Text style={styles.serviceName}>{item.menu_name}</Text>
-                    <Text style={styles.servicePrice}>
-                        ${(item.price_at_time * item.quantity).toLocaleString()}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-
-              {/* Total */}
-              <View style={styles.totalContainer}>
-                <Text style={styles.totalLabel}>Total Amount</Text>
-                <Text style={styles.totalAmount}>
-                    ${parseFloat(booking.total_amount).toLocaleString()}
-                </Text>
-              </View>
-
-              {/* Notes if any */}
-                {booking.special_instructions && (
-                <View style={styles.notesContainer}>
-                  <Text style={styles.notesLabel}>Special Requests:</Text>
-                    <Text style={styles.notesText}>{booking.special_instructions}</Text>
-                </View>
-              )}
-            </Card>
-          );
-        })}
-      </ScrollView>
-
-        {bookings.length > 0 && (
-        <View style={styles.footer}>
-            {isSelectionMode ? (
-              <>
-                <Button
-                  title="Cancel Selected"
-                  onPress={handleSelectedBookingsCancel}
-                  buttonStyle={styles.clearButton}
-                  containerStyle={styles.clearButtonContainer}
-                  titleStyle={styles.clearButtonText}
-                  type="outline"
-                  disabled={selectedBookings.length === 0}
-                />
-                <Button
-                  title={`Checkout (${selectedBookings.length})`}
-                  onPress={handleSelectedBookingsCheckout}
-                  buttonStyle={[
-                    styles.checkoutButton,
-                    !hasOnlyConfirmedBookings() && styles.disabledButton
-                  ]}
-                  containerStyle={styles.checkoutButtonContainer}
-                  icon={<Icon name="payment" color={colors.white} style={styles.checkoutIcon} />}
-                  disabled={!hasOnlyConfirmedBookings()}
-                />
-              </>
-            ) : (
-              <>
-          <Button
-            title="Clear Cart"
-            onPress={handleClearCart}
-            buttonStyle={styles.clearButton}
-            containerStyle={styles.clearButtonContainer}
-            titleStyle={styles.clearButtonText}
-            type="outline"
-          />
-                {bookings.some(booking => booking.status === 'confirmed') ? (
-          <Button
-                    title={`Checkout (${bookings.filter(b => b.status === 'confirmed').length})`}
-                    onPress={handleCheckout}
-            buttonStyle={styles.checkoutButton}
-            containerStyle={styles.checkoutButtonContainer}
-            icon={<Icon name="payment" color={colors.white} style={styles.checkoutIcon} />}
-          />
-                ) : (
-                  <View style={styles.waitingMessage}>
-                    <Icon name="hourglass-empty" color={colors.warning} size={24} />
-                    <Text style={styles.waitingText}>Waiting for vendor confirmation</Text>
-                  </View>
-                )}
-              </>
-            )}
+          <View style={styles.headerContent}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={24} color="#FFF" />
+            </TouchableOpacity>
+            
+            <View style={styles.headerCenter}>
+              <Text style={styles.headerTitle}>My Bookings</Text>
+              <Text style={styles.headerSubtitle}>Manage your reservations</Text>
+            </View>
+            
+            <View style={styles.headerRight} />
+          </View>
+        </LinearGradient>
+        
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#6366F1" />
+          <Text style={styles.loadingText}>Loading your bookings...</Text>
         </View>
-      )}
+      </SafeAreaView>
+    );
+  }
+
+  if (error) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
+        
+        <LinearGradient
+          colors={["#6366F1", "#8B5CF6", "#A855F7"]}
+          style={styles.header}
+        >
+          <View style={styles.headerContent}>
+            <TouchableOpacity 
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={24} color="#FFF" />
+            </TouchableOpacity>
+            
+            <View style={styles.headerCenter}>
+              <Text style={styles.headerTitle}>My Bookings</Text>
+              <Text style={styles.headerSubtitle}>Manage your reservations</Text>
+            </View>
+            
+            <View style={styles.headerRight} />
+          </View>
+        </LinearGradient>
+        
+        <View style={styles.errorContainer}>
+          <Ionicons name="alert-circle-outline" size={64} color="#EF4444" />
+          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity 
+            style={styles.retryButton} 
+            onPress={fetchBookings}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={["#A5B4FC", "#8B5CF6", "#7C3AED"]}
+              style={styles.retryButtonGradient}
+            >
+              <Ionicons name="refresh" size={16} color="#FFF" />
+              <Text style={styles.retryButtonText}>Try Again</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
+      
+      <LinearGradient
+        colors={["#6366F1", "#8B5CF6", "#A855F7"]}
+        style={styles.header}
+      >
+        <View style={styles.headerContent}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#FFF" />
+          </TouchableOpacity>
+          
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>My Bookings</Text>
+            <Text style={styles.headerSubtitle}>
+              {bookings.length} {bookings.length === 1 ? 'booking' : 'bookings'}
+            </Text>
+          </View>
+          
+          <TouchableOpacity 
+            style={styles.headerButton}
+            onPress={toggleSelectionMode}
+          >
+            <Ionicons 
+              name={isSelectionMode ? "close" : "checkmark-circle-outline"} 
+              size={24} 
+              color="#FFF" 
+            />
+          </TouchableOpacity>
+        </View>
+      </LinearGradient>
+
+      <View style={styles.container}>
+        {bookings.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="calendar-outline" size={80} color="#CBD5E1" />
+            <Text style={styles.emptyTitle}>No bookings yet</Text>
+            <Text style={styles.emptySubtitle}>
+              Start booking vendors to see your reservations here
+            </Text>
+            <TouchableOpacity 
+              style={styles.browseButton}
+              onPress={() => navigation.navigate('MainDashboard')}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={["#A5B4FC", "#8B5CF6", "#7C3AED"]}
+                style={styles.browseButtonGradient}
+              >
+                <Ionicons name="search" size={20} color="#FFF" />
+                <Text style={styles.browseButtonText}>Browse Vendors</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <>
+            <ScrollView 
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+            >
+              {bookings.map((booking, index) => {
+                console.log('Rendering booking:', booking);
+                if (!booking || !booking.vendor_name) {
+                  console.log('Invalid booking data:', booking);
+                  return null;
+                }
+              
+                return (
+                  <Animated.View 
+                    key={booking.id}
+                    style={[
+                      styles.bookingCard,
+                      {
+                        opacity: fadeAnim,
+                        transform: [{
+                          translateY: fadeAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: [50 * (index + 1), 0]
+                          })
+                        }]
+                      }
+                    ]}
+                  >
+                    {isSelectionMode && (
+                      <TouchableOpacity
+                        style={[
+                          styles.checkbox,
+                          selectedBookings.includes(booking.id) && styles.checkboxSelected
+                        ]}
+                        onPress={() => toggleBookingSelection(booking.id)}
+                      >
+                        {selectedBookings.includes(booking.id) && (
+                          <Ionicons name="checkmark" size={16} color="#FFF" />
+                        )}
+                      </TouchableOpacity>
+                    )}
+                    
+                    {/* Vendor Info */}
+                    <View style={styles.bookingHeader}>
+                      <View style={styles.vendorInfo}>
+                        <Text style={styles.vendorName}>{booking.vendor_name}</Text>
+                        <Text style={styles.vendorCategory}>{booking.business_name}</Text>
+                      </View>
+                      {!isSelectionMode && (
+                        <TouchableOpacity
+                          style={styles.removeButton}
+                          onPress={() => handleRemoveBooking(booking.id)}
+                        >
+                          <Ionicons name="close-circle" size={24} color="#EF4444" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+
+                    {/* Status Badge */}
+                    <View style={styles.statusContainer}>
+                      <View style={[
+                        styles.statusBadge,
+                        { backgroundColor: getStatusBackground(booking.status) }
+                      ]}>
+                        <Text style={[
+                          styles.statusText,
+                          { color: getStatusColor(booking.status) }
+                        ]}>
+                          {booking.status.toUpperCase()}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Booking Details */}
+                    <View style={styles.detailsContainer}>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="calendar-outline" size={18} color="#64748B" />
+                        <Text style={styles.detailText}>
+                          {formatDate(booking.booking_date)}
+                        </Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="time-outline" size={18} color="#64748B" />
+                        <Text style={styles.detailText}>
+                          {formatTime(booking.booking_time)}
+                        </Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <Ionicons name="people-outline" size={18} color="#64748B" />
+                        <Text style={styles.detailText}>
+                          {getGuestCount(booking.guests)} guests
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Services */}
+                    <View style={styles.servicesContainer}>
+                      <Text style={styles.sectionTitle}>Selected Services</Text>
+                      {booking.items?.map((item, index) => (
+                        <View key={index} style={styles.serviceItem}>
+                          <Text style={styles.serviceName}>{item.menu_name}</Text>
+                          <Text style={styles.servicePrice}>
+                            {formatCurrency(calculateServicePrice(item))}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+
+                    {/* Total */}
+                    <View style={styles.totalContainer}>
+                      <Text style={styles.totalLabel}>Total Amount</Text>
+                      <Text style={styles.totalAmount}>
+                        {formatCurrency(booking.total_amount)}
+                      </Text>
+                    </View>
+
+                    {/* Notes if any */}
+                    {booking.special_instructions && (
+                      <View style={styles.notesContainer}>
+                        <Text style={styles.notesLabel}>Special Requests:</Text>
+                        <Text style={styles.notesText}>{booking.special_instructions}</Text>
+                      </View>
+                    )}
+                  </Animated.View>
+                );
+              })}
+            </ScrollView>
+
+            <View style={styles.footer}>
+              {isSelectionMode ? (
+                <>
+                  <TouchableOpacity
+                    style={[
+                      styles.clearButton,
+                      selectedBookings.length === 0 && styles.disabledButton
+                    ]}
+                    onPress={handleSelectedBookingsCancel}
+                    disabled={selectedBookings.length === 0}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="close-circle" size={20} color="#EF4444" />
+                    <Text style={styles.clearButtonText}>Cancel Selected</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.checkoutButton,
+                      !hasOnlyConfirmedBookings() && styles.disabledButton
+                    ]}
+                    onPress={handleSelectedBookingsCheckout}
+                    disabled={!hasOnlyConfirmedBookings()}
+                    activeOpacity={0.8}
+                  >
+                    <LinearGradient
+                      colors={
+                        hasOnlyConfirmedBookings() 
+                          ? ["#A5B4FC", "#8B5CF6", "#7C3AED"] 
+                          : ["#94A3B8", "#94A3B8"]
+                      }
+                      style={styles.checkoutButtonGradient}
+                    >
+                      <Ionicons name="card-outline" size={20} color="#FFF" />
+                      <Text style={styles.checkoutButtonText}>
+                        Checkout ({selectedBookings.length})
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    style={styles.clearButton}
+                    onPress={handleClearCart}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="trash-outline" size={20} color="#EF4444" />
+                    <Text style={styles.clearButtonText}>Clear All</Text>
+                  </TouchableOpacity>
+                  {bookings.some(booking => booking.status === 'confirmed') ? (
+                    <TouchableOpacity
+                      style={styles.checkoutButton}
+                      onPress={handleCheckout}
+                      activeOpacity={0.8}
+                    >
+                      <LinearGradient
+                        colors={["#A5B4FC", "#8B5CF6", "#7C3AED"]}
+                        style={styles.checkoutButtonGradient}
+                      >
+                        <Ionicons name="card-outline" size={20} color="#FFF" />
+                        <Text style={styles.checkoutButtonText}>
+                          Checkout ({bookings.filter(b => b.status === 'confirmed').length})
+                        </Text>
+                      </LinearGradient>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={styles.waitingMessage}>
+                      <Ionicons name="time-outline" color="#F59E0B" size={24} />
+                      <Text style={styles.waitingText}>Waiting for vendor confirmation</Text>
+                    </View>
+                  )}
+                </>
+              )}
+            </View>
+          </>
+        )}
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+    backgroundColor: '#F8FAFC',
+  },
+  header: {
+    marginTop: 30,
+    paddingTop: 10,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 16,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFF',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerRight: {
+    width: 40,
   },
   container: {
     flex: 1,
-    backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    backgroundColor: '#F8FAFC',
   },
   scrollContent: {
-    paddingTop: spacing.md,
-    paddingHorizontal: spacing.xs,
-    paddingBottom: spacing.xl,
+    padding: 20,
+    paddingBottom: 100,
   },
   bookingCard: {
-    borderRadius: 12,
-    marginBottom: spacing.md,
-    padding: spacing.md,
-    elevation: 3,
-    backgroundColor: colors.white,
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    transform: [{ scale: 1 }],
-    transition: 'all 0.3s ease',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  checkbox: {
+    position: 'absolute',
+    top: 16,
+    right: 16,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  checkboxSelected: {
+    backgroundColor: '#6366F1',
+    borderColor: '#6366F1',
   },
   bookingHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: spacing.md,
-    paddingBottom: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    marginBottom: 12,
   },
   vendorInfo: {
     flex: 1,
   },
   vendorName: {
-    ...typography.h3,
-    color: colors.text,
-    marginBottom: spacing.xs,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 4,
   },
   vendorCategory: {
-    ...typography.caption,
-    color: colors.textLight,
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
   },
   removeButton: {
-    marginTop: -spacing.xs,
-    marginRight: -spacing.xs,
+    padding: 4,
+  },
+  statusContainer: {
+    marginBottom: 16,
+    alignItems: 'flex-end',
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
   detailsContainer: {
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    marginBottom: 16,
   },
   detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.sm,
-    paddingVertical: spacing.xs,
+    marginBottom: 8,
   },
   detailText: {
-    ...typography.body,
-    color: colors.text,
-    marginLeft: spacing.sm,
+    fontSize: 14,
+    color: '#0F172A',
+    marginLeft: 8,
+    fontWeight: '500',
   },
   servicesContainer: {
-    marginBottom: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    marginBottom: 16,
   },
   sectionTitle: {
-    ...typography.h3,
-    color: colors.text,
-    marginBottom: spacing.sm,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 12,
   },
   serviceItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: spacing.sm,
+    paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: '#F1F5F9',
   },
   serviceName: {
-    ...typography.body,
+    fontSize: 14,
+    color: '#0F172A',
+    fontWeight: '500',
     flex: 1,
-    color: colors.text,
   },
   servicePrice: {
-    ...typography.body,
-    color: colors.primary,
-    fontWeight: 'bold',
+    fontSize: 14,
+    color: '#6366F1',
+    fontWeight: '700',
   },
   totalContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
-    paddingTop: spacing.md,
-    marginTop: spacing.md,
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    borderRadius: 8,
+    borderTopColor: '#E2E8F0',
+    marginBottom: 12,
   },
   totalLabel: {
-    ...typography.h3,
-    color: colors.text,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0F172A',
   },
   totalAmount: {
-    ...typography.h2,
-    color: colors.primary,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#6366F1',
   },
   notesContainer: {
-    marginTop: spacing.sm,
-    padding: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: 6,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
   },
   notesLabel: {
-    ...typography.caption,
-    fontWeight: 'bold',
-    color: colors.text,
-    marginBottom: spacing.xs / 2,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginBottom: 4,
   },
   notesText: {
-    ...typography.caption,
-    color: colors.textLight,
+    fontSize: 14,
+    color: '#64748B',
+    lineHeight: 20,
   },
   footer: {
-    flexDirection: 'row',
-    padding: spacing.md,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFF',
     borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.white,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  clearButtonContainer: {
-    flex: 1,
-    marginRight: spacing.sm,
+    borderTopColor: '#E2E8F0',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    gap: 12,
   },
   clearButton: {
-    borderColor: colors.error,
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
     borderWidth: 1,
+    borderColor: '#EF4444',
+    backgroundColor: '#FFF',
   },
   clearButtonText: {
-    color: colors.error,
-  },
-  checkoutButtonContainer: {
-    flex: 2,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#EF4444',
+    marginLeft: 8,
   },
   checkoutButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    paddingVertical: spacing.sm,
-    elevation: 2,
-  },
-  checkoutIcon: {
-    marginRight: spacing.sm,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xl,
-  },
-  emptyText: {
-    ...typography.h2,
-    color: colors.textLight,
-    textAlign: 'center',
-    marginTop: spacing.md,
-    marginBottom: spacing.xl,
-  },
-  browseButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.xl,
-    borderRadius: 8,
-  },
-  browseButtonContainer: {
-    width: '80%',
-  },
-  statusContainer: {
-    marginTop: spacing.xs,
-    marginBottom: spacing.md,
-  },
-  statusText: {
-    ...typography.button,
-    fontWeight: 'bold',
-    textAlign: 'right',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs / 2,
-    borderRadius: 16,
+    flex: 2,
+    borderRadius: 12,
     overflow: 'hidden',
-    alignSelf: 'flex-end',
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  pendingStatus: {
-    backgroundColor: colors.warning + '20',
-    color: colors.warning,
-  },
-  confirmedStatus: {
-    backgroundColor: colors.success + '20',
-    color: colors.success,
-  },
-  cancelledStatus: {
-    backgroundColor: colors.error + '20',
-    color: colors.error,
-  },
-  completedStatus: {
-    backgroundColor: colors.primary + '20',
-    color: colors.primary,
-  },
-  '@media (hover: hover)': {
-    bookingCard: {
-      '&:hover': {
-        transform: [{ scale: 1.02 }],
-        elevation: 4,
-      },
-    },
-  },
-  removingCard: {
-    opacity: 0,
-    transform: [{ scale: 0.9 }, { translateY: 20 }],
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalContent: {
-    backgroundColor: colors.white,
-    borderRadius: 16,
-    padding: spacing.xl,
-    width: '85%',
-    alignItems: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-  },
-  warningIconContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: colors.error + '20',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  modalTitle: {
-    ...typography.h2,
-    color: colors.error,
-    marginBottom: spacing.sm,
-    textAlign: 'center',
-  },
-  modalMessage: {
-    ...typography.body,
-    color: colors.textLight,
-    textAlign: 'center',
-    marginBottom: spacing.xl,
-  },
-  modalButtonContainer: {
+  checkoutButtonGradient: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginTop: spacing.md,
-    gap: spacing.md,
-  },
-  modalButtonWidth: {
-    flex: 1,
-  },
-  modalCancelButton: {
-    borderColor: colors.border,
-    borderWidth: 1,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.white,
-  },
-  modalConfirmButton: {
-    backgroundColor: colors.error,
-    paddingVertical: spacing.sm,
-  },
-  modalCancelButtonText: {
-    color: colors.text,
-    ...typography.button,
-  },
-  modalConfirmButtonText: {
-    color: colors.white,
-    fontWeight: 'bold',
-    ...typography.button,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
-  },
-  loadingText: {
-    ...typography.body,
-    color: colors.textLight,
-    marginTop: spacing.md,
-  },
-  errorContainer: {
-    flex: 1,
     justifyContent: 'center',
-    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
-  errorText: {
-    ...typography.body,
-    color: colors.error,
-    marginTop: spacing.md,
+  checkoutButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFF',
+    marginLeft: 8,
   },
-  retryButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    paddingVertical: spacing.sm,
+  disabledButton: {
+    opacity: 0.5,
   },
   waitingMessage: {
     flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.warning + '20',
-    padding: spacing.sm,
-    borderRadius: 8,
-    marginLeft: spacing.sm,
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    padding: 12,
+    borderRadius: 12,
+    marginLeft: 12,
   },
   waitingText: {
-    ...typography.body,
-    color: colors.warning,
-    marginLeft: spacing.sm,
+    fontSize: 14,
+    color: '#F59E0B',
+    marginLeft: 8,
+    fontWeight: '500',
   },
-  headerTitle: {
-    ...typography.h2,
-    color: colors.text,
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
   },
-  checkboxContainer: {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.sm,
-    zIndex: 1,
-    backgroundColor: 'transparent',
-    borderWidth: 0,
-    padding: 0,
-    margin: 0,
+  loadingText: {
+    fontSize: 16,
+    color: '#64748B',
+    marginTop: 16,
+    fontWeight: '500',
   },
-  disabledButton: {
-    backgroundColor: colors.primaryLight,
-    opacity: 0.6,
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  errorTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#EF4444',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#64748B',
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 24,
+  },
+  retryButton: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  retryButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+  },
+  retryButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    fontSize: 16,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 32,
+  },
+  browseButton: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  browseButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+  },
+  browseButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 }); 

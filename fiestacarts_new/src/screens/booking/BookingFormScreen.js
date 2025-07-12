@@ -1,11 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Alert, Modal, Animated } from 'react-native';
-import { Button, Input, Icon } from '@rneui/themed';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Alert, Modal, Animated, SafeAreaView, StatusBar, TextInput } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useActionSheet } from '@expo/react-native-action-sheet';
-import { colors, spacing, typography } from '../../styles/theme';
 import { useBooking } from '../../contexts/BookingContext';
 import { createBooking, updateVendorAvailability } from '../../api/apiService';
-import BackButton from '../../components/common/BackButton';
 
 export default function BookingFormScreen({ route, navigation }) {
   const { vendor, selectedDate, selectedServices, availableSlots } = route.params;
@@ -34,6 +33,15 @@ export default function BookingFormScreen({ route, navigation }) {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const modalScaleAnim = useRef(new Animated.Value(0)).current;
   const successScaleAnim = useRef(new Animated.Value(0)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  React.useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+  }, []);
 
   const animateModal = (anim, show) => {
     Animated.spring(anim, {
@@ -199,49 +207,46 @@ export default function BookingFormScreen({ route, navigation }) {
       transparent
       visible={showConfirmModal}
       animationType="fade"
-      onRequestClose={() => {
-        setShowConfirmModal(false);
-        animateModal(modalScaleAnim, false);
-      }}
     >
       <View style={styles.modalOverlay}>
-        <Animated.View
+        <Animated.View 
           style={[
             styles.modalContent,
             {
-              transform: [
-                {
-                  scale: modalScaleAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.8, 1],
-                  }),
-                },
-              ],
-            },
+              transform: [{ scale: modalScaleAnim }]
+            }
           ]}
         >
-          <Icon name="event-available" size={50} color={colors.primary} />
+          <Ionicons name="checkmark-circle" size={64} color="#10B981" />
           <Text style={styles.modalTitle}>Confirm Booking</Text>
           <Text style={styles.modalTotal}>
-            Total Amount: ${calculateTotal().toLocaleString()}
+            Total: ${calculateTotal().toLocaleString()}
           </Text>
           <View style={styles.modalButtons}>
-            <Button
-              title="Cancel"
-              type="outline"
-              buttonStyle={styles.modalCancelButton}
-              titleStyle={styles.modalCancelButtonText}
+            <TouchableOpacity
+              style={styles.modalConfirmButton}
+              onPress={handleConfirmBooking}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={["#6366F1", "#8B5CF6"]}
+                style={styles.modalConfirmButtonGradient}
+              >
+                <Ionicons name="checkmark" size={20} color="#FFF" />
+                <Text style={styles.modalConfirmButtonText}>Confirm Booking</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.modalCancelButton}
               onPress={() => {
                 setShowConfirmModal(false);
                 animateModal(modalScaleAnim, false);
               }}
-            />
-            <Button
-              title="Confirm"
-              buttonStyle={styles.modalConfirmButton}
-              titleStyle={styles.modalConfirmButtonText}
-              onPress={handleConfirmBooking}
-            />
+              activeOpacity={0.8}
+            >
+              <Ionicons name="close" size={20} color="#EF4444" />
+              <Text style={styles.modalCancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
           </View>
         </Animated.View>
       </View>
@@ -253,69 +258,47 @@ export default function BookingFormScreen({ route, navigation }) {
       transparent
       visible={showSuccessModal}
       animationType="fade"
-      onRequestClose={() => {
-        setShowSuccessModal(false);
-        animateModal(successScaleAnim, false);
-      }}
     >
       <View style={styles.modalOverlay}>
-        <Animated.View
+        <Animated.View 
           style={[
-            styles.modalContent,
             styles.successModalContent,
             {
-              transform: [
-                {
-                  scale: successScaleAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.8, 1],
-                  }),
-                },
-              ],
-            },
+              transform: [{ scale: successScaleAnim }]
+            }
           ]}
         >
-          <Icon name="check-circle" size={50} color={colors.success} />
-          <Text style={styles.modalTitle}>Booking Confirmed!</Text>
-          <Text style={styles.modalMessage}>
-            Your booking has been successfully created
+          <Ionicons name="checkmark-circle" size={80} color="#10B981" />
+          <Text style={styles.successTitle}>Booking Confirmed!</Text>
+          <Text style={styles.successMessage}>
+            Your booking has been successfully created. You can view your bookings in the cart.
           </Text>
           <View style={styles.modalButtons}>
-            <Button
-              title="View My Bookings"
+            <TouchableOpacity
+              style={styles.viewCartButton}
               onPress={() => {
                 setShowSuccessModal(false);
                 animateModal(successScaleAnim, false);
-                navigation.reset({
-                  index: 0,
-                  routes: [
-                    {
-                      name: 'MainApp',
-                      state: {
-                        routes: [
-                          { name: 'Dashboard' },
-                          { 
-                            name: 'Bookings',
-                            params: { refresh: true }
-                          },
-                          { name: 'Profile' }
-                        ],
-                        index: 1
-                      }
-                    }
-                  ]
-                });
+                navigation.navigate('BookingCart', { refresh: true });
               }}
-              buttonStyle={styles.modalConfirmButton}
-              titleStyle={styles.modalConfirmButtonText}
-            />
-            <Button
-              title="Back to Home"
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={["#6366F1", "#8B5CF6"]}
+                style={styles.viewCartButtonGradient}
+              >
+                <Ionicons name="cart" size={20} color="#FFF" />
+                <Text style={styles.viewCartButtonText}>View Bookings</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.continueButton}
               onPress={handleBackToHome}
-              buttonStyle={styles.modalCancelButton}
-              titleStyle={styles.modalCancelButtonText}
-              type="outline"
-            />
+              activeOpacity={0.8}
+            >
+              <Ionicons name="home" size={20} color="#6366F1" />
+              <Text style={styles.continueButtonText}>Back to Home</Text>
+            </TouchableOpacity>
           </View>
         </Animated.View>
       </View>
@@ -323,280 +306,379 @@ export default function BookingFormScreen({ route, navigation }) {
   );
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity 
-        style={styles.backButtonContainer} 
-        onPress={handleBackToHome}
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
+      
+      <LinearGradient
+        colors={["#6366F1", "#8B5CF6", "#A855F7"]}
+        style={styles.header}
       >
-        <View style={styles.backButtonCircle}>
-          <Icon name="arrow-back" size={24} color={colors.primary} />
-        </View>
-      </TouchableOpacity>
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* Event Date (Read-only) */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Event Date</Text>
-          <View style={styles.infoContainer}>
-            <Icon name="event" color={colors.primary} size={24} />
-            <Text style={styles.infoText}>
-              {formatDate(selectedDate)}
-            </Text>
-          </View>
-        </View>
-
-        {/* Time Selection */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Event Time</Text>
-          <TouchableOpacity
-            style={styles.dateButton}
-            onPress={handleTimeSelect}
+        <View style={styles.headerContent}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
           >
-            <Icon name="access-time" color={colors.primary} size={24} />
-            <Text style={styles.dateText}>
-              {formData.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-            </Text>
+            <Ionicons name="arrow-back" size={24} color="#FFF" />
           </TouchableOpacity>
-        </View>
-
-        {/* Guest Count */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Number of Guests</Text>
-          <View style={styles.guestCounter}>
-            <TouchableOpacity
-              style={styles.counterButton}
-              onPress={() => handleGuestChange(-1)}
-            >
-              <Icon name="remove" color={colors.primary} />
-            </TouchableOpacity>
-            <Text style={styles.guestCount}>{formData.guests}</Text>
-            <TouchableOpacity
-              style={styles.counterButton}
-              onPress={() => handleGuestChange(1)}
-            >
-              <Icon name="add" color={colors.primary} />
-            </TouchableOpacity>
+          
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Book Service</Text>
+            <Text style={styles.headerSubtitle}>{vendor?.name}</Text>
           </View>
+          
+          <View style={styles.headerRight} />
         </View>
+      </LinearGradient>
 
-        {/* Selected Services (Read-only) */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Selected Services</Text>
-          {selectedServices.map((service, index) => (
-            <View
-              key={index}
-              style={styles.serviceCard}
-            >
-              <View style={styles.serviceInfo}>
-                <Text style={styles.serviceTitle}>{service.name}</Text>
-                <Text style={styles.serviceDescription}>{service.description}</Text>
-              </View>
-              <Text style={styles.servicePrice}>
-                ${(service.price * formData.guests).toLocaleString()}
+      <Animated.View 
+        style={[
+          styles.container,
+          { opacity: fadeAnim }
+        ]}
+      >
+        <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Event Date (Read-only) */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Event Date</Text>
+            <View style={styles.infoContainer}>
+              <Ionicons name="calendar-outline" color="#6366F1" size={24} />
+              <Text style={styles.infoText}>
+                {formatDate(selectedDate)}
               </Text>
             </View>
-          ))}
-          <View style={styles.totalContainer}>
-            <Text style={styles.totalLabel}>Total</Text>
-            <Text style={styles.totalAmount}>
-              ${calculateTotal().toLocaleString()}
-            </Text>
           </View>
-        </View>
 
-        {/* Special Requests */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Address</Text>
-          <Input
-            multiline
-            numberOfLines={3}
-            placeholder="Enter your address..."
-            value={formData.address}
-            onChangeText={(text) => setFormData(prev => ({ ...prev, address: text }))}
-            containerStyle={styles.notesContainer}
-            inputStyle={styles.notesInput}
-          />
-        </View>
+          {/* Time Selection */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Event Time</Text>
+            <TouchableOpacity
+              style={styles.timeButton}
+              onPress={handleTimeSelect}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="time-outline" color="#6366F1" size={24} />
+              <Text style={styles.timeText}>
+                {formData.time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </Text>
+              <Ionicons name="chevron-down" color="#64748B" size={20} />
+            </TouchableOpacity>
+          </View>
 
-        {/* Special Requests */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Special Requests</Text>
-          <Input
-            multiline
-            numberOfLines={4}
-            placeholder="Any special requirements or requests..."
-            value={formData.notes}
-            onChangeText={(text) => setFormData(prev => ({ ...prev, notes: text }))}
-            containerStyle={styles.notesContainer}
-            inputStyle={styles.notesInput}
-          />
-        </View>
+          {/* Guest Count */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Number of Guests</Text>
+            <View style={styles.guestCounter}>
+              <TouchableOpacity
+                style={styles.counterButton}
+                onPress={() => handleGuestChange(-1)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="remove" color="#6366F1" size={24} />
+              </TouchableOpacity>
+              <Text style={styles.guestCount}>{formData.guests}</Text>
+              <TouchableOpacity
+                style={styles.counterButton}
+                onPress={() => handleGuestChange(1)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="add" color="#6366F1" size={24} />
+              </TouchableOpacity>
+            </View>
+          </View>
 
-        {/* Submit Button */}
-        <Button
-          title="Confirm Booking"
-          onPress={handleSubmit}
-          buttonStyle={[styles.submitButton, styles.confirmButton]}
-          containerStyle={styles.submitButtonContainer}
-          titleStyle={styles.confirmButtonText}
-          disabled={!formData.time || formData.guests < 1}
-        />
-      </ScrollView>
-      <ConfirmationModal />
-      <SuccessModal />
-    </View>
+          {/* Selected Services (Read-only) */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Selected Services</Text>
+            {selectedServices.map((service, index) => (
+              <View
+                key={index}
+                style={styles.serviceCard}
+              >
+                <View style={styles.serviceInfo}>
+                  <Text style={styles.serviceTitle}>{service.name}</Text>
+                  <Text style={styles.serviceDescription}>{service.description}</Text>
+                </View>
+                <Text style={styles.servicePrice}>
+                  ${(service.price * formData.guests).toLocaleString()}
+                </Text>
+              </View>
+            ))}
+            <View style={styles.totalContainer}>
+              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalAmount}>
+                ${calculateTotal().toLocaleString()}
+              </Text>
+            </View>
+          </View>
+
+          {/* Address */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Delivery Address</Text>
+            <View style={styles.inputContainer}>
+              <TextInput
+                multiline
+                numberOfLines={3}
+                placeholder="Enter your delivery address..."
+                placeholderTextColor="#94A3B8"
+                value={formData.address}
+                onChangeText={(text) => setFormData(prev => ({ ...prev, address: text }))}
+                style={styles.textInput}
+              />
+            </View>
+          </View>
+
+          {/* Special Requests */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Special Requests</Text>
+            <View style={styles.inputContainer}>
+              <TextInput
+                multiline
+                numberOfLines={4}
+                placeholder="Any special requirements or requests..."
+                placeholderTextColor="#94A3B8"
+                value={formData.notes}
+                onChangeText={(text) => setFormData(prev => ({ ...prev, notes: text }))}
+                style={styles.textInput}
+              />
+            </View>
+          </View>
+
+          {/* Submit Button */}
+          <TouchableOpacity
+            style={[
+              styles.submitButton,
+              (!formData.time || formData.guests < 1 || !formData.address.trim()) && styles.disabledButton
+            ]}
+            onPress={handleSubmit}
+            disabled={!formData.time || formData.guests < 1 || !formData.address.trim()}
+            activeOpacity={0.8}
+          >
+            <LinearGradient
+              colors={
+                (!formData.time || formData.guests < 1 || !formData.address.trim())
+                  ? ["#94A3B8", "#94A3B8"]
+                  : ["#6366F1", "#8B5CF6"]
+              }
+              style={styles.submitButtonGradient}
+            >
+              <Ionicons name="checkmark-circle" size={24} color="#FFF" />
+              <Text style={styles.submitButtonText}>Confirm Booking</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </ScrollView>
+        <ConfirmationModal />
+        <SuccessModal />
+      </Animated.View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#F8FAFC',
   },
-  backButtonContainer: {
-    position: 'absolute',
-    top: spacing.xl + spacing.xs,
-    left: spacing.md,
-    zIndex: 1,
+  header: {
+    marginTop: 30,
+    paddingTop: 10,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  backButtonCircle: {
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.white,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 16,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFF',
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '500',
+  },
+  headerRight: {
+    width: 40,
+  },
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
   },
   content: {
-    paddingTop: spacing.xl * 2,
+    padding: 20,
+    paddingBottom: 40,
   },
   section: {
-    padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    marginBottom: 24,
   },
   sectionTitle: {
-    ...typography.h3,
-    marginBottom: spacing.md,
-    color: colors.text,
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginBottom: 12,
   },
   infoContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: 8,
+    padding: 16,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   infoText: {
-    ...typography.body,
-    marginLeft: spacing.md,
-    color: colors.primary,
+    fontSize: 16,
+    marginLeft: 12,
+    color: '#6366F1',
+    fontWeight: '600',
   },
-  dateButton: {
+  timeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: 8,
+    justifyContent: 'space-between',
+    padding: 16,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.primary,
+    borderColor: '#E2E8F0',
   },
-  dateText: {
-    ...typography.body,
-    marginLeft: spacing.md,
+  timeText: {
+    fontSize: 16,
+    color: '#0F172A',
+    fontWeight: '600',
+    flex: 1,
+    marginLeft: 12,
   },
   guestCounter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   counterButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.surface,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F1F5F9',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.primary,
   },
   guestCount: {
-    ...typography.h2,
-    marginHorizontal: spacing.xl,
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginHorizontal: 32,
   },
   serviceCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: 8,
-    marginBottom: spacing.sm,
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: '#E2E8F0',
   },
   serviceInfo: {
     flex: 1,
-    marginRight: spacing.md,
+    marginRight: 16,
   },
   serviceTitle: {
-    ...typography.h3,
-    marginBottom: spacing.xs,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#0F172A',
+    marginBottom: 4,
   },
   serviceDescription: {
-    ...typography.body,
-    color: colors.textLight,
+    fontSize: 14,
+    color: '#64748B',
+    lineHeight: 20,
   },
   servicePrice: {
-    ...typography.body,
-    color: colors.primary,
-    fontWeight: 'bold',
+    fontSize: 16,
+    color: '#6366F1',
+    fontWeight: '700',
   },
   totalContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: spacing.md,
-    paddingTop: spacing.md,
+    marginTop: 16,
+    paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: '#E2E8F0',
   },
   totalLabel: {
-    ...typography.h3,
-    color: colors.text,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#0F172A',
   },
   totalAmount: {
-    ...typography.h2,
-    color: colors.primary,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#6366F1',
   },
-  notesContainer: {
-    paddingHorizontal: 0,
+  inputContainer: {
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 16,
   },
-  notesInput: {
-    ...typography.body,
+  textInput: {
+    fontSize: 16,
+    color: '#0F172A',
     textAlignVertical: 'top',
+    minHeight: 80,
   },
   submitButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    padding: spacing.md,
-    margin: spacing.lg,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+    marginTop: 16,
   },
-  confirmButton: {
-    backgroundColor: colors.primary,
-    elevation: 2,
+  submitButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
   },
-  confirmButtonText: {
-    ...typography.button,
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: colors.white,
+  submitButtonText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFF',
+    marginLeft: 8,
   },
-  submitButtonContainer: {
-    marginBottom: spacing.xl,
+  disabledButton: {
+    opacity: 0.5,
   },
   modalOverlay: {
     flex: 1,
@@ -605,74 +687,139 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: colors.background,
-    borderRadius: 16,
-    padding: spacing.lg,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    padding: 24,
     width: '90%',
     maxWidth: 400,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
   },
   successModalContent: {
-    padding: spacing.xl,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    padding: 32,
+    width: '90%',
+    maxWidth: 400,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
   },
   modalTitle: {
-    ...typography.h2,
-    marginTop: spacing.md,
-    marginBottom: spacing.sm,
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: 16,
+    marginBottom: 8,
+    textAlign: 'center',
   },
   modalTotal: {
-    ...typography.h3,
-    color: colors.primary,
-    marginBottom: spacing.lg,
+    fontSize: 20,
+    color: '#6366F1',
+    fontWeight: '700',
+    marginBottom: 24,
   },
   modalButtons: {
     width: '100%',
-    gap: spacing.md,
+    gap: 12,
   },
   modalCancelButton: {
-    borderColor: colors.error,
-    borderRadius: 8,
-    paddingVertical: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#EF4444',
+    backgroundColor: '#FFF',
   },
   modalCancelButtonText: {
-    color: colors.error,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#EF4444',
+    marginLeft: 8,
   },
   modalConfirmButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    paddingVertical: spacing.md,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  modalConfirmButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   modalConfirmButtonText: {
-    color: colors.white,
-  },
-  successIconContainer: {
-    marginBottom: spacing.md,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFF',
+    marginLeft: 8,
   },
   successTitle: {
-    ...typography.h2,
-    color: colors.success,
-    marginBottom: spacing.sm,
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#10B981',
+    marginBottom: 8,
+    textAlign: 'center',
   },
   successMessage: {
-    ...typography.body,
-    color: colors.textLight,
+    fontSize: 16,
+    color: '#64748B',
     textAlign: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: 24,
+    lineHeight: 24,
   },
   viewCartButton: {
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    paddingVertical: spacing.md,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  viewCartButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   viewCartButtonText: {
-    color: colors.white,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFF',
+    marginLeft: 8,
   },
   continueButton: {
-    borderColor: colors.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
     borderWidth: 1,
-    paddingVertical: spacing.md,
+    borderColor: '#6366F1',
+    backgroundColor: '#FFF',
   },
   continueButtonText: {
-    color: colors.primary,
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#6366F1',
+    marginLeft: 8,
   },
 }); 

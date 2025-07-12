@@ -1,28 +1,22 @@
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { StyleSheet, View, Text, Dimensions, ScrollView, TouchableOpacity, Animated, SafeAreaView, FlatList, TextInput, PermissionsAndroid, Platform, Alert, ActivityIndicator } from 'react-native';
-import { Button, SearchBar, Card, Icon } from '@rneui/themed';
-import MapView, { Marker, PROVIDER_GOOGLE, Circle } from 'react-native-maps';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { StyleSheet, View, Text, Dimensions, ScrollView, TouchableOpacity, Animated, SafeAreaView, FlatList, TextInput, StatusBar, ActivityIndicator, Platform, Image } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { colors, spacing, typography } from '../../styles/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import VendorCard from '../vendor/components/VendorCard';
-import { VENDOR_IMAGES } from '../../constants/images';
-import * as Location from 'expo-location';
-import { getDistance } from 'geolib';
-import Slider from '@react-native-community/slider';
-import { useFocusEffect } from '@react-navigation/native';
 import { getVendors } from '../../api/apiService';
-import { websocketService } from '../../services/websocketService';
+import * as Location from 'expo-location';
 
-// Categories data
-const MOCK_CATEGORIES = [
-  { id: '1', name: 'Catering', icon: 'restaurant' },
-  { id: '2', name: 'Venues', icon: 'location-on' },
-  { id: '3', name: 'Photography', icon: 'camera-alt' },
-  { id: '4', name: 'Music', icon: 'music-note' },
-  { id: '5', name: 'Decoration', icon: 'celebration' },
+const CATEGORIES = [
+  { id: '1', name: 'Catering', icon: 'restaurant-outline', color: '#FF6B6B' },
+  { id: '2', name: 'Venues', icon: 'location-outline', color: '#4ECDC4' },
+  { id: '3', name: 'Photography', icon: 'camera-outline', color: '#45B7D1' },
+  { id: '4', name: 'Music', icon: 'musical-notes-outline', color: '#96CEB4' },
+  { id: '5', name: 'Decoration', icon: 'flower-outline', color: '#FFEAA7' },
 ];
 
-// Special offers data
 const SPECIAL_OFFERS = [
   {
     id: '1',
@@ -30,6 +24,8 @@ const SPECIAL_OFFERS = [
     description: 'Get 20% off on your first booking with any vendor',
     code: 'FIRST20',
     expiryDate: '2024-04-30',
+    gradient: ['#667eea', '#764ba2'],
+    icon: 'pricetag-outline'
   },
   {
     id: '2',
@@ -37,203 +33,60 @@ const SPECIAL_OFFERS = [
     description: 'Book a venue and get free decoration services',
     code: 'FREEDECOR',
     expiryDate: '2024-05-15',
+    gradient: ['#f093fb', '#f5576c'],
+    icon: 'gift-outline'
   },
 ];
 
-// Add this helper function at the top of the file, after imports
-const getCategoryIcon = (category) => {
-  const categoryMap = {
-    'Catering': 'restaurant',
-    'Venues': 'location-on',
-    'Photography': 'camera-alt',
-    'Music': 'music-note',
-    'Decoration': 'celebration',
-  };
-  return categoryMap[category] || 'store';
-};
-
-const SearchHeader = ({ searchQuery, setSearchQuery, isSearchActive, setIsSearchActive }) => {
-  const searchInputRef = useRef(null);
-
-  const handleSearchChange = useCallback((text) => {
-    setSearchQuery(text);
-  }, [setSearchQuery]);
-
-  const handleSearchClose = useCallback(() => {
-    setIsSearchActive(false);
-    setSearchQuery('');
-    searchInputRef.current?.blur();
-  }, [setIsSearchActive, setSearchQuery]);
-
-  const handleSearchPress = useCallback(() => {
-    setIsSearchActive(true);
-    searchInputRef.current?.focus();
-  }, [setIsSearchActive]);
-
-  return (
-    <View style={styles.searchHeader}>
-      <Animated.View 
-        style={[
-          styles.searchContainer,
-          isSearchActive ? {
-            flex: 1,
-            marginRight: spacing.sm,
-          } : {
-            width: 45,
-          }
-        ]}
-      >
-        {isSearchActive ? (
-          <>
-            <Icon name="search" size={20} color={colors.textLight} style={styles.searchIcon} />
-            <TextInput
-              ref={searchInputRef}
-              style={styles.searchInput}
-              placeholder="Search vendors..."
-              value={searchQuery}
-              onChangeText={handleSearchChange}
-              placeholderTextColor={colors.textLight}
-              autoFocus={true}
-              returnKeyType="search"
-              autoCapitalize="none"
-              autoCorrect={false}
-              blurOnSubmit={false}
-              onFocus={() => setIsSearchActive(true)}
-              onBlur={() => {
-                if (!searchQuery) {
-                  setIsSearchActive(false);
-                }
-              }}
-            />
-            {searchQuery ? (
-              <TouchableOpacity 
-                style={styles.searchCloseButton}
-                onPress={handleSearchClose}
-              >
-                <Icon name="close" size={20} color={colors.textLight} />
-              </TouchableOpacity>
-            ) : null}
-          </>
-        ) : (
-          <TouchableOpacity 
-            style={styles.searchButton}
-            onPress={handleSearchPress}
-          >
-            <Icon name="search" size={24} color={colors.background} />
-          </TouchableOpacity>
-        )}
-      </Animated.View>
-    </View>
-  );
-};
-
-// Custom marker component
-const CustomMarker = ({ vendor, onPress }) => {
-  return (
-    <View style={styles.markerContainer}>
-      <View style={styles.marker}>
-        <Icon 
-          name={getCategoryIcon(vendor.category)} 
-          size={16} 
-          color={colors.white} 
-          type="material"
-        />
-      </View>
-      <Text style={styles.markerLabel} numberOfLines={1}>
-        {vendor.name}
-      </Text>
-    </View>
-  );
-};
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const CARD_WIDTH = SCREEN_WIDTH * 0.75;
 
 export default function MainDashboardScreen({ navigation }) {
   const { user, loading } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
-  const [isSearchActive, setIsSearchActive] = useState(false);
-  const searchInputRef = useRef(null);
   const [vendors, setVendors] = useState([]);
   const [loadingVendors, setLoadingVendors] = useState(true);
-
+  const [featuredVendors, setFeaturedVendors] = useState([]);
+  const [filteredVendors, setFilteredVendors] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [region, setRegion] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
-  const [vendorsWithLocations, setVendorsWithLocations] = useState([]);
-  const [nearbyVendors, setNearbyVendors] = useState([]);
-  const [radiusKm, setRadiusKm] = useState(10); // Default 10km
+  const [mapRegion, setMapRegion] = useState(null);
   const [isMapLoading, setIsMapLoading] = useState(true);
 
-  const scrollViewRef = useRef(null);
-  const [mapRegion, setMapRegion] = useState(null);
-  const mapRef = useRef(null);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [lastUpdateTime, setLastUpdateTime] = useState(null);
-  const updateTimeoutRef = useRef(null);
-  const [vendorLocations, setVendorLocations] = useState({});
+  useEffect(() => {
+    fetchVendors();
+    getUserLocation();
+  }, []);
 
-  // Initialize markers ref
-  const markersRef = useRef({});
-
-  // Add mapKey state for forcing re-renders
-  const [mapKey, setMapKey] = useState(0);
-
-  // Fetch vendors from API
   const fetchVendors = async () => {
+    setLoadingVendors(true);
     try {
-      setLoadingVendors(true);
-      console.log('Fetching vendors...');
       const response = await getVendors();
-      console.log('Vendors API Response:', response);
       if (response && response.success) {
-        console.log('Setting vendors:', response.vendors);
         setVendors(response.vendors);
-        
-        // Transform vendors data for map display
-        const transformedVendors = response.vendors.map(vendor => {
-          if (vendor.locations && vendor.locations.length > 0) {
-            const location = vendor.locations[0];
-            return {
-              ...vendor,
-              latitude: parseFloat(location.latitude),
-              longitude: parseFloat(location.longitude),
-              location: {
-                latitude: parseFloat(location.latitude),
-                longitude: parseFloat(location.longitude)
-              }
-            };
-          }
-          return vendor;
-        }).filter(vendor => vendor.latitude && vendor.longitude);
-        
-        console.log('Transformed vendors with locations:', transformedVendors);
-        setVendorsWithLocations(transformedVendors);
-      } else {
-        console.log('API returned success: false');
+        setFeaturedVendors(response.vendors.slice(0, 5));
+        setFilteredVendors(response.vendors);
+        // Debug: Log the first vendor to see available fields
+        if (response.vendors.length > 0) {
+          console.log('First vendor data:', response.vendors[0]);
+          console.log('Available image fields:', {
+            profile_image: response.vendors[0].profile_image,
+            image_url: response.vendors[0].image_url,
+            image: response.vendors[0].image
+          });
+        }
       }
     } catch (error) {
       console.error('Error fetching vendors:', error);
-      Alert.alert('Error', 'Failed to fetch vendors');
     } finally {
       setLoadingVendors(false);
     }
   };
 
-  // Use useFocusEffect to refresh data when screen is focused
-  useFocusEffect(
-    useCallback(() => {
-      fetchVendors();
-      getUserLocation();
-    }, [])
-  );
-
   const getUserLocation = async () => {
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
-      
-      if (status !== 'granted') {
-        Alert.alert('Permission Denied', 'Please allow location access to see nearby vendors');
-        return;
-      }
-
+      if (status !== 'granted') return;
       let location = await Location.getCurrentPositionAsync({});
       const userCoords = {
         latitude: location.coords.latitude,
@@ -241,351 +94,236 @@ export default function MainDashboardScreen({ navigation }) {
         latitudeDelta: 0.0922,
         longitudeDelta: 0.0421,
       };
-      
       setUserLocation(userCoords);
-      setRegion(userCoords);
+      setMapRegion(userCoords);
       setIsMapLoading(false);
-
-      // Update nearby vendors based on user location
-      if (vendors.length > 0) {
-        const vendorsInRange = vendors.filter(vendor => {
-          if (!vendor.locations || vendor.locations.length === 0) return false;
-          const vendorLocation = vendor.locations[0]; // Use first location
-          const distance = getDistance(
-            { latitude: userCoords.latitude, longitude: userCoords.longitude },
-            { latitude: vendorLocation.latitude, longitude: vendorLocation.longitude }
-          );
-          return distance <= radiusKm * 1000;
-        });
-        setNearbyVendors(vendorsInRange);
-      }
     } catch (error) {
-      console.error('Error getting location:', error);
-      Alert.alert('Error', 'Unable to get your location');
       setIsMapLoading(false);
     }
   };
 
-  const handleCategoryPress = (category) => {
-    setSelectedCategory(category === selectedCategory ? null : category);
-  };
-
-  const filteredVendors = useMemo(() => {
-    if (!searchQuery) return vendors;
-    
-    const query = searchQuery.toLowerCase().trim();
-    return vendors.filter(vendor => {
-      const nameMatch = vendor.name?.toLowerCase().includes(query);
-      const businessNameMatch = vendor.business_name?.toLowerCase().includes(query);
-      const addressMatch = vendor.address?.toLowerCase().includes(query);
-      const categoryMatch = vendor.category?.toLowerCase().includes(query);
-      
-      return nameMatch || businessNameMatch || addressMatch || categoryMatch;
-    });
-  }, [vendors, searchQuery]);
-
-  const handleVendorPress = (vendor) => {
-    navigation.navigate('VendorDetails', { vendor });
-  };
-
-  const animateSearch = (show) => {
-    Animated.parallel([
-      Animated.timing(searchWidthAnim, {
-        toValue: show ? 1 : 0,
-        duration: 300,
-        useNativeDriver: false,
-      }),
-      Animated.timing(searchOpacityAnim, {
-        toValue: show ? 1 : 0,
-        duration: 300,
-        useNativeDriver: false,
-      }),
-    ]).start(() => {
-      if (show) {
-        searchInputRef.current?.focus();
-      }
-    });
-  };
-
-  // Filter vendors based on radius and search
-  const filterVendors = () => {
-    if (!userLocation || !vendorsWithLocations.length) return;
-
-    const filtered = vendorsWithLocations.filter(vendor => {
-      // Distance filter
-      const distance = getDistance(
-        { latitude: userLocation.latitude, longitude: userLocation.longitude },
-        { latitude: vendor.latitude, longitude: vendor.longitude }
+  // Filter vendors by search/category
+  useEffect(() => {
+    let filtered = vendors;
+    if (selectedCategory) {
+      filtered = filtered.filter(v => v.category?.toLowerCase() === selectedCategory.name.toLowerCase());
+    }
+    if (searchQuery) {
+      filtered = filtered.filter(v =>
+        v.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        v.business_name?.toLowerCase().includes(searchQuery.toLowerCase())
       );
-      const isInRadius = distance <= radiusKm * 1000;
-
-      // Search filter
-      const matchesSearch = !searchQuery || 
-        vendor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        vendor.category?.toLowerCase().includes(searchQuery.toLowerCase());
-
-      return isInRadius && matchesSearch;
-    });
-
-    setNearbyVendors(filtered);
-    setLastUpdateTime(new Date().toLocaleTimeString());
-  };
-
-  // Handle radius change
-  const handleRadiusChange = (newRadius) => {
-    console.log('\n=== RADIUS CHANGE ===');
-    console.log('New radius:', newRadius, 'km');
-    setRadiusKm(newRadius);
-    filterVendors();
-  };
-
-  // Handle region change with debounce
-  const handleRegionChange = useCallback((region) => {
-    setMapRegion(region);
-    
-    if (updateTimeoutRef.current) {
-      clearTimeout(updateTimeoutRef.current);
     }
+    setFilteredVendors(filtered);
+  }, [searchQuery, selectedCategory, vendors]);
 
-    updateTimeoutRef.current = setTimeout(() => {
-      filterVendors();
-    }, 300);
-  }, [userLocation, vendorsWithLocations, radiusKm, searchQuery]);
+  // Header with improved design
+  const renderHeader = () => (
+    <LinearGradient
+      colors={["#6366F1", "#8B5CF6", "#A855F7"]}
+      style={styles.header}
+    >
+      <SafeAreaView>
+        <View style={styles.headerContent}>
+          <View style={styles.headerTop}>
+            <View style={styles.greetingSection}>
+              <Text style={styles.greetingText}>
+                {loading ? 'Loading...' : `Hi, ${user?.name?.split(' ')[0] || 'Guest'}! 👋`}
+              </Text>
+              <Text style={styles.headerTitle}>Find the perfect vendor</Text>
+              <Text style={styles.headerTitle}>for your event</Text>
+              <Text style={styles.headerSubtitle}>Browse, book, and manage all your event needs in one place.</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.profileBtn}
+              onPress={() => navigation.navigate('ProfileMain')}
+            >
+              <View style={styles.profileAvatar}>
+                <Text style={styles.profileInitial}>
+                  {loading ? 'G' : (user?.name?.charAt(0)?.toUpperCase() || 'G')}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+          
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <View style={styles.searchInputWrapper}>
+              <Ionicons name="search" size={20} color="#8B5CF6" style={styles.searchIcon} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search vendors, services..."
+                placeholderTextColor="#94A3B8"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                returnKeyType="search"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')} style={styles.clearBtn}>
+                  <Ionicons name="close-circle" size={18} color="#94A3B8" />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        </View>
+      </SafeAreaView>
+    </LinearGradient>
+  );
 
-  // Add effect to handle radius changes
-  useEffect(() => {
-    if (userLocation && vendorsWithLocations.length > 0) {
-      filterVendors();
-    }
-  }, [radiusKm, userLocation, vendorsWithLocations]);
+  // Quick Categories with better design
+  const renderCategories = () => (
+    <View style={styles.categoriesSection}>
+      <Text style={styles.sectionTitle}>Categories</Text>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.categoriesContainer}
+      >
+        {CATEGORIES.map(category => (
+          <TouchableOpacity
+            key={category.id}
+            style={[
+              styles.categoryCard,
+              selectedCategory?.id === category.id && styles.categoryCardActive
+            ]}
+            onPress={() => setSelectedCategory(selectedCategory?.id === category.id ? null : category)}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.categoryIconContainer, { backgroundColor: category.color }]}>
+              <Ionicons 
+                name={category.icon} 
+                size={28} 
+                color="#FFF"
+              />
+            </View>
+            <Text style={[
+              styles.categoryText,
+              selectedCategory?.id === category.id && styles.categoryTextActive
+            ]}>
+              {category.name}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  );
 
-  // Handle WebSocket location updates
-  const handleLocationUpdate = (data) => {
-    console.log('Received location update:', data);
-    
-    if (!data.vendorId || !data.location) {
-      console.warn('Invalid location update data:', data);
-      return;
-    }
-
-    const updatedLocation = {
-      latitude: parseFloat(data.location.latitude),
-      longitude: parseFloat(data.location.longitude),
-      timestamp: data.timestamp || new Date().toISOString()
-    };
-
-    console.log('Processed location update:', {
-      vendorId: data.vendorId,
-      location: updatedLocation
-    });
-
-    // Update vendorsWithLocations
-    setVendorsWithLocations(prevVendors => {
-      const updatedVendors = prevVendors.map(vendor => {
-        // Convert both IDs to strings for comparison
-        if (String(vendor.id) === String(data.vendorId)) {
-          console.log('Updating vendor location:', {
-            vendorId: vendor.id,
-            oldLocation: vendor.location,
-            newLocation: updatedLocation
-          });
-          return {
-            ...vendor,
-            latitude: updatedLocation.latitude,
-            longitude: updatedLocation.longitude,
-            location: updatedLocation
-          };
-        }
-        return vendor;
-      });
-      return updatedVendors;
-    });
-
-    // Update nearbyVendors
-    setNearbyVendors(prevVendors => {
-      const updatedVendors = prevVendors.map(vendor => {
-        // Convert both IDs to strings for comparison
-        if (String(vendor.id) === String(data.vendorId)) {
-          return {
-            ...vendor,
-            latitude: updatedLocation.latitude,
-            longitude: updatedLocation.longitude,
-            location: updatedLocation
-          };
-        }
-        return vendor;
-      });
-      return updatedVendors;
-    });
-
-    // Update map markers smoothly
-    if (mapRef.current) {
-      const marker = markersRef.current[data.vendorId];
-      if (marker) {
-        // Animate the marker to the new position
-        marker.animateMarkerToCoordinate({
-          latitude: updatedLocation.latitude,
-          longitude: updatedLocation.longitude
-        }, 500); // 500ms animation duration
-      }
-    }
-  };
-
-  // Handle WebSocket location removal
-  const handleLocationRemoved = (data) => {
-    console.log('Received location removal:', data);
-    
-    if (!data.vendorId) {
-      console.warn('Invalid location removal data:', data);
-      return;
-    }
-
-    // Remove vendor from vendorsWithLocations
-    setVendorsWithLocations(prevVendors => 
-      prevVendors.filter(vendor => String(vendor.id) !== String(data.vendorId))
-    );
-
-    // Remove vendor from nearbyVendors
-    setNearbyVendors(prevVendors => 
-      prevVendors.filter(vendor => String(vendor.id) !== String(data.vendorId))
-    );
-
-    // Remove marker from map safely
-    if (mapRef.current) {
-      const marker = markersRef.current[data.vendorId];
-      if (marker) {
-        try {
-          // Force a re-render of the map to remove the marker
-          setMapKey(prevKey => prevKey + 1);
-          // Clean up the marker reference
-          delete markersRef.current[data.vendorId];
-        } catch (error) {
-          console.warn('Error removing marker:', error);
-        }
-      }
-    }
-  };
-
-  // Connect to WebSocket when component mounts
-  useEffect(() => {
-    console.log('[MainDashboard] Setting up WebSocket connection');
-    const unsubscribeLocationUpdate = websocketService.subscribe('location_update', handleLocationUpdate);
-    const unsubscribeLocationRemoved = websocketService.subscribe('location_removed', handleLocationRemoved);
-    
-    // Register with WebSocket server
-    websocketService.send({
-      type: 'register',
-      vendorId: 'customer' // or any identifier for the customer app
-    });
-
-    return () => {
-      console.log('[MainDashboard] Cleaning up WebSocket connection');
-      unsubscribeLocationUpdate();
-      unsubscribeLocationRemoved();
-    };
-  }, [handleLocationUpdate, handleLocationRemoved]);
-
-  // Add a separate effect for handling map region changes
-  useEffect(() => {
-    if (mapRegion) {
-      console.log('[MainDashboard] Map region changed, updating nearby vendors');
-      filterVendors();
-    }
-  }, [mapRegion, radiusKm]);
-
-  const renderMap = () => (
+  // Featured Vendors with improved cards
+  const renderFeaturedVendors = () => (
     <View style={styles.section}>
-      <View style={styles.mapHeader}>
-        <Text style={styles.sectionTitle}>Nearby Vendors</Text>
-        <TouchableOpacity 
-          style={styles.fullMapButton}
-          onPress={() => navigation.navigate('FullMap', { 
-            userLocation,
-            nearbyVendors: vendorsWithLocations
-          })}
-        >
-          <Text style={styles.seeAllText}>View Full Map</Text>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Featured Vendors</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('VendorSearch', { featured: true })}>
+          <Text style={styles.seeAllText}>See All</Text>
         </TouchableOpacity>
       </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.featuredContainer}
+      >
+        {featuredVendors.map((vendor, index) => (
+          <TouchableOpacity
+            key={vendor.id}
+            style={[styles.featuredCard, { marginLeft: index === 0 ? 20 : 0 }]}
+            onPress={() => navigation.navigate('VendorDetails', { vendor })}
+            activeOpacity={0.9}
+          >
+                          <View style={styles.featuredImageContainer}>
+                <Image 
+                  source={{ uri: vendor.profile_image || vendor.image_url || 'https://via.placeholder.com/300x200' }}
+                  style={styles.featuredImage}
+                  defaultSource={{ uri: 'https://via.placeholder.com/300x200' }}
+                />
+              <LinearGradient
+                colors={['transparent', 'rgba(0,0,0,0.7)']}
+                style={styles.featuredOverlay}
+              />
+              <View style={styles.featuredBadge}>
+                <Ionicons name="star" size={14} color="#FFD700" />
+                <Text style={styles.featuredRating}>{vendor.rating || '4.8'}</Text>
+              </View>
+            </View>
+            <View style={styles.featuredInfo}>
+              <Text style={styles.featuredName} numberOfLines={1}>{vendor.name}</Text>
+            </View>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  );
 
-      <View style={styles.radiusControl}>
-        <View style={styles.radiusHeader}>
-          <Text style={styles.radiusLabel}>Search Radius: {radiusKm}km</Text>
-          {lastUpdateTime && (
-            <Text style={styles.lastUpdateText}>Last update: {lastUpdateTime}</Text>
-          )}
-        </View>
-        <Slider
-          style={styles.radiusSlider}
-          minimumValue={1}
-          maximumValue={50}
-          step={1}
-          value={radiusKm}
-          onValueChange={handleRadiusChange}
-          minimumTrackTintColor={colors.primary}
-          maximumTrackTintColor={colors.border}
-          thumbTintColor={colors.primary}
-        />
+  // Special Offers with better design
+  const renderSpecialOffers = () => (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Special Offers</Text>
       </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.offersContainer}
+      >
+        {SPECIAL_OFFERS.map((offer, index) => (
+          <LinearGradient
+            key={offer.id}
+            colors={offer.gradient}
+            style={[styles.offerCard, { marginLeft: index === 0 ? 20 : 0 }]}
+          >
+            <View style={styles.offerHeader}>
+              <Ionicons name={offer.icon} size={28} color="#FFF" />
+              <View style={styles.offerCodeBadge}>
+                <Text style={styles.offerCodeText}>{offer.code}</Text>
+              </View>
+            </View>
+            <Text style={styles.offerTitle}>{offer.title}</Text>
+            <Text style={styles.offerDescription}>{offer.description}</Text>
+            <Text style={styles.offerExpiry}>Expires {offer.expiryDate}</Text>
+          </LinearGradient>
+        ))}
+      </ScrollView>
+    </View>
+  );
 
+  // Map Preview with better styling
+  const renderMapPreview = () => (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>Vendors Near You</Text>
+        <TouchableOpacity onPress={() => navigation.navigate('FullMap', { userLocation, vendors })}>
+          <Text style={styles.seeAllText}>View Map</Text>
+        </TouchableOpacity>
+      </View>
       <View style={styles.mapContainer}>
-        {isMapLoading && (
+        {isMapLoading ? (
           <View style={styles.mapLoadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
+            <ActivityIndicator size="large" color="#8B5CF6" />
             <Text style={styles.loadingText}>Loading map...</Text>
           </View>
-        )}
-        
-        {region && (
+        ) : (
           <MapView
-            ref={mapRef}
             provider={PROVIDER_GOOGLE}
-            style={[
-              styles.map,
-              isMapLoading && styles.hiddenMap
-            ]}
-            region={region}
+            style={styles.map}
+            region={mapRegion}
             showsUserLocation={true}
-            showsMyLocationButton={true}
-            onMapReady={() => {
-              console.log('Map ready');
-              setIsMapLoading(false);
-              if (region) {
-                filterVendors();
-              }
-            }}
-            onRegionChange={handleRegionChange}
+            scrollEnabled={false}
+            zoomEnabled={false}
+            pitchEnabled={false}
+            rotateEnabled={false}
           >
-            {userLocation && (
-              <Circle
-                center={userLocation}
-                radius={radiusKm * 1000}
-                fillColor="rgba(255, 99, 71, 0.1)"
-                strokeColor="rgba(255, 99, 71, 0.3)"
-                strokeWidth={1}
-              />
-            )}
-            {nearbyVendors.map((vendor) => (
-              <Marker
-                key={vendor.id}
-                ref={ref => {
-                  if (ref) {
-                    markersRef.current[vendor.id] = ref;
-                  }
-                }}
-                coordinate={{
-                  latitude: vendor.latitude,
-                  longitude: vendor.longitude,
-                }}
-                title={vendor.name}
-                description={`${vendor.category || 'Vendor'} • ${vendor.rating || 0}⭐`}
-                onPress={() => navigation.navigate('VendorDetails', { vendor })}
-              >
-                <CustomMarker 
-                  vendor={vendor} 
-                  onPress={() => navigation.navigate('VendorDetails', { vendor })}
-                />
-              </Marker>
+            {vendors.slice(0, 5).map(vendor => (
+              vendor.latitude && vendor.longitude && (
+                <Marker
+                  key={vendor.id}
+                  coordinate={{ latitude: vendor.latitude, longitude: vendor.longitude }}
+                  title={vendor.name}
+                  description={vendor.category}
+                >
+                  <View style={styles.mapMarker}>
+                    <Ionicons name="location" size={24} color="#8B5CF6" />
+                  </View>
+                </Marker>
+              )
             ))}
           </MapView>
         )}
@@ -593,636 +331,485 @@ export default function MainDashboardScreen({ navigation }) {
     </View>
   );
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        ref={scrollViewRef}
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-      >
-        <View style={styles.header}>
-          <View style={styles.welcomeContainer}>
-            <View style={styles.welcomeTextContainer}>
-              <Text style={styles.welcomeText}>
-                {loading ? 'Loading...' : 'Welcome back,'}
-              </Text>
-              <Text style={styles.nameText}>
-                {loading ? '' : user?.name ? `${user.name.split(' ')[0]}!` : 'Guest!'}
-              </Text>
-            </View>
-            <TouchableOpacity 
-              style={styles.notificationButton}
-              onPress={() => navigation.navigate('Notifications')}
-            >
-              <Icon name="notifications" size={24} color={colors.background} />
-            </TouchableOpacity>
-          </View>
+  // All Vendors with improved grid
+  const renderAllVendors = () => (
+    <View style={styles.section}>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>All Vendors</Text>
+        <Text style={styles.resultCount}>{filteredVendors.length} vendors</Text>
+      </View>
+      {loadingVendors ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#8B5CF6" />
+          <Text style={styles.loadingText}>Loading vendors...</Text>
         </View>
-
-        <SearchHeader 
-          searchQuery={searchQuery}
-          setSearchQuery={setSearchQuery}
-          isSearchActive={isSearchActive}
-          setIsSearchActive={setIsSearchActive}
-        />
-
-        {loadingVendors ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={styles.loadingText}>Loading vendors...</Text>
-          </View>
-        ) : (
-          <>
-            {searchQuery ? (
-              <>
-                {filteredVendors.length === 0 ? (
-                  <View style={styles.emptyState}>
-                    <Icon name="search-off" size={64} color={colors.textLight} />
-                    <Text style={styles.emptyStateText}>No vendors found matching "{searchQuery}"</Text>
-                  </View>
-                ) : (
-                  <View style={styles.section}>
-                    <View style={styles.sectionHeader}>
-                      <Text style={styles.sectionTitle}>Search Results</Text>
-                      <Text style={styles.resultCount}>{filteredVendors.length} vendors found</Text>
-                    </View>
-                    <View style={styles.vendorList}>
-                      {filteredVendors.map((vendor) => (
-                        <VendorCard
-                          key={vendor.id}
-                          vendor={vendor}
-                          onPress={() => handleVendorPress(vendor)}
-                        />
-                      ))}
-                    </View>
-                  </View>
-                )}
-              </>
-            ) : (
-              <>
-                {/* Categories */}
-                <View style={styles.section}>
-                  <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Categories</Text>
-                  </View>
-                  <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.categoriesContainer}
-                  >
-                    {MOCK_CATEGORIES.map((category) => (
-                      <TouchableOpacity
-                        key={category.id}
-                        style={styles.categoryItem}
-                        onPress={() => {
-                          const filteredVendors = vendors.filter(vendor => 
-                            vendor.business_name?.toLowerCase().includes(category.name.toLowerCase()) ||
-                            vendor.name?.toLowerCase().includes(category.name.toLowerCase())
-                          );
-                          navigation.navigate('VendorSearch', {
-                            vendors: filteredVendors,
-                            category: category.name
-                          });
-                        }}
-                      >
-                        <View style={styles.categoryIconContainer}>
-                          <Icon name={category.icon} size={32} color={colors.primary} />
-                        </View>
-                        <Text style={styles.categoryName} numberOfLines={1}>{category.name}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
+      ) : filteredVendors.length === 0 ? (
+        <View style={styles.emptyState}>
+          <Ionicons name="search-outline" size={64} color="#CBD5E1" />
+          <Text style={styles.emptyStateTitle}>No vendors found</Text>
+          <Text style={styles.emptyStateText}>Try adjusting your search or filters</Text>
+        </View>
+      ) : (
+        <View style={styles.vendorsGrid}>
+          {filteredVendors.map((vendor, index) => (
+            <TouchableOpacity
+              key={vendor.id}
+              style={styles.vendorGridCard}
+              onPress={() => navigation.navigate('VendorDetails', { vendor })}
+              activeOpacity={0.9}
+            >
+              <View style={styles.vendorImageContainer}>
+                <Image 
+                  source={{ uri: vendor.profile_image || vendor.image_url || 'https://via.placeholder.com/200x120' }}
+                  style={styles.vendorImage}
+                  defaultSource={{ uri: 'https://via.placeholder.com/200x120' }}
+                />
+                <View style={styles.vendorRatingBadge}>
+                  <Ionicons name="star" size={12} color="#FFD700" />
+                  <Text style={styles.vendorRating}>{vendor.rating || '4.8'}</Text>
                 </View>
+              </View>
+              <View style={styles.vendorInfo}>
+                <Text style={styles.vendorName} numberOfLines={1}>{vendor.name}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+    </View>
+  );
 
-                {/* Special Offers */}
-                <View style={styles.section}>
-                  <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Special Offers</Text>
-                  </View>
-                  <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.offersContainer}
-                  >
-                    {SPECIAL_OFFERS.map((offer) => (
-                      <Card key={offer.id} containerStyle={styles.offerCard}>
-                        <View style={styles.offerContent}>
-                          <View style={styles.offerIconContainer}>
-                            <Icon name="local-offer" color={colors.primary} size={24} />
-                          </View>
-                          <View style={styles.offerInfo}>
-                            <Text style={styles.offerTitle}>{offer.title}</Text>
-                            <Text style={styles.offerDescription}>{offer.description}</Text>
-                            <View style={styles.offerMeta}>
-                              <Text style={styles.offerExpiry}>Expires: {offer.expiryDate}</Text>
-                            </View>
-                          </View>
-                        </View>
-                      </Card>
-                    ))}
-                  </ScrollView>
-                </View>
-
-                {/* Featured Vendors */}
-                <View style={styles.section}>
-                  <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>Featured Vendors</Text>
-                  </View>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.featuredContainer}
-                  >
-                    {vendors.slice(0, 3).map((vendor) => (
-                      <VendorCard
-                        key={vendor.id}
-                        vendor={vendor}
-                        onPress={() => handleVendorPress(vendor)}
-                        featured={true}
-                        style={styles.featuredVendorCard}
-                      />
-                    ))}
-                  </ScrollView>
-                </View>
-
-                {/* All Vendors Section */}
-                <View style={styles.section}>
-                  <View style={styles.sectionHeader}>
-                    <Text style={styles.sectionTitle}>All Vendors</Text>
-                  </View>
-                  <FlatList
-                    data={vendors}
-                    horizontal={false}
-                    showsVerticalScrollIndicator={false}
-                    scrollEnabled={false}
-                    contentContainerStyle={styles.vendorList}
-                    renderItem={({ item }) => (
-                      <VendorCard
-                        vendor={item}
-                        onPress={() => handleVendorPress(item)}
-                      />
-                    )}
-                    keyExtractor={item => item.id.toString()}
-                  />
-                </View>
-
-                {renderMap()}
-              </>
-            )}
-          </>
-        )}
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {renderHeader()}
+        {renderCategories()}
+        {renderFeaturedVendors()}
+        {renderSpecialOffers()}
+        {renderMapPreview()}
+        {renderAllVendors()}
+        <View style={styles.bottomPadding} />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#F8FAFC',
   },
-  header: {
-    backgroundColor: colors.primary,
-    paddingTop: spacing.xl * 2,
-    paddingBottom: spacing.xl + 30,
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    padding: spacing.lg,
-  },
-  welcomeContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  welcomeTextContainer: {
+  scrollView: {
     flex: 1,
   },
-  welcomeText: {
-    ...typography.body,
-    color: colors.background,
-    opacity: 0.8,
+  header: {
+    marginTop: 30,
+    paddingBottom: 30,
   },
-  nameText: {
-    ...typography.h1,
-    color: colors.background,
-    marginTop: spacing.xs,
+  headerContent: {
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'android' ? 20 : 0,
   },
-  notificationButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 24,
+  },
+  greetingSection: {
+    flex: 1,
+  },
+  greetingText: {
+    fontSize: 16,
+    color: '#E0E7FF',
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  headerTitle: {
+    fontSize: 28,
+    color: '#FFF',
+    fontWeight: '800',
+    lineHeight: 32,
+  },
+  headerSubtitle: {
+    fontSize: 15,
+    color: '#C7D2FE',
+    marginTop: 8,
+    lineHeight: 20,
+  },
+  profileBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
   },
-  searchHeader: {
-    flexDirection: 'row',
+  profileAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    marginTop: -25,
-    marginBottom: spacing.md,
-    zIndex: 1,
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.white,
-    borderRadius: 25,
-    height: 45,
-    elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    overflow: 'hidden',
+    elevation: 3,
+  },
+  profileInitial: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#8B5CF6',
+  },
+  searchContainer: {
+    marginTop: 8,
+  },
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    height: 52,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  searchIcon: {
+    marginRight: 12,
   },
   searchInput: {
     flex: 1,
-    ...typography.body,
-    color: colors.text,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.sm,
-    height: '100%',
+    fontSize: 16,
+    color: '#1F2937',
+    fontWeight: '500',
   },
-  searchIcon: {
-    marginLeft: spacing.sm,
+  clearBtn: {
+    padding: 4,
   },
-  searchButton: {
-    width: '100%',
-    height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: colors.primary,
-  },
-  searchCloseButton: {
-    padding: spacing.sm,
+  categoriesSection: {
+    marginTop: 24,
   },
   section: {
-    marginBottom: spacing.xl,
-    backgroundColor: colors.background,
+    marginTop: 32,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    marginBottom: spacing.md,
+    paddingHorizontal: 20,
+    marginBottom: 16,
   },
   sectionTitle: {
-    ...typography.h2,
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1F2937',
   },
-  categoryItem: {
+  seeAllText: {
+    fontSize: 15,
+    color: '#8B5CF6',
+    fontWeight: '600',
+  },
+  categoriesContainer: {
+    paddingHorizontal: 20,
+  },
+  categoryCard: {
     alignItems: 'center',
-    marginRight: spacing.lg,
-    width: 80,
+    marginRight: 20,
+    paddingVertical: 12,
+  },
+  categoryCardActive: {
+    transform: [{ scale: 1.05 }],
   },
   categoryIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.background,
+    width: 64,
+    height: 64,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: spacing.xs,
-    borderWidth: 1,
-    borderColor: colors.border,
-    elevation: 2,
+    marginBottom: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  categoryName: {
-    ...typography.caption,
+  categoryText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
     textAlign: 'center',
-    width: '100%',
   },
-  vendorCard: {
-    padding: 0,
-    margin: 0,
-    marginBottom: spacing.md,
-    borderRadius: 8,
-    elevation: 3,
+  categoryTextActive: {
+    color: '#8B5CF6',
+    fontWeight: '700',
+  },
+  featuredContainer: {
+    paddingBottom: 20,
+    paddingRight: 20,
+  },
+  featuredCard: {
+    width: CARD_WIDTH,
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    marginRight: 16,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
+    overflow: 'hidden',
   },
-  vendorImage: {
-    height: 200,
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
+  featuredImageContainer: {
+    position: 'relative',
+    height: 160,
   },
-  vendorInfo: {
-    padding: spacing.md,
+  featuredImage: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#F3F4F6',
   },
-  vendorName: {
-    ...typography.h3,
-    marginBottom: spacing.xs,
+  featuredOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 60,
   },
-  vendorCategory: {
-    ...typography.body,
-    color: colors.textLight,
-    marginBottom: spacing.sm,
+  featuredBadge: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
-  vendorDetails: {
+  featuredRating: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  featuredInfo: {
+    padding: 16,
+  },
+  featuredName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  featuredCategory: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 12,
+  },
+  featuredFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  ratingContainer: {
+  featuredPrice: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#8B5CF6',
+  },
+  featuredBookBtn: {
+    backgroundColor: '#8B5CF6',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+  },
+  featuredBookText: {
+    color: '#FFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  offersContainer: {
+    paddingRight: 20,
+  },
+  offerCard: {
+    width: CARD_WIDTH * 0.85,
+    padding: 20,
+    borderRadius: 20,
+    marginRight: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  offerHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 12,
   },
-  rating: {
-    ...typography.body,
-    marginLeft: spacing.xs,
-    marginRight: spacing.xs,
+  offerCodeBadge: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
   },
-  reviews: {
-    ...typography.caption,
-    color: colors.textLight,
+  offerCodeText: {
+    color: '#FFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
-  priceRange: {
-    ...typography.body,
-    color: colors.primary,
+  offerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFF',
+    marginBottom: 8,
+  },
+  offerDescription: {
+    fontSize: 14,
+    color: '#E0E7FF',
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  offerExpiry: {
+    fontSize: 12,
+    color: '#C7D2FE',
+    fontWeight: '500',
   },
   mapContainer: {
-    height: 300,
-    marginHorizontal: spacing.lg,
-    marginVertical: spacing.md,
-    borderRadius: 16,
+    height: 200,
+    marginHorizontal: 20,
+    borderRadius: 20,
     overflow: 'hidden',
-    backgroundColor: colors.white,
-    elevation: 3,
+    backgroundColor: '#FFF',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 8,
   },
   map: {
     flex: 1,
-    width: '100%',
-    height: '100%',
-  },
-  selectedCategory: {
-    transform: [{ scale: 1.05 }],
-  },
-  selectedCategoryIcon: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  selectedCategoryText: {
-    color: colors.primary,
-    fontWeight: 'bold',
-  },
-  emptyState: {
-    alignItems: 'center',
-    padding: spacing.xl,
-  },
-  emptyStateText: {
-    ...typography.body,
-    color: colors.textLight,
-    marginTop: spacing.md,
-    textAlign: 'center',
-  },
-  searchResults: {
-    padding: spacing.md,
-    flex: 1,
-  },
-  searchResultsTitle: {
-    ...typography.h2,
-    marginBottom: spacing.md,
-  },
-  seeAllText: {
-    ...typography.body,
-    color: colors.primary,
-  },
-  categoriesContainer: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-  },
-  vendorList: {
-    paddingHorizontal: spacing.lg,
-  },
-  featuredContainer: {
-    paddingHorizontal: spacing.lg,
-  },
-  featuredVendorCard: {
-    width: 280,
-    marginRight: spacing.md,
-  },
-  mapHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  mapTitle: {
-    ...typography.h3,
-  },
-  noResultsContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: spacing.xl,
-  },
-  noResultsText: {
-    ...typography.body,
-    color: colors.textLight,
-    textAlign: 'center',
-    marginTop: spacing.md,
-  },
-  offersContainer: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-  },
-  offerCard: {
-    width: 300,
-    marginRight: spacing.md,
-    borderRadius: 12,
-    padding: spacing.md,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    backgroundColor: colors.white,
-    borderWidth: 0,
-  },
-  offerContent: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-  },
-  offerIconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primary + '10',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: spacing.md,
-  },
-  offerInfo: {
-    flex: 1,
-  },
-  offerTitle: {
-    ...typography.h3,
-    marginBottom: spacing.xs,
-    color: colors.text,
-  },
-  offerDescription: {
-    ...typography.body,
-    color: colors.textLight,
-    marginBottom: spacing.md,
-  },
-  offerMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  offerCodeContainer: {
-    backgroundColor: colors.primary + '10',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs / 2,
-    borderRadius: 4,
-  },
-  offerCode: {
-    ...typography.caption,
-    color: colors.primary,
-    fontWeight: 'bold',
-  },
-  offerExpiry: {
-    ...typography.caption,
-    color: colors.textLight,
-  },
-  markerContainer: {
-    alignItems: 'center',
-    width: 150,
-    marginLeft: -60,
-    marginBottom: -20,
-    paddingRight: 10,
-    paddingLeft: 10,
-  },
-  marker: {
-    width: 30,
-    height: 32.5,
-    borderRadius: 15,
-    backgroundColor: colors.primary,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  markerLabel: {
-    ...typography.caption,
-    backgroundColor: colors.white,
-    color: colors.text,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xs / 2,
-    borderRadius: 4,
-    marginTop: spacing.xs,
-    textAlign: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 1.41,
-    maxWidth: 140,
-  },
-  radiusControl: {
-    backgroundColor: colors.white,
-    marginHorizontal: spacing.lg,
-    marginBottom: spacing.md,
-    borderRadius: 12,
-    padding: spacing.lg,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  radiusHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  radiusLabel: {
-    ...typography.body,
-    color: colors.text,
-  },
-  radiusButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: 16,
-  },
-  radiusButtonText: {
-    ...typography.button,
-    color: colors.white,
-  },
-  radiusSlider: {
-    width: '100%',
-    height: 40,
   },
   mapLoadingContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: colors.white,
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 16,
-    zIndex: 1,
+    backgroundColor: '#F9FAFB',
   },
-  loadingText: {
-    ...typography.body,
-    color: colors.textLight,
-    marginTop: spacing.sm,
-  },
-  hiddenMap: {
-    opacity: 0,
+  mapMarker: {
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    padding: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 6,
   },
   loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
+    paddingVertical: 40,
     alignItems: 'center',
   },
-  scrollView: {
-    flex: 1,
-    backgroundColor: colors.background,
+  loadingText: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginTop: 12,
+    fontWeight: '500',
   },
-  scrollContent: {
-    flexGrow: 1,
-    backgroundColor: colors.background,
+  emptyState: {
+    paddingVertical: 40,
+    alignItems: 'center',
+    paddingHorizontal: 40,
   },
-  mapHeaderButtons: {
+  emptyStateTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#374151',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    lineHeight: 24,
+  },
+  vendorsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 20,
+    justifyContent: 'space-between',
+  },
+  vendorGridCard: {
+    width: '48%',
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 6,
+    overflow: 'hidden',
+  },
+  vendorImageContainer: {
+    position: 'relative',
+    height: 120,
+  },
+  vendorImage: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#F3F4F6',
+  },
+  vendorRatingBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 8,
   },
-  fullMapButton: {
-    padding: spacing.xs,
+  vendorRating: {
+    color: '#FFF',
+    fontSize: 11,
+    fontWeight: '600',
+    marginLeft: 2,
   },
-  lastUpdateText: {
-    ...typography.caption,
-    color: colors.textLight,
-    marginLeft: spacing.sm,
+  vendorInfo: {
+    padding: 12,
+  },
+  vendorName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  vendorCategory: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  vendorPrice: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#8B5CF6',
   },
   resultCount: {
-    ...typography.caption,
-    color: colors.textLight,
-    marginLeft: spacing.sm,
+    fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  bottomPadding: {
+    height: 100,
   },
 });

@@ -35,7 +35,6 @@ import SavedVendorsScreen from '../screens/profile/SavedVendorsScreen';
 import SearchFiltersScreen from '../screens/vendor/SearchFiltersScreen';
 import VendorSearchScreen from '../screens/vendor/VendorSearchScreen';
 import AddReviewScreen from '../screens/vendor/AddReviewScreen';
-import EditReviewScreen from '../screens/vendor/EditReviewScreen';
 import BookingSuccess from '../screens/booking/BookingSuccess';
 import ChatScreen from '../screens/chat/ChatScreen';
 import ChatDetailsScreen from '../screens/chat/ChatDetailsScreen';
@@ -100,7 +99,7 @@ const ProfileStack = () => (
       name="Notifications"
       component={NotificationsScreen}
       options={{
-        headerShown: true,
+        headerShown: false,
         headerTitle: 'Notifications',
         headerBackTitle: 'Back',
       }}
@@ -109,7 +108,7 @@ const ProfileStack = () => (
       name="Privacy"
       component={PrivacyPolicyScreen}
       options={{
-        headerShown: true,
+        headerShown: false,
         headerTitle: 'Privacy Policy',
         headerBackTitle: 'Back',
       }}
@@ -118,7 +117,7 @@ const ProfileStack = () => (
       name="Terms"
       component={TermsScreen}
       options={{
-        headerShown: true,
+        headerShown: false,
         headerTitle: 'Terms of Service',
         headerBackTitle: 'Back',
       }}
@@ -127,7 +126,7 @@ const ProfileStack = () => (
       name="Support"
       component={SupportScreen}
       options={{
-        headerShown: true,
+        headerShown: false,
         headerTitle: 'Help & Support',
         headerBackTitle: 'Back',
       }}
@@ -136,7 +135,7 @@ const ProfileStack = () => (
       name="About"
       component={AboutScreen}
       options={{
-        headerShown: true,
+        headerShown: false,
         headerTitle: 'About',
         headerBackTitle: 'Back',
       }}
@@ -145,7 +144,7 @@ const ProfileStack = () => (
       name="SavedVendors"
       component={SavedVendorsScreen}
       options={{
-        headerShown: true,
+        headerShown: false,
         headerTitle: 'Saved Vendors',
         headerBackTitle: 'Back',
       }}
@@ -164,14 +163,6 @@ const ProfileStack = () => (
       component={AddReviewScreen}
       options={{
         headerTitle: 'Add Review',
-        headerBackTitle: 'Back',
-      }}
-    />
-    <Stack.Screen
-      name="EditReview"
-      component={EditReviewScreen}
-      options={{
-        headerTitle: 'Edit Review',
         headerBackTitle: 'Back',
       }}
     />

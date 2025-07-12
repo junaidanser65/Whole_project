@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { StyleSheet, View, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Text, Button, Icon, Input } from '@rneui/themed';
 import { colors, spacing, typography } from '../../styles/theme';
-import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function AddReviewScreen({ route, navigation }) {

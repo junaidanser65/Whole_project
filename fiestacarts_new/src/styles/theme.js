@@ -1,7 +1,7 @@
 export const colors = {
-  primary: '#ff4500', // Main orange-red color
-  primaryLight: '#ff6933', // Lighter shade for hover/active states
-  primaryDark: '#cc3700', // Darker shade for pressed states
+  primary: '#8B5CF6', // Main purple color to match the app theme
+  primaryLight: '#A855F7', // Lighter shade for hover/active states
+  primaryDark: '#6366F1', // Darker shade for pressed states
   success: '#4CAF50', // Change this to proper green color instead of using primary
   background: '#ffffff',
   surface: '#f8f8f8',

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, Image, TouchableOpacity, Dimensions, Alert, Share, Animated } from 'react-native';
-import { Button, Icon, Card } from '@rneui/themed';
-import { colors, spacing, typography } from '../../styles/theme';
+import { StyleSheet, View, Text, ScrollView, Image, TouchableOpacity, Dimensions, Alert, Share, Animated, SafeAreaView, StatusBar, Platform } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { useAuth } from '../../contexts/AuthContext';
 import ImageGallery from '../../components/vendor/ImageGallery';
@@ -13,171 +13,6 @@ import ErrorMessage from '../../components/common/ErrorMessage';
 import { useFavorites } from '../../contexts/FavoritesContext';
 import BackButton from '../../components/common/BackButton';
 import { getVendorMenu, getPublicVendorAvailability, createConversation } from '../../api/apiService';
-
-// Mock data - replace with API call later
-const MOCK_VENDOR = {
-  id: '123e4567-e89b-12d3-a456-426614174001',
-  name: 'Gourmet Catering Co.',
-  category: 'Catering',
-  description: 'Premium catering services for all types of events. Specializing in corporate events and weddings.',
-  rating: 4.8,
-  reviews_count: 124,
-  price_range: '$$',
-  image_url: 'https://via.placeholder.com/400x300',
-  latitude: 37.78825,
-  longitude: -122.4324,
-  address: '123 Main St, San Francisco, CA 94105',
-  contact_phone: '+1234567890',
-  contact_email: 'info@gourmetcatering.com',
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString()
-};
-
-// Update the MOCK_SERVICES to include services for all vendors
-const MOCK_SERVICES = {
-  // Gourmet Catering Co. services
-  '123e4567-e89b-12d3-a456-426614174001': [
-    {
-      id: '123e4567-e89b-12d3-a456-426614174101',
-      vendor_id: '123e4567-e89b-12d3-a456-426614174001',
-      name: 'Full-Service Catering',
-      description: 'Complete catering service including setup and cleanup',
-      price: 2500,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: '123e4567-e89b-12d3-a456-426614174102',
-      vendor_id: '123e4567-e89b-12d3-a456-426614174001',
-      name: 'Buffet Service',
-      description: 'Self-service buffet setup with variety of options',
-      price: 1800,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: '123e4567-e89b-12d3-a456-426614174103',
-      vendor_id: '123e4567-e89b-12d3-a456-426614174001',
-      name: 'Cocktail Reception',
-      description: 'Hors d\'oeuvres and drinks service',
-      price: 1500,
-      created_at: new Date().toISOString(),
-    },
-  ],
-  
-  // Elegant Events Venue services
-  '123e4567-e89b-12d3-a456-426614174002': [
-    {
-      id: '123e4567-e89b-12d3-a456-426614174201',
-      vendor_id: '123e4567-e89b-12d3-a456-426614174002',
-      name: 'Full Venue Rental',
-      description: 'Exclusive access to entire venue for your event',
-      price: 5000,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: '123e4567-e89b-12d3-a456-426614174202',
-      vendor_id: '123e4567-e89b-12d3-a456-426614174002',
-      name: 'Partial Venue Rental',
-      description: 'Access to main hall and garden area',
-      price: 3500,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: '123e4567-e89b-12d3-a456-426614174203',
-      vendor_id: '123e4567-e89b-12d3-a456-426614174002',
-      name: 'Basic Decoration Package',
-      description: 'Standard decoration setup for your event',
-      price: 1200,
-      created_at: new Date().toISOString(),
-    },
-  ],
-  
-  // Capture Moments services
-  '123e4567-e89b-12d3-a456-426614174003': [
-    {
-      id: '123e4567-e89b-12d3-a456-426614174301',
-      vendor_id: '123e4567-e89b-12d3-a456-426614174003',
-      name: 'Full Day Photography',
-      description: 'Complete event coverage with edited photos',
-      price: 2000,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: '123e4567-e89b-12d3-a456-426614174302',
-      vendor_id: '123e4567-e89b-12d3-a456-426614174003',
-      name: 'Half Day Photography',
-      description: '4-hour event coverage with edited photos',
-      price: 1200,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: '123e4567-e89b-12d3-a456-426614174303',
-      vendor_id: '123e4567-e89b-12d3-a456-426614174003',
-      name: 'Photo Booth Service',
-      description: 'Setup with props and unlimited prints',
-      price: 800,
-      created_at: new Date().toISOString(),
-    },
-  ],
-
-  // Royal Palace services
-  '123e4567-e89b-12d3-a456-426614174004': [
-    {
-      id: '123e4567-e89b-12d3-a456-426614174401',
-      vendor_id: '123e4567-e89b-12d3-a456-426614174004',
-      name: 'Grand Ballroom Package',
-      description: 'Complete ballroom rental with luxury amenities',
-      price: 8000,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: '123e4567-e89b-12d3-a456-426614174402',
-      vendor_id: '123e4567-e89b-12d3-a456-426614174004',
-      name: 'Garden Wedding Package',
-      description: 'Outdoor venue with tent and garden setup',
-      price: 6000,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: '123e4567-e89b-12d3-a456-426614174403',
-      vendor_id: '123e4567-e89b-12d3-a456-426614174004',
-      name: 'Premium Catering Add-on',
-      description: 'High-end catering service for up to 200 guests',
-      price: 4000,
-      created_at: new Date().toISOString(),
-    },
-  ],
-
-  // Elite Decorators services
-  '123e4567-e89b-12d3-a456-426614174005': [
-    {
-      id: '123e4567-e89b-12d3-a456-426614174501',
-      vendor_id: '123e4567-e89b-12d3-a456-426614174005',
-      name: 'Luxury Decoration Package',
-      description: 'Premium decor with floral arrangements and lighting',
-      price: 3500,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: '123e4567-e89b-12d3-a456-426614174502',
-      vendor_id: '123e4567-e89b-12d3-a456-426614174005',
-      name: 'Theme-based Decoration',
-      description: 'Customized themed decoration for your event',
-      price: 2800,
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: '123e4567-e89b-12d3-a456-426614174503',
-      vendor_id: '123e4567-e89b-12d3-a456-426614174005',
-      name: 'Basic Decoration Setup',
-      description: 'Essential decoration elements for your event',
-      price: 1500,
-      created_at: new Date().toISOString(),
-    },
-  ],
-};
-
-// Verify the structure of MOCK_SERVICES
-console.log('Available mock service IDs:', Object.keys(MOCK_SERVICES));
 
 const VendorDetailsScreen = ({ route, navigation }) => {
   // Get vendor from route params
@@ -414,269 +249,508 @@ const VendorDetailsScreen = ({ route, navigation }) => {
     setTotalPrice(total);
   };
 
-  const renderPricingCalculator = () => {
-    console.log('Rendering PricingCalculator with services:', vendorServices);
-    return (
-      <Card containerStyle={styles.section}>
-        <Text style={styles.sectionTitle}>Services & Pricing</Text>
-        {vendorServices && vendorServices.length > 0 ? (
-          <>
-            <Text style={styles.serviceCount}>{vendorServices.length} services available</Text>
-            <PricingCalculator
-              services={vendorServices}
-              onServiceSelect={handleServiceSelection}
-            />
-          </>
-        ) : (
-          <View style={styles.noServicesContainer}>
-            <Icon name="restaurant-menu" size={48} color={colors.textLight} />
-            <Text style={styles.noServicesText}>No menu items have been added yet</Text>
-            <Text style={styles.noServicesSubText}>Please check back later for updates</Text>
-          </View>
-        )}
-      </Card>
-    );
-  };
-
   if (loading) {
-    return <LoadingSpinner />;
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
+        <LinearGradient
+          colors={["#6366F1", "#8B5CF6", "#A855F7"]}
+          style={styles.loadingHeader}
+        >
+          <SafeAreaView>
+            <View style={styles.headerContent}>
+              <TouchableOpacity 
+                style={styles.backButton}
+                onPress={() => navigation.goBack()}
+              >
+                <Ionicons name="arrow-back" size={24} color="#FFF" />
+              </TouchableOpacity>
+              
+              <View style={styles.headerRight} />
+            </View>
+          </SafeAreaView>
+        </LinearGradient>
+        <View style={styles.loadingContainer}>
+          <LoadingSpinner />
+        </View>
+      </View>
+    );
   }
 
   if (!vendor) {
-    return <ErrorMessage message="Vendor not found" />;
+    return (
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
+        <LinearGradient
+          colors={["#6366F1", "#8B5CF6", "#A855F7"]}
+          style={styles.loadingHeader}
+        >
+          <SafeAreaView>
+            <View style={styles.headerContent}>
+              <TouchableOpacity 
+                style={styles.backButton}
+                onPress={() => navigation.goBack()}
+              >
+                <Ionicons name="arrow-back" size={24} color="#FFF" />
+              </TouchableOpacity>
+             
+              <View style={styles.headerRight} />
+            </View>
+          </SafeAreaView>
+        </LinearGradient>
+        <View style={styles.loadingContainer}>
+          <ErrorMessage message="Vendor not found" />
+        </View>
+      </View>
+    );
   }
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity style={styles.backButtonContainer} onPress={() => navigation.goBack()}>
-        <View style={styles.backButtonCircle}>
-          <Icon name="arrow-back" size={24} color={colors.primary} />
+      <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
+      
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Header with Back Button */}
+        <View style={styles.imageContainer}>
+          <ImageGallery images={vendorImages} />
+          <LinearGradient
+            colors={['rgba(99, 102, 241, 0.8)', 'transparent']}
+            style={styles.headerOverlay}
+          >
+            <SafeAreaView>
+              <View style={styles.headerContent}>
+                <TouchableOpacity 
+                  style={styles.backButton}
+                  onPress={() => navigation.goBack()}
+                >
+                  <Ionicons name="arrow-back" size={24} color="#FFF" />
+                </TouchableOpacity>
+              </View>
+            </SafeAreaView>
+          </LinearGradient>
         </View>
-      </TouchableOpacity>
-      <ScrollView>
-        <ImageGallery images={vendorImages} />
-        
-        <View style={styles.contentContainer}>
-          <Text style={styles.vendorName}>{vendor.name}</Text>
 
-          <View style={styles.ratingContainer}>
-            <Icon name="star" color={colors.primary} size={20} />
-            <Text style={styles.rating}>{vendor.rating}</Text>
-            <Text style={styles.reviews}>({vendor.reviews_count} reviews)</Text>
-            <Text style={styles.priceRange}>{vendor.price_range}</Text>
+        {/* Vendor Information Card */}
+        <View style={styles.vendorInfoCard}>
+          <View style={styles.vendorHeader}>
+            <View style={styles.vendorTitleSection}>
+              <Text style={styles.vendorName}>{vendor.name}</Text>
+              <Text style={styles.businessName}>{vendor.business_name || 'Restaurant'}</Text>
+            </View>
+            
+            <View style={styles.ratingBadge}>
+              <Ionicons name="star" size={16} color="#FFD700" />
+              <Text style={styles.ratingText}>{vendor.rating}</Text>
+            </View>
           </View>
 
-          <View style={styles.actionsContainer}>
+          <View style={styles.vendorMeta}>
+            <View style={styles.metaItem}>
+              <Ionicons name="chatbubble-outline" size={16} color="#6B7280" />
+              <Text style={styles.metaText}>{vendor.reviews_count} reviews</Text>
+            </View>
+            <View style={styles.metaItem}>
+              <Ionicons name="card-outline" size={16} color="#6B7280" />
+              <Text style={styles.metaText}>{vendor.price_range}</Text>
+            </View>
+          </View>
+
+          {/* Action Buttons */}
+          <View style={styles.actionButtons}>
             <TouchableOpacity
-              style={[styles.favoriteButton, isFavorite(vendor.id) && styles.favoriteButtonActive]}
+              style={[styles.actionButton, isFavorite(vendor.id) && styles.favoriteActive]}
               onPress={toggleFavorite}
               disabled={loading}
             >
-              <Icon
-                name={isFavorite(vendor.id) ? 'favorite' : 'favorite-border'}
-                color={isFavorite(vendor.id) ? colors.error : colors.primary}
-                size={24}
+              <Ionicons
+                name={isFavorite(vendor.id) ? 'heart' : 'heart-outline'}
+                size={20}
+                color={isFavorite(vendor.id) ? '#EF4444' : '#8B5CF6'}
               />
               <Text style={[
-                styles.favoriteButtonText,
-                isFavorite(vendor.id) && styles.favoriteButtonTextActive
+                styles.actionButtonText,
+                isFavorite(vendor.id) && styles.favoriteActiveText
               ]}>
                 {loading ? 'Updating...' : (isFavorite(vendor.id) ? 'Saved' : 'Save')}
               </Text>
             </TouchableOpacity>
+
             <TouchableOpacity
-              style={styles.chatButton}
+              style={styles.actionButton}
               onPress={handleChat}
             >
-              <Icon
-                name="chat"
-                color={colors.primary}
-                size={24}
-              />
-              <Text style={styles.chatButtonText}>Chat</Text>
+              <Ionicons name="chatbubble-outline" size={20} color="#8B5CF6" />
+              <Text style={styles.actionButtonText}>Chat</Text>
             </TouchableOpacity>
-            <ShareButton onPress={handleShare} />
           </View>
         </View>
 
-        <Card containerStyle={styles.section}>
+        {/* Availability Section */}
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Availability</Text>
-          <AvailabilityCalendar
-            availability={availability}
-            selectedDate={selectedDate}
-            onDateSelect={handleDateSelect}
-          />
-        </Card>
+          <View style={styles.sectionCard}>
+            <AvailabilityCalendar
+              availability={availability}
+              selectedDate={selectedDate}
+              onDateSelect={handleDateSelect}
+            />
+          </View>
+        </View>
 
-        {renderPricingCalculator()}
+        {/* Services & Pricing Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Services & Pricing</Text>
+          <View style={styles.sectionCard}>
+            {vendorServices && vendorServices.length > 0 ? (
+              <>
+                <View style={styles.serviceHeader}>
+                  <Ionicons name="restaurant-outline" size={20} color="#8B5CF6" />
+                  <Text style={styles.serviceCount}>{vendorServices.length} services available</Text>
+                </View>
+                <PricingCalculator
+                  services={vendorServices}
+                  onServiceSelect={handleServiceSelection}
+                />
+              </>
+            ) : (
+              <View style={styles.noServicesContainer}>
+                <View style={styles.noServicesIcon}>
+                  <Ionicons name="restaurant-outline" size={48} color="#CBD5E1" />
+                </View>
+                <Text style={styles.noServicesText}>No menu items available</Text>
+                <Text style={styles.noServicesSubText}>Please check back later for updates</Text>
+              </View>
+            )}
+          </View>
+        </View>
 
-        <Button
-          title="Book Now"
+        <View style={styles.bottomPadding} />
+      </ScrollView>
+
+      {/* Floating Book Now Button */}
+      <View style={styles.floatingButtonContainer}>
+        <TouchableOpacity
+          style={[
+            styles.bookButton,
+            (!selectedDate || selectedServices.length === 0) && styles.bookButtonDisabled
+          ]}
           onPress={handleBookNow}
           disabled={!selectedDate || selectedServices.length === 0}
-          containerStyle={styles.bookButton}
-          buttonStyle={styles.bookButtonStyle}
-          titleStyle={styles.bookButtonText}
-          disabledStyle={styles.bookButtonDisabled}
-          disabledTitleStyle={styles.bookButtonDisabledText}
-        />
-      </ScrollView>
+          activeOpacity={0.8}
+        >
+          <LinearGradient
+            colors={
+              (!selectedDate || selectedServices.length === 0)
+                ? ["#9CA3AF", "#6B7280"]
+                : ["#A5B4FC", "#8B5CF6", "#7C3AED"]
+            }
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.bookButtonGradient}
+          >
+            {!selectedDate || selectedServices.length === 0 ? (
+              <>
+                <Ionicons name="lock-closed" size={20} color="#FFF" />
+                <Text style={styles.bookButtonText}>
+                  {!selectedDate ? 'Select Date' : 'Select Services'}
+                </Text>
+              </>
+            ) : (
+              <>
+                <Ionicons name="calendar-outline" size={20} color="#FFF" />
+                <Text style={styles.bookButtonText}>Book Now</Text>
+                <View style={styles.priceBadge}>
+                </View>
+              </>
+            )}
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    marginTop: 20,
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#F8FAFC',
   },
-  backButtonContainer: {
-    position: 'absolute',
-    top: spacing.xl + spacing.xs,
-    left: spacing.md,
-    zIndex: 1,
+  scrollView: {
+    flex: 1,
   },
-  backButtonCircle: {
+  scrollContent: {
+    flexGrow: 1,
+  },
+  loadingHeader: {
+    paddingBottom: 16,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'android' ? 20 : 0,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  headerRight: {
+    width: 40,
+  },
+  backButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.white,
+    backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
   },
-  contentContainer: {
-    padding: spacing.md,
+  shareButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageContainer: {
+    position: 'relative',
+    height: 300,
+  },
+  headerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 120,
+    zIndex: 10,
+  },
+  vendorInfoCard: {
+    backgroundColor: '#FFF',
+    marginHorizontal: 20,
+    marginTop: -30,
+    borderRadius: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+    zIndex: 5,
+  },
+  vendorHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  vendorTitleSection: {
+    flex: 1,
+    marginRight: 16,
   },
   vendorName: {
-    ...typography.h1,
-    color: colors.text,
-    marginBottom: spacing.sm,
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 4,
   },
-  ratingContainer: {
+  businessName: {
+    fontSize: 16,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  rating: {
-    ...typography.body,
-    marginLeft: spacing.xs,
-    marginRight: spacing.xs,
-  },
-  reviews: {
-    ...typography.body,
-    color: colors.textLight,
-    marginRight: spacing.md,
-  },
-  priceRange: {
-    ...typography.body,
-    color: colors.primary,
-    marginLeft: 'auto',
-  },
-  actionsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  favoriteButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    backgroundColor: colors.background,
+    gap: 4,
   },
-  favoriteButtonActive: {
-    backgroundColor: colors.error + '10',
-    borderColor: colors.error,
-  },
-  favoriteButtonText: {
-    ...typography.body,
-    color: colors.primary,
-    marginLeft: spacing.xs,
+  ratingText: {
     fontSize: 14,
+    fontWeight: '600',
+    color: '#92400E',
   },
-  favoriteButtonTextActive: {
-    color: colors.error,
+  vendorMeta: {
+    flexDirection: 'row',
+    gap: 20,
+    marginBottom: 20,
   },
-  chatButton: {
+  metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.sm,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.primary,
-    backgroundColor: colors.background,
+    gap: 6,
   },
-  chatButtonText: {
-    ...typography.body,
-    color: colors.primary,
-    marginLeft: spacing.xs,
+  metaText: {
     fontSize: 14,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+    gap: 8,
+  },
+  favoriteActive: {
+    backgroundColor: '#FEF2F2',
+    borderColor: '#FECACA',
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  favoriteActiveText: {
+    color: '#DC2626',
   },
   section: {
-    marginHorizontal: spacing.md,
-    marginBottom: spacing.md,
-    borderRadius: 12,
-    elevation: 2,
+    marginTop: 24,
+    paddingHorizontal: 20,
   },
   sectionTitle: {
-    ...typography.h2,
-    marginBottom: spacing.sm,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 16,
   },
-  bookButton: {
-    margin: spacing.md,
+  sectionCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  bookButtonStyle: {
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    paddingVertical: spacing.md,
-  },
-  bookButtonText: {
-    ...typography.h3,
-    color: colors.white,
-    fontWeight: 'bold',
-  },
-  bookButtonDisabled: {
-    backgroundColor: colors.primaryLight,
-    opacity: 0.6,
-  },
-  bookButtonDisabledText: {
-    color: colors.white,
-  },
-  image: {
-    width: Dimensions.get('window').width,
-    height: Dimensions.get('window').height,
+  serviceHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 8,
   },
   serviceCount: {
-    ...typography.body,
-    color: colors.textLight,
-    marginBottom: spacing.md,
+    fontSize: 16,
+    color: '#6B7280',
+    fontWeight: '500',
   },
   noServicesContainer: {
     alignItems: 'center',
-    padding: spacing.xl,
+    paddingVertical: 40,
+  },
+  noServicesIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   noServicesText: {
-    ...typography.h3,
-    color: colors.textLight,
-    marginTop: spacing.md,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
     textAlign: 'center',
   },
   noServicesSubText: {
-    ...typography.body,
-    color: colors.textLight,
-    marginTop: spacing.xs,
+    fontSize: 14,
+    color: '#9CA3AF',
     textAlign: 'center',
-    opacity: 0.8,
+    lineHeight: 20,
+  },
+  bookingSection: {
+    paddingHorizontal: 20,
+    marginTop: 32,
+  },
+  bookButton: {
+    width: '100%',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#8B5CF6',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  bookButtonDisabled: {
+    shadowOpacity: 0.1,
+    elevation: 3,
+  },
+  bookButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    gap: 8,
+    position: 'relative',
+  },
+  bookButtonText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  bookingHint: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    textAlign: 'center',
+    marginTop: 12,
+    fontStyle: 'italic',
+  },
+  bottomPadding: {
+    height: 120,
+  },
+  floatingButtonContainer: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+  },
+  priceBadge: {
+    position: 'absolute',
+    top: -10,
+    right: -10,
+    backgroundColor: '#8B5CF6',
+    borderRadius: 15,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    zIndex: 1,
+  },
+  priceText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFF',
   },
 });
 
