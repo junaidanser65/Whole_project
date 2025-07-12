@@ -223,23 +223,37 @@ const BookingDetails = ({ navigation, route }) => {
           {/* Status Card */}
           <View style={styles.statusCard}>
             <LinearGradient
-              colors={[statusConfig.bgColor, statusConfig.bgColor + '80']}
+              colors={['#FFFFFF', '#F8FAFF']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
               style={styles.statusGradient}
             >
               <View style={styles.statusContent}>
-                <View style={styles.statusIconContainer}>
+                <View style={[styles.statusIconContainer, { backgroundColor: `${statusConfig.bgColor}30` }]}>
                   <Ionicons 
                     name={statusConfig.icon} 
-                    size={32} 
+                    size={28} 
                     color={statusConfig.color} 
                   />
                 </View>
                 <View style={styles.statusInfo}>
                   <Text style={styles.statusLabel}>Current Status</Text>
-                  <Text style={[styles.statusValue, { color: statusConfig.color }]}>
+                  <Text style={[styles.statusValue, { 
+                    backgroundImage: `linear-gradient(90deg, ${statusConfig.color}, ${statusConfig.color}90)`,
+                  }]}>
                     {statusConfig.label}
                   </Text>
                 </View>
+                <View style={{
+                  position: 'absolute',
+                  right: -20,
+                  top: -20,
+                  width: 100,
+                  height: 100,
+                  borderRadius: 50,
+                  backgroundColor: 'rgba(99, 102, 241, 0.05)',
+                  zIndex: 0,
+                }} />
               </View>
             </LinearGradient>
           </View>
@@ -398,40 +412,53 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 15,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.15)',
   },
   statusGradient: {
-    padding: 20,
+    padding: 24,
+    borderRadius: 16,
+    backgroundColor: '#FFF',
   },
   statusContent: {
     flexDirection: 'row',
     alignItems: 'center',
+    position: 'relative',
+    zIndex: 1,
   },
   statusIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    width: 60,
+    height: 60,
+    borderRadius: 16,
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(99, 102, 241, 0.2)',
   },
   statusInfo: {
     flex: 1,
   },
   statusLabel: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#64748B',
-    fontWeight: '500',
+    fontWeight: '600',
     marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   statusValue: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
+    backgroundImage: 'linear-gradient(90deg, #6366F1, #8B5CF6, #A855F7)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
   },
   infoCard: {
     backgroundColor: '#FFF',
