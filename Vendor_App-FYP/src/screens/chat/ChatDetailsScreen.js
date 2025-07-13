@@ -130,51 +130,62 @@ export default function ChatDetailsScreen({ route, navigation }) {
 
   const setupWebSocket = () => {
     if (!API_URL) {
-      console.error('API_URL is not defined');
+      console.error("API_URL is not defined");
       return;
     }
 
     // Extract host from API_URL
-    const host = API_URL.replace('http://', '').replace('/api', '');
+    const host = API_URL.replace("http://", "").replace("/api", "");
     const wsUrl = `ws://${host}/ws`;
-    
-    console.log('Connecting to WebSocket:', wsUrl);
-    
+
+    // Extract host from API_URL
+    // const host = API_URL.replace("https://", "").replace("/api", "");
+    // const wsUrl = `wss://${host}/ws`;
+
+    console.log("Connecting to WebSocket:", wsUrl);
+
     ws.current = new WebSocket(wsUrl);
 
     ws.current.onopen = () => {
-      console.log('WebSocket Connected');
+      console.log("WebSocket Connected");
       // Register as vendor
-      ws.current.send(JSON.stringify({
-        type: 'register',
-        vendorId: user.id
-      }));
+      ws.current.send(
+        JSON.stringify({
+          type: "register",
+          vendorId: user.id,
+        })
+      );
     };
 
     ws.current.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('WebSocket message received:', data);
+        console.log("WebSocket message received:", data);
 
-        if (data.type === 'new_message' && data.conversationId === currentConversationId) {
-          setMessages(prev => {
-            const messageExists = prev.some(msg => msg.id === data.message.id);
+        if (
+          data.type === "new_message" &&
+          data.conversationId === currentConversationId
+        ) {
+          setMessages((prev) => {
+            const messageExists = prev.some(
+              (msg) => msg.id === data.message.id
+            );
             if (messageExists) return prev;
             return [...prev, data.message];
           });
           scrollToBottom();
         }
       } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
+        console.error("Error parsing WebSocket message:", error);
       }
     };
 
     ws.current.onerror = (error) => {
-      console.error('WebSocket error:', error);
+      console.error("WebSocket error:", error);
     };
 
     ws.current.onclose = () => {
-      console.log('WebSocket disconnected');
+      console.log("WebSocket disconnected");
     };
   };
 

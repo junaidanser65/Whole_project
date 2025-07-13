@@ -464,34 +464,34 @@ export default function BookingCartScreen({ route, navigation }) {
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
-      
+
       <LinearGradient
         colors={["#6366F1", "#8B5CF6", "#A855F7"]}
         style={styles.header}
       >
         <View style={styles.headerContent}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
             <Ionicons name="arrow-back" size={24} color="#FFF" />
           </TouchableOpacity>
-          
+
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>My Bookings</Text>
             <Text style={styles.headerSubtitle}>
-              {bookings.length} {bookings.length === 1 ? 'booking' : 'bookings'}
+              {bookings.length} {bookings.length === 1 ? "booking" : "bookings"}
             </Text>
           </View>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={styles.headerButton}
             onPress={toggleSelectionMode}
           >
-            <Ionicons 
-              name={isSelectionMode ? "close" : "checkmark-circle-outline"} 
-              size={24} 
-              color="#FFF" 
+            <Ionicons
+              name={isSelectionMode ? "close" : "checkmark-circle-outline"}
+              size={24}
+              color="#FFF"
             />
           </TouchableOpacity>
         </View>
@@ -505,9 +505,12 @@ export default function BookingCartScreen({ route, navigation }) {
             <Text style={styles.emptySubtitle}>
               Start booking vendors to see your reservations here
             </Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.browseButton}
-              onPress={() => navigation.navigate('MainDashboard')}
+              // onPress={() => navigation.navigate("MainDashboard")}
+              onPress={() =>
+                navigation.navigate("VendorSearch", { featured: true })
+              }
               activeOpacity={0.8}
             >
               <LinearGradient
@@ -521,38 +524,41 @@ export default function BookingCartScreen({ route, navigation }) {
           </View>
         ) : (
           <>
-            <ScrollView 
+            <ScrollView
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
             >
               {bookings.map((booking, index) => {
-                console.log('Rendering booking:', booking);
+                console.log("Rendering booking:", booking);
                 if (!booking || !booking.vendor_name) {
-                  console.log('Invalid booking data:', booking);
+                  console.log("Invalid booking data:", booking);
                   return null;
                 }
-              
+
                 return (
-                  <Animated.View 
+                  <Animated.View
                     key={booking.id}
                     style={[
                       styles.bookingCard,
                       {
                         opacity: fadeAnim,
-                        transform: [{
-                          translateY: fadeAnim.interpolate({
-                            inputRange: [0, 1],
-                            outputRange: [50 * (index + 1), 0]
-                          })
-                        }]
-                      }
+                        transform: [
+                          {
+                            translateY: fadeAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: [50 * (index + 1), 0],
+                            }),
+                          },
+                        ],
+                      },
                     ]}
                   >
                     {isSelectionMode && (
                       <TouchableOpacity
                         style={[
                           styles.checkbox,
-                          selectedBookings.includes(booking.id) && styles.checkboxSelected
+                          selectedBookings.includes(booking.id) &&
+                            styles.checkboxSelected,
                         ]}
                         onPress={() => toggleBookingSelection(booking.id)}
                       >
@@ -561,33 +567,49 @@ export default function BookingCartScreen({ route, navigation }) {
                         )}
                       </TouchableOpacity>
                     )}
-                    
+
                     {/* Vendor Info */}
                     <View style={styles.bookingHeader}>
                       <View style={styles.vendorInfo}>
-                        <Text style={styles.vendorName}>{booking.vendor_name}</Text>
-                        <Text style={styles.vendorCategory}>{booking.business_name}</Text>
+                        <Text style={styles.vendorName}>
+                          {booking.vendor_name}
+                        </Text>
+                        <Text style={styles.vendorCategory}>
+                          {booking.business_name}
+                        </Text>
                       </View>
                       {!isSelectionMode && (
                         <TouchableOpacity
                           style={styles.removeButton}
                           onPress={() => handleRemoveBooking(booking.id)}
                         >
-                          <Ionicons name="close-circle" size={24} color="#EF4444" />
+                          <Ionicons
+                            name="close-circle"
+                            size={24}
+                            color="#EF4444"
+                          />
                         </TouchableOpacity>
                       )}
                     </View>
 
                     {/* Status Badge */}
                     <View style={styles.statusContainer}>
-                      <View style={[
-                        styles.statusBadge,
-                        { backgroundColor: getStatusBackground(booking.status) }
-                      ]}>
-                        <Text style={[
-                          styles.statusText,
-                          { color: getStatusColor(booking.status) }
-                        ]}>
+                      <View
+                        style={[
+                          styles.statusBadge,
+                          {
+                            backgroundColor: getStatusBackground(
+                              booking.status
+                            ),
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.statusText,
+                            { color: getStatusColor(booking.status) },
+                          ]}
+                        >
                           {booking.status.toUpperCase()}
                         </Text>
                       </View>
@@ -596,19 +618,31 @@ export default function BookingCartScreen({ route, navigation }) {
                     {/* Booking Details */}
                     <View style={styles.detailsContainer}>
                       <View style={styles.detailRow}>
-                        <Ionicons name="calendar-outline" size={18} color="#64748B" />
+                        <Ionicons
+                          name="calendar-outline"
+                          size={18}
+                          color="#64748B"
+                        />
                         <Text style={styles.detailText}>
                           {formatDate(booking.booking_date)}
                         </Text>
                       </View>
                       <View style={styles.detailRow}>
-                        <Ionicons name="time-outline" size={18} color="#64748B" />
+                        <Ionicons
+                          name="time-outline"
+                          size={18}
+                          color="#64748B"
+                        />
                         <Text style={styles.detailText}>
                           {formatTime(booking.booking_time)}
                         </Text>
                       </View>
                       <View style={styles.detailRow}>
-                        <Ionicons name="people-outline" size={18} color="#64748B" />
+                        <Ionicons
+                          name="people-outline"
+                          size={18}
+                          color="#64748B"
+                        />
                         <Text style={styles.detailText}>
                           {getGuestCount(booking.guests)} guests
                         </Text>
@@ -620,7 +654,9 @@ export default function BookingCartScreen({ route, navigation }) {
                       <Text style={styles.sectionTitle}>Selected Services</Text>
                       {booking.items?.map((item, index) => (
                         <View key={index} style={styles.serviceItem}>
-                          <Text style={styles.serviceName}>{item.menu_name}</Text>
+                          <Text style={styles.serviceName}>
+                            {item.menu_name}
+                          </Text>
                           <Text style={styles.servicePrice}>
                             {formatCurrency(calculateServicePrice(item))}
                           </Text>
@@ -640,7 +676,9 @@ export default function BookingCartScreen({ route, navigation }) {
                     {booking.special_instructions && (
                       <View style={styles.notesContainer}>
                         <Text style={styles.notesLabel}>Special Requests:</Text>
-                        <Text style={styles.notesText}>{booking.special_instructions}</Text>
+                        <Text style={styles.notesText}>
+                          {booking.special_instructions}
+                        </Text>
                       </View>
                     )}
                   </Animated.View>
@@ -654,7 +692,7 @@ export default function BookingCartScreen({ route, navigation }) {
                   <TouchableOpacity
                     style={[
                       styles.clearButton,
-                      selectedBookings.length === 0 && styles.disabledButton
+                      selectedBookings.length === 0 && styles.disabledButton,
                     ]}
                     onPress={handleSelectedBookingsCancel}
                     disabled={selectedBookings.length === 0}
@@ -666,7 +704,7 @@ export default function BookingCartScreen({ route, navigation }) {
                   <TouchableOpacity
                     style={[
                       styles.checkoutButton,
-                      !hasOnlyConfirmedBookings() && styles.disabledButton
+                      !hasOnlyConfirmedBookings() && styles.disabledButton,
                     ]}
                     onPress={handleSelectedBookingsCheckout}
                     disabled={!hasOnlyConfirmedBookings()}
@@ -674,8 +712,8 @@ export default function BookingCartScreen({ route, navigation }) {
                   >
                     <LinearGradient
                       colors={
-                        hasOnlyConfirmedBookings() 
-                          ? ["#A5B4FC", "#8B5CF6", "#7C3AED"] 
+                        hasOnlyConfirmedBookings()
+                          ? ["#A5B4FC", "#8B5CF6", "#7C3AED"]
                           : ["#94A3B8", "#94A3B8"]
                       }
                       style={styles.checkoutButtonGradient}
@@ -697,7 +735,9 @@ export default function BookingCartScreen({ route, navigation }) {
                     <Ionicons name="trash-outline" size={20} color="#EF4444" />
                     <Text style={styles.clearButtonText}>Clear All</Text>
                   </TouchableOpacity>
-                  {bookings.some(booking => booking.status === 'confirmed') ? (
+                  {bookings.some(
+                    (booking) => booking.status === "confirmed"
+                  ) ? (
                     <TouchableOpacity
                       style={styles.checkoutButton}
                       onPress={handleCheckout}
@@ -709,14 +749,21 @@ export default function BookingCartScreen({ route, navigation }) {
                       >
                         <Ionicons name="card-outline" size={20} color="#FFF" />
                         <Text style={styles.checkoutButtonText}>
-                          Checkout ({bookings.filter(b => b.status === 'confirmed').length})
+                          Checkout (
+                          {
+                            bookings.filter((b) => b.status === "confirmed")
+                              .length
+                          }
+                          )
                         </Text>
                       </LinearGradient>
                     </TouchableOpacity>
                   ) : (
                     <View style={styles.waitingMessage}>
                       <Ionicons name="time-outline" color="#F59E0B" size={24} />
-                      <Text style={styles.waitingText}>Waiting for vendor confirmation</Text>
+                      <Text style={styles.waitingText}>
+                        Waiting for vendor confirmation
+                      </Text>
                     </View>
                   )}
                 </>

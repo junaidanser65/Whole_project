@@ -3,10 +3,8 @@ import axios from "axios";
 
 // Define the base URL for the API
 // 192.168.18.8
-// const API_URL = "http://localhost:5000/api";
-// const API_URL = "http://192.168.18.8:5000/api";
-export const API_URL = "http://192.168.18.8:5000/api";//ushna /  hamza bhai ke mobile ka
-// const API_URL = "http://192.168.72.42:5000/api";//mere mobile ka
+const API_URL = "http://192.168.18.8:5000/api";
+// export const API_URL = "https://fypbackend-production-f754.up.railway.app/api";//ushna /  hamza bhai ke mobile ka
 
 // Helper function to handle API responses
 const handleResponse = async (response) => {

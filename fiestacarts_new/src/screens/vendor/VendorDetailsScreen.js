@@ -57,8 +57,14 @@ const VendorDetailsScreen = ({ route, navigation }) => {
           // Fetch menu items from the database
           try {
             const menuItems = await getVendorMenu(vendorFromParams.id);
-            console.log('Fetched menu items:', menuItems);
-            setVendorServices(menuItems);
+            console.log("Fetched menu items:", menuItems);
+            // setVendorServices(menuItems);
+            // Filter only available items
+            const availableMenuItems = menuItems.filter(
+              (item) => item.is_available === true || item.is_available === 1
+            );
+
+            setVendorServices(availableMenuItems);
           } catch (error) {
             console.error('Error fetching menu items:', error);
             // Fallback to mock services if API fails

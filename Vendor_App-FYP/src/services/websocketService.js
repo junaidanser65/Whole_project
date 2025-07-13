@@ -12,6 +12,7 @@ class WebSocketService {
       // Replace with your WebSocket server URL
       this.ws = new WebSocket("ws://192.168.18.8:5000/ws");
 
+        // "wss://fypbackend-production-f754.up.railway.app/ws";
       this.ws.onopen = () => {
         console.log('WebSocket connected');
         this.reconnectAttempts = 0;

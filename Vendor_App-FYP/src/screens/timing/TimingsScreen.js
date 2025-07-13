@@ -358,20 +358,20 @@ const TimingsScreen = ({ navigation }) => {
             style={styles.headerGradient}
           >
             <View style={styles.headerContent}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.backButton}
                 onPress={() => navigation.goBack()}
               >
                 <Ionicons name="arrow-back" size={24} color="#FFFFFF" />
               </TouchableOpacity>
-              
+
               <View style={styles.headerTitleSection}>
                 <RNText style={styles.headerTitle}>Set Availability</RNText>
                 <RNText style={styles.headerSubtitle}>
                   Manage your working hours and availability
                 </RNText>
               </View>
-              
+
               <View style={styles.headerIconContainer}>
                 <Ionicons name="time-outline" size={24} color="#FFFFFF" />
               </View>
@@ -390,15 +390,15 @@ const TimingsScreen = ({ navigation }) => {
                 <View style={styles.cardTitleSection}>
                   <RNText style={styles.cardTitle}>Availability Status</RNText>
                   <RNText style={styles.cardSubtitle}>
-                    {isAvailable ? 'Currently accepting bookings' : 'Not taking bookings'}
+                    {isAvailable ? "Accepting bookings" : "Not available"}
                   </RNText>
                 </View>
               </View>
               <Switch
                 value={isAvailable}
                 onValueChange={setIsAvailable}
-                trackColor={{ false: '#E2E8F0', true: '#A5B4FC' }}
-                thumbColor={isAvailable ? '#6366F1' : '#94A3B8'}
+                trackColor={{ false: "#E2E8F0", true: "#A5B4FC" }}
+                thumbColor={isAvailable ? "#6366F1" : "#94A3B8"}
                 ios_backgroundColor="#E2E8F0"
                 style={styles.switch}
               />
@@ -413,10 +413,12 @@ const TimingsScreen = ({ navigation }) => {
               </View>
               <View style={styles.cardTitleSection}>
                 <RNText style={styles.cardTitle}>Select Date</RNText>
-                <RNText style={styles.cardSubtitle}>Choose your available date</RNText>
+                <RNText style={styles.cardSubtitle}>
+                  Choose your available date
+                </RNText>
               </View>
             </View>
-            
+
             <TouchableOpacity
               style={styles.pickerButton}
               onPress={() => setDateModalVisible(true)}
@@ -443,10 +445,12 @@ const TimingsScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.cardTitleSection}>
                   <RNText style={styles.cardTitle}>Time Range</RNText>
-                  <RNText style={styles.cardSubtitle}>Set your working hours</RNText>
+                  <RNText style={styles.cardSubtitle}>
+                    Set your working hours
+                  </RNText>
                 </View>
               </View>
-              
+
               <View style={styles.timeContainer}>
                 <TouchableOpacity
                   style={styles.timePickerButton}
@@ -459,7 +463,9 @@ const TimingsScreen = ({ navigation }) => {
                     </View>
                     <View style={styles.timeTextContainer}>
                       <RNText style={styles.timeLabel}>Start Time</RNText>
-                      <RNText style={styles.timeValue}>{formatTime(startTime)}</RNText>
+                      <RNText style={styles.timeValue}>
+                        {formatTime(startTime)}
+                      </RNText>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -476,12 +482,16 @@ const TimingsScreen = ({ navigation }) => {
                   activeOpacity={0.7}
                 >
                   <View style={styles.timePickerContent}>
-                    <View style={[styles.timeIconContainer, styles.endTimeIcon]}>
+                    <View
+                      style={[styles.timeIconContainer, styles.endTimeIcon]}
+                    >
                       <Ionicons name="stop-outline" size={18} color="#EF4444" />
                     </View>
                     <View style={styles.timeTextContainer}>
                       <RNText style={styles.timeLabel}>End Time</RNText>
-                      <RNText style={styles.timeValue}>{formatTime(endTime)}</RNText>
+                      <RNText style={styles.timeValue}>
+                        {formatTime(endTime)}
+                      </RNText>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -494,12 +504,16 @@ const TimingsScreen = ({ navigation }) => {
             <View style={styles.summaryCard}>
               <View style={styles.summaryHeader}>
                 <Ionicons name="checkmark-circle" size={24} color="#10B981" />
-                <RNText style={styles.summaryTitle}>Availability Summary</RNText>
+                <RNText style={styles.summaryTitle}>
+                  Availability Summary
+                </RNText>
               </View>
               <View style={styles.summaryContent}>
                 <View style={styles.summaryRow}>
                   <RNText style={styles.summaryLabel}>Date:</RNText>
-                  <RNText style={styles.summaryValue}>{formatDate(selectedDate)}</RNText>
+                  <RNText style={styles.summaryValue}>
+                    {formatDate(selectedDate)}
+                  </RNText>
                 </View>
                 <View style={styles.summaryRow}>
                   <RNText style={styles.summaryLabel}>Duration:</RNText>
@@ -539,7 +553,9 @@ const TimingsScreen = ({ navigation }) => {
               ) : (
                 <View style={styles.saveButtonContent}>
                   <Ionicons name="save-outline" size={20} color="#FFFFFF" />
-                  <RNText style={styles.saveButtonText}>Save Availability</RNText>
+                  <RNText style={styles.saveButtonText}>
+                    Save Availability
+                  </RNText>
                 </View>
               )}
             </LinearGradient>

@@ -60,7 +60,14 @@ export default function ChatDetailsScreen({ route, navigation }) {
     }
 
     try {
-      const wsUrl = `ws://${API_URL.replace('http://', '').replace('/api', '')}/ws`;
+      const wsUrl = `ws://${API_URL.replace("http://", "").replace(
+        "/api",
+        ""
+      )}/ws`;
+      // const wsUrl = `wss://${API_URL.replace("https://", "").replace(
+      //   "/api",
+      //   ""
+      // )}/ws`;
       console.log('Connecting to WebSocket:', wsUrl);
       ws.current = new WebSocket(wsUrl);
 
