@@ -1,5 +1,5 @@
 import { API_URL } from '../constants/config';
-import { getAuthToken } from './authService';
+import { getAuthToken } from './AuthService';
 import { websocketService } from './websocketService';
 import * as Location from 'expo-location';
 

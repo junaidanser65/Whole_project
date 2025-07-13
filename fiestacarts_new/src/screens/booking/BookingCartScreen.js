@@ -713,7 +713,7 @@ export default function BookingCartScreen({ route, navigation }) {
                     <LinearGradient
                       colors={
                         hasOnlyConfirmedBookings()
-                          ? ["#A5B4FC", "#8B5CF6", "#7C3AED"]
+                          ? ["#6366F1", "#8B5CF6"]
                           : ["#94A3B8", "#94A3B8"]
                       }
                       style={styles.checkoutButtonGradient}
@@ -744,7 +744,7 @@ export default function BookingCartScreen({ route, navigation }) {
                       activeOpacity={0.8}
                     >
                       <LinearGradient
-                        colors={["#A5B4FC", "#8B5CF6", "#7C3AED"]}
+                        colors={["#6366F1", "#8B5CF6"]}
                         style={styles.checkoutButtonGradient}
                       >
                         <Ionicons name="card-outline" size={20} color="#FFF" />
@@ -1000,9 +1000,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#EF4444',
     backgroundColor: '#FFF',
@@ -1015,11 +1015,11 @@ const styles = StyleSheet.create({
   },
   checkoutButton: {
     flex: 2,
-    borderRadius: 12,
+    borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#8B5CF6',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
   },
@@ -1027,11 +1027,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
   },
   checkoutButtonText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '600',
     color: '#FFF',
     marginLeft: 8,

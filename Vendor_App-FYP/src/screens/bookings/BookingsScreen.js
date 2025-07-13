@@ -22,7 +22,7 @@ const BOOKING_FILTERS = [
   { id: 'pending', label: 'Pending', icon: 'time-outline' },
   { id: 'confirmed', label: 'Confirmed', icon: 'checkmark-circle-outline' },
   { id: 'completed', label: 'Completed', icon: 'checkmark-done-outline' },
-  { id: 'rejected', label: 'Rejected', icon: 'close-circle-outline' },
+  { id: 'cancelled', label: 'Cancelled', icon: 'close-circle-outline' },
 ];
 
 const BookingsScreen = ({ navigation, route }) => {
@@ -170,7 +170,7 @@ const BookingsScreen = ({ navigation, route }) => {
         text: { color: '#2563EB' },
         icon: 'checkmark-done-outline'
       },
-      rejected: {
+      cancelled: {
         badge: { backgroundColor: '#FEE2E2' },
         text: { color: '#DC2626' },
         icon: 'close-circle-outline'
@@ -286,20 +286,34 @@ const BookingsScreen = ({ navigation, route }) => {
             <Ionicons name="close-outline" size={20} color="#FFFFFF" />
             <RNText style={styles.actionButtonText}>Reject</RNText>
           </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.chatButtonInline}
+            onPress={() => navigation.navigate('ChatDetails', { 
+              conversationId: null,
+              userId: booking.user_id,
+              userName: booking.user_name,
+              userImage: booking.user_image || null
+            })}
+          >
+            <Ionicons name="chatbubble-outline" size={18} color="#6366F1" />
+          </TouchableOpacity>
         </View>
       )}
 
-      <TouchableOpacity 
-        style={styles.chatButton}
-        onPress={() => navigation.navigate('ChatDetails', { 
-          conversationId: null,
-          userId: booking.user_id,
-          userName: booking.user_name,
-          userImage: booking.user_image || null
-        })}
-      >
-        <Ionicons name="chatbubble-outline" size={20} color="#6366F1" />
-      </TouchableOpacity>
+      {booking.status !== 'pending' && (
+        <TouchableOpacity 
+          style={styles.chatButton}
+          onPress={() => navigation.navigate('ChatDetails', { 
+            conversationId: null,
+            userId: booking.user_id,
+            userName: booking.user_name,
+            userImage: booking.user_image || null
+          })}
+        >
+          <Ionicons name="chatbubble-outline" size={20} color="#6366F1" />
+        </TouchableOpacity>
+      )}
     </TouchableOpacity>
   );
 
@@ -643,6 +657,7 @@ const styles = StyleSheet.create({
   actionSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginTop: 10,
     paddingTop: 10,
     borderTopWidth: 1,
@@ -684,6 +699,16 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  chatButtonInline: {
+    backgroundColor: '#F0F4FF',
+    borderRadius: 20,
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E7FF',
   },
   emptyContainer: {
     alignItems: 'center',

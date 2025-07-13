@@ -279,7 +279,10 @@ export default function BookingFormScreen({ route, navigation }) {
               onPress={() => {
                 setShowSuccessModal(false);
                 animateModal(successScaleAnim, false);
-                navigation.navigate('BookingCart', { refresh: true });
+                navigation.navigate('Bookings', { 
+                  screen: 'BookingsMain',
+                  params: { refresh: true }
+                });
               }}
               activeOpacity={0.8}
             >
@@ -287,8 +290,8 @@ export default function BookingFormScreen({ route, navigation }) {
                 colors={["#6366F1", "#8B5CF6"]}
                 style={styles.viewCartButtonGradient}
               >
-                <Ionicons name="cart" size={20} color="#FFF" />
-                <Text style={styles.viewCartButtonText}>View Bookings</Text>
+                <Ionicons name="calendar-outline" size={20} color="#FFF" />
+                <Text style={styles.viewCartButtonText}>View My Bookings</Text>
               </LinearGradient>
             </TouchableOpacity>
             <TouchableOpacity
