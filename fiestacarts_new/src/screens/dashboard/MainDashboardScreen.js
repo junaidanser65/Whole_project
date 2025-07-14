@@ -8,6 +8,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import VendorCard from '../vendor/components/VendorCard';
 import { getVendors } from '../../api/apiService';
 import * as Location from 'expo-location';
+import { websocketService } from '../../services/websocketService';
 
 const CATEGORIES = [
   { id: '1', name: 'Catering', icon: 'restaurant-outline', color: '#FF6B6B' },
@@ -56,6 +57,51 @@ export default function MainDashboardScreen({ navigation }) {
   useEffect(() => {
     fetchVendors();
     getUserLocation();
+
+    // Subscribe to websocket location updates
+    const handleLocationUpdate = (data) => {
+      setVendors(prevVendors => prevVendors.map(vendor => {
+        if (String(vendor.id) === String(data.vendorId)) {
+          return {
+            ...vendor,
+            latitude: parseFloat(data.location.latitude),
+            longitude: parseFloat(data.location.longitude),
+            location: {
+              latitude: parseFloat(data.location.latitude),
+              longitude: parseFloat(data.location.longitude),
+              timestamp: data.timestamp || new Date().toISOString()
+            }
+          };
+        }
+        return vendor;
+      }));
+    };
+
+    const handleLocationRemoved = (data) => {
+      setVendors(prevVendors => prevVendors.map(vendor => {
+        if (String(vendor.id) === String(data.vendorId)) {
+          // Remove lat/lng so marker disappears
+          return {
+            ...vendor,
+            latitude: undefined,
+            longitude: undefined,
+            location: null
+          };
+        }
+        return vendor;
+      }));
+    };
+
+    const unsubscribeLocationUpdate = websocketService.subscribe('location_update', handleLocationUpdate);
+    const unsubscribeLocationRemoved = websocketService.subscribe('location_removed', handleLocationRemoved);
+
+    // Register as customer for location updates
+    websocketService.send({ type: 'register', vendorId: 'customer' });
+
+    return () => {
+      unsubscribeLocationUpdate();
+      unsubscribeLocationRemoved();
+    };
   }, []);
 
   const fetchVendors = async () => {
@@ -63,16 +109,28 @@ export default function MainDashboardScreen({ navigation }) {
     try {
       const response = await getVendors();
       if (response && response.success) {
-        setVendors(response.vendors);
-        setFeaturedVendors(response.vendors.slice(0, 5));
-        setFilteredVendors(response.vendors);
+        // Add latitude/longitude from latest location
+        const vendorsWithLatLng = response.vendors.map(vendor => {
+          const latestLocation = vendor.locations && vendor.locations.length > 0
+            ? vendor.locations[vendor.locations.length - 1]
+            : null;
+          return {
+            ...vendor,
+            latitude: latestLocation ? parseFloat(latestLocation.latitude) : undefined,
+            longitude: latestLocation ? parseFloat(latestLocation.longitude) : undefined,
+            location: latestLocation || null,
+          };
+        });
+        setVendors(vendorsWithLatLng);
+        setFeaturedVendors(vendorsWithLatLng.slice(0, 5));
+        setFilteredVendors(vendorsWithLatLng);
         // Debug: Log the first vendor to see available fields
-        if (response.vendors.length > 0) {
-          console.log('First vendor data:', response.vendors[0]);
+        if (vendorsWithLatLng.length > 0) {
+          console.log('First vendor data:', vendorsWithLatLng[0]);
           console.log('Available image fields:', {
-            profile_image: response.vendors[0].profile_image,
-            image_url: response.vendors[0].image_url,
-            image: response.vendors[0].image
+            profile_image: vendorsWithLatLng[0].profile_image,
+            image_url: vendorsWithLatLng[0].image_url,
+            image: vendorsWithLatLng[0].image
           });
         }
       }
@@ -290,7 +348,7 @@ export default function MainDashboardScreen({ navigation }) {
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <Text style={styles.sectionTitle}>Vendors Near You</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('FullMap', { userLocation, vendors })}>
+        <TouchableOpacity onPress={() => navigation.navigate('FullMap', { userLocation, vendors: vendors.filter(v => v.id !== undefined && v.latitude !== undefined && v.longitude !== undefined) })}>
           <Text style={styles.seeAllText}>View Map</Text>
         </TouchableOpacity>
       </View>
@@ -311,19 +369,17 @@ export default function MainDashboardScreen({ navigation }) {
             pitchEnabled={false}
             rotateEnabled={false}
           >
-            {vendors.slice(0, 5).map(vendor => (
-              vendor.latitude && vendor.longitude && (
-                <Marker
-                  key={vendor.id}
-                  coordinate={{ latitude: vendor.latitude, longitude: vendor.longitude }}
-                  title={vendor.name}
-                  description={vendor.category}
-                >
-                  <View style={styles.mapMarker}>
-                    <Ionicons name="location" size={24} color="#8B5CF6" />
-                  </View>
-                </Marker>
-              )
+            {vendors.slice(0, 5).filter(v => v.id !== undefined && v.latitude !== undefined && v.longitude !== undefined).map(vendor => (
+              <Marker
+                key={vendor.id}
+                coordinate={{ latitude: vendor.latitude, longitude: vendor.longitude }}
+                title={vendor.name}
+                description={vendor.category}
+              >
+                <View style={styles.mapMarker}>
+                  <Ionicons name="location" size={24} color="#8B5CF6" />
+                </View>
+              </Marker>
             ))}
           </MapView>
         )}
