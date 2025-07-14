@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView } from 'react-native';
+import { StyleSheet, View, ScrollView, RefreshControl } from 'react-native';
 import { Text, Button, Slider, Chip, Divider } from '@rneui/themed';
 import { colors, spacing, typography } from '../../styles/theme';
 
@@ -27,6 +27,7 @@ export default function SearchFiltersScreen({ navigation, route }) {
     sortBy: currentFilters.sortBy || 'recommended',
     ...currentFilters,
   });
+  const [refreshing, setRefreshing] = useState(false);
 
   const handleCategoryToggle = (category) => {
     setFilters(prev => ({
@@ -66,9 +67,25 @@ export default function SearchFiltersScreen({ navigation, route }) {
     });
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    // await fetchFilters(); // Replace with your actual data-fetching function
+    setRefreshing(false);
+  };
+
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scrollView}>
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={["#6366F1"]}
+            tintColor="#6366F1"
+          />
+        }
+      >
         {/* Categories */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Categories</Text>

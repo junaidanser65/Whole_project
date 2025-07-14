@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Modal, ActivityIndicator, TextInput, Alert, SafeAreaView, StatusBar, Platform, Image } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, Modal, ActivityIndicator, TextInput, Alert, SafeAreaView, StatusBar, Platform, Image, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { getUserBookings, submitReview, checkBookingReview } from '../../api/apiService';
@@ -280,6 +280,7 @@ export default function BookingHistoryScreen({ route, navigation }) {
   const [error, setError] = useState(null);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [reviewedBookings, setReviewedBookings] = useState(new Set());
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (route.params?.initialTab) {
@@ -419,6 +420,12 @@ export default function BookingHistoryScreen({ route, navigation }) {
       setSelectedBooking(booking);
       setIsReviewModalVisible(true);
     }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchBookings();
+    setRefreshing(false);
   };
 
   const renderBookingCard = (booking) => {
@@ -617,7 +624,18 @@ export default function BookingHistoryScreen({ route, navigation }) {
       </View>
 
       {/* Content */}
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={["#6366F1"]}
+            tintColor="#6366F1"
+          />
+        }
+      >
         {getFilteredBookings().length > 0 ? (
           <View style={styles.bookingsContainer}>
             {getFilteredBookings().map(renderBookingCard)}

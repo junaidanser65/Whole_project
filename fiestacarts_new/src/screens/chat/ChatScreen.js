@@ -19,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../contexts/AuthContext';
 import { getConversations, getVendorConversations } from '../../api/apiService';
 import { formatDistanceToNow } from 'date-fns';
+import { useFocusEffect } from '@react-navigation/native';
 
 export default function ChatScreen({ navigation }) {
   const { user } = useAuth();
@@ -61,6 +62,12 @@ export default function ChatScreen({ navigation }) {
       useNativeDriver: true,
     }).start();
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchConversations();
+    }, [])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);

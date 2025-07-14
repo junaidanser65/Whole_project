@@ -80,9 +80,10 @@ export default function VendorSearchScreen({ navigation, route }) {
     }
   }, [searchQuery, allVendors]);
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setRefreshing(true);
-    fetchVendors().finally(() => setRefreshing(false));
+    await fetchVendors();
+    setRefreshing(false);
   };
 
   const renderHeader = () => (

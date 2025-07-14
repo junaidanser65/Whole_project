@@ -10,7 +10,7 @@ router.get('/menu', verifyToken, verifyVendor, async (req, res) => {
     
     // Get all menu items for this vendor
     const [menuItems] = await pool.execute(
-      'SELECT id, name, description, price, image, category, is_available FROM menus WHERE vendor_id = ?',
+      'SELECT id, name, description, price, image, category, is_available, created_at, updated_at FROM menus WHERE vendor_id = ?',
       [vendorId]
     );
     
@@ -36,7 +36,7 @@ router.get('/menu/:id', verifyToken, verifyVendor, async (req, res) => {
     
     // Get the specific menu item
     const [menuItems] = await pool.execute(
-      'SELECT id, name, description, price, image, category, is_available FROM menus WHERE id = ? AND vendor_id = ?',
+      'SELECT id, name, description, price, image, category, is_available, created_at, updated_at FROM menus WHERE id = ? AND vendor_id = ?',
       [menuItemId, vendorId]
     );
     
@@ -81,19 +81,15 @@ router.post('/menu', verifyToken, verifyVendor, async (req, res) => {
       [vendorId, name, description || null, price, image || null, category || null, is_available !== undefined ? is_available : true]
     );
     
+    // Fetch the newly created menu item with timestamps
+    const [newMenuItems] = await pool.execute(
+      'SELECT id, vendor_id, name, description, price, image, category, is_available, created_at, updated_at FROM menus WHERE id = ?',
+      [result.insertId]
+    );
     res.status(201).json({
       success: true,
       message: 'Menu item added successfully',
-      menu_item: {
-        id: result.insertId,
-        vendor_id: vendorId,
-        name,
-        description,
-        price,
-        image,
-        category,
-        is_available: is_available !== undefined ? is_available : true
-      }
+      menu_item: newMenuItems[0]
     });
   } catch (error) {
     console.error('Add menu item error:', error);

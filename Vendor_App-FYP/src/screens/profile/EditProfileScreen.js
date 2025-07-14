@@ -139,7 +139,7 @@ const EditProfileScreen = ({ navigation, route }) => {
     if (!formData.name.trim()) newErrors.name = 'Name is required';
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     if (!formData.phone_number.trim()) newErrors.phone_number = 'Phone number is required';
-    if (!formData.business_name.trim()) newErrors.business_name = 'Business name is required';
+    if (!formData.business_name.trim()) newErrors.business_name = 'Business description is required';
     
     // Phone number format validation
     if (formData.phone_number.trim() && !/^\+?\d{10,12}$/.test(formData.phone_number.trim())) {
@@ -395,11 +395,11 @@ const EditProfileScreen = ({ navigation, route }) => {
               </View>
               
               {renderInput({
-                label: "Business Name",
+                label: "Business Description",
                 value: formData.business_name,
                 onChangeText: (text) => setFormData({ ...formData, business_name: text }),
                 icon: "storefront-outline",
-                placeholder: "Enter your business name",
+                placeholder: "Enter your business description",
                 fieldKey: "business_name"
               })}
 

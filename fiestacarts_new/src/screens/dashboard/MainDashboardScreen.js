@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Text, Dimensions, ScrollView, TouchableOpacity, Animated, SafeAreaView, FlatList, TextInput, StatusBar, ActivityIndicator, Platform, Image } from 'react-native';
+import { StyleSheet, View, Text, Dimensions, ScrollView, TouchableOpacity, Animated, SafeAreaView, FlatList, TextInput, StatusBar, ActivityIndicator, Platform, Image, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -53,6 +53,7 @@ export default function MainDashboardScreen({ navigation }) {
   const [userLocation, setUserLocation] = useState(null);
   const [mapRegion, setMapRegion] = useState(null);
   const [isMapLoading, setIsMapLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     fetchVendors();
@@ -105,6 +106,7 @@ export default function MainDashboardScreen({ navigation }) {
   }, []);
 
   const fetchVendors = async () => {
+    setIsRefreshing(true);
     setLoadingVendors(true);
     try {
       const response = await getVendors();
@@ -138,6 +140,7 @@ export default function MainDashboardScreen({ navigation }) {
       console.error('Error fetching vendors:', error);
     } finally {
       setLoadingVendors(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -163,17 +166,17 @@ export default function MainDashboardScreen({ navigation }) {
   // Filter vendors by search/category
   useEffect(() => {
     let filtered = vendors;
-    if (selectedCategory) {
-      filtered = filtered.filter(v => v.category?.toLowerCase() === selectedCategory.name.toLowerCase());
-    }
     if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      console.log('Filtering vendors with query:', q, 'Vendors:', vendors);
       filtered = filtered.filter(v =>
-        v.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        v.business_name?.toLowerCase().includes(searchQuery.toLowerCase())
+        v.name?.toLowerCase().includes(q) ||
+        v.business_name?.toLowerCase().includes(q) ||
+        v.address?.toLowerCase().includes(q)
       );
     }
     setFilteredVendors(filtered);
-  }, [searchQuery, selectedCategory, vendors]);
+  }, [searchQuery, vendors]);
 
   // Header with improved design
   const renderHeader = () => (
@@ -192,16 +195,18 @@ export default function MainDashboardScreen({ navigation }) {
               <Text style={styles.headerTitle}>for your event</Text>
               <Text style={styles.headerSubtitle}>Browse, book, and manage all your event needs in one place.</Text>
             </View>
-            <TouchableOpacity 
-              style={styles.profileBtn}
-              onPress={() => navigation.navigate('ProfileMain')}
-            >
-              <View style={styles.profileAvatar}>
-                <Text style={styles.profileInitial}>
-                  {loading ? 'G' : (user?.name?.charAt(0)?.toUpperCase() || 'G')}
-                </Text>
-              </View>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity 
+                style={styles.profileBtn}
+                onPress={() => navigation.navigate('ProfileMain')}
+              >
+                <View style={styles.profileAvatar}>
+                  <Text style={styles.profileInitial}>
+                    {loading ? 'G' : (user?.name?.charAt(0)?.toUpperCase() || 'G')}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
           </View>
           
           {/* Search Bar */}
@@ -226,44 +231,6 @@ export default function MainDashboardScreen({ navigation }) {
         </View>
       </SafeAreaView>
     </LinearGradient>
-  );
-
-  // Quick Categories with better design
-  const renderCategories = () => (
-    <View style={styles.categoriesSection}>
-      <Text style={styles.sectionTitle}>Categories</Text>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.categoriesContainer}
-      >
-        {CATEGORIES.map(category => (
-          <TouchableOpacity
-            key={category.id}
-            style={[
-              styles.categoryCard,
-              selectedCategory?.id === category.id && styles.categoryCardActive
-            ]}
-            onPress={() => setSelectedCategory(selectedCategory?.id === category.id ? null : category)}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.categoryIconContainer, { backgroundColor: category.color }]}>
-              <Ionicons 
-                name={category.icon} 
-                size={28} 
-                color="#FFF"
-              />
-            </View>
-            <Text style={[
-              styles.categoryText,
-              selectedCategory?.id === category.id && styles.categoryTextActive
-            ]}>
-              {category.name}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    </View>
   );
 
   // Featured Vendors with improved cards
@@ -438,9 +405,19 @@ export default function MainDashboardScreen({ navigation }) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="#6366F1" />
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={fetchVendors}
+            colors={["#6366F1"]}
+            tintColor="#6366F1"
+          />
+        }
+      >
         {renderHeader()}
-        {renderCategories()}
         {renderFeaturedVendors()}
         {renderSpecialOffers()}
         {renderMapPreview()}

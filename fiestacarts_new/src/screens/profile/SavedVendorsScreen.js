@@ -9,6 +9,7 @@ export default function SavedVendorsScreen({ navigation }) {
   const { user } = useAuth();
   const { favorites, removeFavorite } = useFavorites();
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   // Set loading to false after component mounts
   useEffect(() => {
@@ -31,6 +32,15 @@ export default function SavedVendorsScreen({ navigation }) {
         },
       ]
     );
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    // In a real app, you would refetch favorites here
+    // For now, we'll just set refreshing to false after a short delay
+    // to simulate a refresh operation.
+    await new Promise(resolve => setTimeout(resolve, 1000)); 
+    setRefreshing(false);
   };
 
   const renderVendorCard = ({ item: vendor }) => (
@@ -172,6 +182,8 @@ export default function SavedVendorsScreen({ navigation }) {
             </TouchableOpacity>
           </View>
         )}
+        refreshing={refreshing}
+        onRefresh={handleRefresh}
       />
     </View>
   );

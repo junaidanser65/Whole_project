@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, ScrollView, Alert, ActivityIndicator, TouchableOpacity, SafeAreaView, StatusBar, Platform, Animated } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, Alert, ActivityIndicator, TouchableOpacity, SafeAreaView, StatusBar, Platform, Animated, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useBooking } from '../../contexts/BookingContext';
@@ -14,6 +14,7 @@ export default function BookingCartScreen({ route, navigation }) {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const { removeBooking, clearBookings } = useBooking();
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const [refreshing, setRefreshing] = useState(false);
 
   // Refresh bookings when screen comes into focus
   useFocusEffect(
@@ -379,6 +380,12 @@ export default function BookingCartScreen({ route, navigation }) {
     return isNaN(count) ? 1 : count;
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchBookings();
+    setRefreshing(false);
+  };
+
   if (isLoading) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -527,6 +534,14 @@ export default function BookingCartScreen({ route, navigation }) {
             <ScrollView
               contentContainerStyle={styles.scrollContent}
               showsVerticalScrollIndicator={false}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={handleRefresh}
+                  colors={["#6366F1"]}
+                  tintColor="#6366F1"
+                />
+              }
             >
               {bookings.map((booking, index) => {
                 console.log("Rendering booking:", booking);

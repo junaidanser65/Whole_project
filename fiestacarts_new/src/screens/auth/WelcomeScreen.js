@@ -8,6 +8,7 @@ import {
   Animated,
   FlatList,
   TouchableOpacity,
+  StatusBar,
 } from 'react-native';
 import { Button } from 'react-native-elements';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -169,7 +170,8 @@ const OnboardingScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={{flex: 1, backgroundColor: '#1A1A1A'}}>
+      <StatusBar hidden={true} />
       <LinearGradient colors={["#6366F1", "#8B5CF6", "#A855F7"]} style={styles.gradient}>
         <FlatList
           ref={slideRef}
@@ -222,7 +224,7 @@ const OnboardingScreen = ({ navigation }) => {
           )}
       </View>
       </LinearGradient>
-    </SafeAreaView>
+    </View>
   );
 };
 

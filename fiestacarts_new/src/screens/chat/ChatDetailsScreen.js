@@ -32,6 +32,7 @@ export default function ChatDetailsScreen({ route, navigation }) {
   const flatListRef = useRef(null);
   const ws = useRef(null);
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (conversationId) {
@@ -142,6 +143,12 @@ export default function ChatDetailsScreen({ route, navigation }) {
     } finally {
       setSending(false);
     }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchMessages();
+    setRefreshing(false);
   };
 
   const scrollToBottom = () => {
@@ -319,6 +326,8 @@ export default function ChatDetailsScreen({ route, navigation }) {
             showsVerticalScrollIndicator={false}
             onContentSizeChange={scrollToBottom}
             onLayout={scrollToBottom}
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Ionicons name="chatbubble-outline" size={64} color="#CBD5E1" />

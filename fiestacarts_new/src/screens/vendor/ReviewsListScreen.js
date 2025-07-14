@@ -118,6 +118,12 @@ export default function ReviewsListScreen({ route, navigation }) {
     navigation.navigate('EditReview', { review, onReviewUpdated: fetchReviews });
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchReviews();
+    setRefreshing(false);
+  };
+
   const renderHeader = () => (
     <>
       <View style={styles.header}>
@@ -179,10 +185,7 @@ export default function ReviewsListScreen({ route, navigation }) {
         keyExtractor={item => item.id}
         ListHeaderComponent={renderHeader}
         refreshing={refreshing}
-        onRefresh={() => {
-          setRefreshing(true);
-          fetchReviews();
-        }}
+        onRefresh={handleRefresh}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>

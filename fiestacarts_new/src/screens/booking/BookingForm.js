@@ -17,6 +17,7 @@ const BookingForm = ({ route, navigation }) => {
   const { addBooking } = useBooking();
   const { user } = useAuth();
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -46,6 +47,15 @@ const BookingForm = ({ route, navigation }) => {
       console.error('Availability check error:', error);
       return false;
     }
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    // Reload booking form data if needed, e.g., available slots, total price
+    // For now, we'll just set refreshing to false after a short delay
+    // In a real app, you'd refetch data here
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate data fetching
+    setRefreshing(false);
   };
 
   const handleSubmit = async () => {
@@ -177,6 +187,14 @@ const BookingForm = ({ route, navigation }) => {
       <ScrollView 
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={["#6366F1"]}
+            tintColor="#6366F1"
+          />
+        }
       >
         <View style={styles.card}>
           <Text style={styles.title}>Booking Details</Text>

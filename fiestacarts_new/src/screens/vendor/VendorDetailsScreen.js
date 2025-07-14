@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ScrollView, Image, TouchableOpacity, Dimensions, Alert, Share, Animated, SafeAreaView, StatusBar, Platform } from 'react-native';
+import { StyleSheet, View, Text, ScrollView, Image, TouchableOpacity, Dimensions, Alert, Share, Animated, SafeAreaView, StatusBar, Platform, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -30,6 +30,7 @@ const VendorDetailsScreen = ({ route, navigation }) => {
   const [selectedServices, setSelectedServices] = useState([]);
   const [totalPrice, setTotalPrice] = useState(0);
   const [dateAvailability, setDateAvailability] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     const fetchVendorData = async () => {
@@ -255,6 +256,68 @@ const VendorDetailsScreen = ({ route, navigation }) => {
     setTotalPrice(total);
   };
 
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    const fetchVendorData = async () => {
+      try {
+        setLoading(true);
+        
+        if (route.params?.vendor) {
+          const vendorFromParams = route.params.vendor;
+          setVendor(vendorFromParams);
+          
+          // Set vendor images - use profile_image if available, otherwise use image_url
+          const images = [];
+          if (vendorFromParams.profile_image) {
+            images.push(vendorFromParams.profile_image);
+          }
+          if (vendorFromParams.image_url && !images.includes(vendorFromParams.image_url)) {
+            images.push(vendorFromParams.image_url);
+          }
+          // If no images are available, use a default image
+          if (images.length === 0) {
+            images.push('https://via.placeholder.com/400x300');
+          }
+          setVendorImages(images);
+          
+          // Fetch menu items from the database
+          try {
+            const menuItems = await getVendorMenu(vendorFromParams.id);
+            console.log("Fetched menu items:", menuItems);
+            // setVendorServices(menuItems);
+            // Filter only available items
+            const availableMenuItems = menuItems.filter(
+              (item) => item.is_available === true || item.is_available === 1
+            );
+
+            setVendorServices(availableMenuItems);
+          } catch (error) {
+            console.error('Error fetching menu items:', error);
+            // Fallback to mock services if API fails
+            const mockServices = MOCK_SERVICES[vendorFromParams.id] || [];
+            console.log('Using mock services:', mockServices);
+            setVendorServices(mockServices);
+          }
+          
+          fetchAvailability(vendorFromParams.id);
+        } else {
+          console.log('No vendor in params, using mock vendor');
+          setVendor(MOCK_VENDOR);
+          setVendorImages([MOCK_VENDOR.image_url]);
+          const mockServices = MOCK_SERVICES[MOCK_VENDOR.id] || [];
+          setVendorServices(mockServices);
+        }
+      } catch (error) {
+        console.error('Error fetching vendor data:', error);
+        Alert.alert('Error', 'Failed to load vendor details');
+      } finally {
+        setLoading(false);
+      }
+    };
+    await fetchVendorData();
+    setRefreshing(false);
+  };
+
   if (loading) {
     return (
       <View style={styles.container}>
@@ -319,6 +382,14 @@ const VendorDetailsScreen = ({ route, navigation }) => {
         style={styles.scrollView} 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            colors={["#6366F1"]}
+            tintColor="#6366F1"
+          />
+        }
       >
         {/* Header with Back Button */}
         <View style={styles.imageContainer}>

@@ -3,7 +3,7 @@ import axios from "axios";
 
 // Define the base URL for the API
 // 192.168.18.8
-export const API_URL = "http://192.168.0.156:5000/api";
+export const API_URL = "http://192.168.89.199:5000/api";
 // export const API_URL = "https://fypbackend-production-f754.up.railway.app/api";//ushna /  hamza bhai ke mobile ka
 
 // Helper function to handle API responses

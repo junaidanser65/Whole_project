@@ -340,8 +340,8 @@ const EditMenuItemScreen = ({ route, navigation }) => {
           </View>
 
           <View style={styles.inputGroup}>
-            <View style={styles.inputContainer}>
-              <View style={styles.inputIconContainer}>
+            <View style={[styles.inputContainer, styles.inputContainerMultiline]}>
+              <View style={[styles.inputIconContainer, styles.inputIconContainerMultiline]}>
                 <Ionicons name="document-text-outline" size={20} color="#6366F1" />
               </View>
               <TextInput
@@ -671,8 +671,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
+  inputContainerMultiline: {
+    alignItems: 'flex-start',
+  },
   inputIconContainer: {
     marginRight: 12,
+  },
+  inputIconContainerMultiline: {
+    paddingTop: 12,
   },
   textInput: {
     flex: 1,

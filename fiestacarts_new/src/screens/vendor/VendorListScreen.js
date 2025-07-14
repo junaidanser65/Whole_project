@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, FlatList, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, FlatList, ActivityIndicator, Text } from 'react-native';
 import { SearchBar, Button, Icon } from '@rneui/themed';
-import { colors, spacing } from '../../styles/theme';
+import { colors, spacing, typography } from '../../styles/theme';
 import { supabase } from '../../lib/supabase';
 import VendorCard from './components/VendorCard';
 
@@ -42,6 +42,12 @@ export default function VendorListScreen({ navigation }) {
 
   const handleVendorPress = (vendor) => {
     navigation.navigate('VendorDetails', { vendor });
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchVendors();
+    setRefreshing(false);
   };
 
   const renderHeader = () => (
@@ -88,10 +94,7 @@ export default function VendorListScreen({ navigation }) {
         keyExtractor={item => item.id}
         ListHeaderComponent={renderHeader}
         refreshing={refreshing}
-        onRefresh={() => {
-          setRefreshing(true);
-          fetchVendors();
-        }}
+        onRefresh={handleRefresh}
         contentContainerStyle={styles.listContent}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>

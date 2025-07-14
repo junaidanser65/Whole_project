@@ -407,7 +407,7 @@ export default function FullMapScreen({ route, navigation }) {
                   longitude: vendor.longitude,
                 }}
                 title={vendor.name}
-                description={`${vendor.category} • ${vendor.rating}⭐`}
+                description={`${vendor.category || 'Other'} • ${vendor.rating}⭐`}
                 onPress={() => handleMarkerPress(vendor)}
                 anchor={{ x: 0.5, y: 1.0 }}
               >
