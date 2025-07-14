@@ -83,8 +83,15 @@ const getCategoryIcon = (category) => {
   return categoryMap[category] || 'store';
 };
 
+// Safe string conversion helper
+function safeString(val) {
+  return (val !== undefined && val !== null) ? String(val) : '';
+}
+
 export default function FullMapScreen({ route, navigation }) {
-  const { userLocation, nearbyVendors } = route.params || {};
+  // Accept both 'vendors' and 'nearbyVendors' from route.params for compatibility
+  const { userLocation, vendors: vendorsParam, nearbyVendors: nearbyVendorsParam } = route.params || {};
+  const initialVendors = vendorsParam || nearbyVendorsParam || [];
   const [search, setSearch] = useState('');
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [mapRef, setMapRef] = useState(null);
@@ -95,15 +102,15 @@ export default function FullMapScreen({ route, navigation }) {
     longitudeDelta: 0.0421,
   });
   const [radiusKm, setRadiusKm] = useState(10);
-  const [vendorsWithLocations, setVendorsWithLocations] = useState(nearbyVendors || []);
-  const [filteredVendors, setFilteredVendors] = useState(nearbyVendors || []);
+  const [vendorsWithLocations, setVendorsWithLocations] = useState(initialVendors);
+  const [filteredVendors, setFilteredVendors] = useState(initialVendors);
   const [lastUpdateTime, setLastUpdateTime] = useState(null);
   const markersRef = useRef({});
 
   // Initialize map and vendors when component mounts
   useEffect(() => {
-    if (userLocation && nearbyVendors?.length > 0) {
-      console.log('Initializing with:', { userLocation, vendorCount: nearbyVendors.length });
+    if (userLocation && initialVendors?.length > 0) {
+      console.log('Initializing with:', { userLocation, vendorCount: initialVendors.length });
       
       // Set initial region
       const initialRegion = {
@@ -115,15 +122,15 @@ export default function FullMapScreen({ route, navigation }) {
       setRegion(initialRegion);
       
       // Set vendors
-      setVendorsWithLocations(nearbyVendors);
-      setFilteredVendors(nearbyVendors);
+      setVendorsWithLocations(initialVendors);
+      setFilteredVendors(initialVendors);
 
       // Animate to user location if map is ready
       if (mapRef) {
         mapRef.animateToRegion(initialRegion, 1000);
       }
     }
-  }, [userLocation, nearbyVendors, mapRef]);
+  }, [userLocation, initialVendors, mapRef]);
 
   // Handle WebSocket location updates
   const handleLocationUpdate = (data) => {
@@ -148,7 +155,7 @@ export default function FullMapScreen({ route, navigation }) {
     // Update vendorsWithLocations
     setVendorsWithLocations(prevVendors => {
       const updatedVendors = prevVendors.map(vendor => {
-        if (String(vendor.id) === String(data.vendorId)) {
+        if (safeString(vendor.id) === safeString(data.vendorId)) {
           console.log('Updating vendor location:', {
             vendorId: vendor.id,
             oldLocation: vendor.location,
@@ -169,7 +176,7 @@ export default function FullMapScreen({ route, navigation }) {
     // Update filteredVendors
     setFilteredVendors(prevVendors => {
       const updatedVendors = prevVendors.map(vendor => {
-        if (String(vendor.id) === String(data.vendorId)) {
+        if (safeString(vendor.id) === safeString(data.vendorId)) {
           return {
             ...vendor,
             latitude: updatedLocation.latitude,
@@ -206,12 +213,12 @@ export default function FullMapScreen({ route, navigation }) {
 
     // Remove vendor from vendorsWithLocations
     setVendorsWithLocations(prevVendors => 
-      prevVendors.filter(vendor => String(vendor.id) !== String(data.vendorId))
+      prevVendors.filter(vendor => safeString(vendor.id) !== safeString(data.vendorId))
     );
 
     // Remove vendor from filteredVendors
     setFilteredVendors(prevVendors => 
-      prevVendors.filter(vendor => String(vendor.id) !== String(data.vendorId))
+      prevVendors.filter(vendor => safeString(vendor.id) !== safeString(data.vendorId))
     );
 
     // Remove marker from map safely
@@ -316,7 +323,7 @@ export default function FullMapScreen({ route, navigation }) {
 
   // Add console logs to debug
   console.log('UserLocation:', userLocation);
-  console.log('Initial Vendors:', nearbyVendors?.length);
+  console.log('Initial Vendors:', initialVendors?.length);
   console.log('Current Region:', region);
 
   return (
@@ -385,38 +392,40 @@ export default function FullMapScreen({ route, navigation }) {
               strokeWidth={1}
             />
           )}
-          {filteredVendors.map((vendor) => (
-            <Marker
-              key={vendor.id}
-              ref={ref => {
-                if (ref) {
-                  markersRef.current[vendor.id] = ref;
-                }
-              }}
-              coordinate={{
-                latitude: vendor.latitude,
-                longitude: vendor.longitude,
-              }}
-              title={vendor.name}
-              description={`${vendor.category} • ${vendor.rating}⭐`}
-              onPress={() => handleMarkerPress(vendor)}
-              anchor={{ x: 0.5, y: 1.0 }}
-            >
-              <View style={styles.markerContainer}>
-                <View style={[styles.marker, { backgroundColor: colors.white }]}>
-                  <Icon 
-                    name={getCategoryIcon(vendor.category)} 
-                    size={18} 
-                    color={colors.primary} 
-                    type="material"
-                  />
+          {filteredVendors
+            .filter(vendor => vendor.id !== undefined && vendor.latitude !== undefined && vendor.longitude !== undefined)
+            .map((vendor) => (
+              <Marker
+                key={vendor.id}
+                ref={ref => {
+                  if (ref) {
+                    markersRef.current[vendor.id] = ref;
+                  }
+                }}
+                coordinate={{
+                  latitude: vendor.latitude,
+                  longitude: vendor.longitude,
+                }}
+                title={vendor.name}
+                description={`${vendor.category} • ${vendor.rating}⭐`}
+                onPress={() => handleMarkerPress(vendor)}
+                anchor={{ x: 0.5, y: 1.0 }}
+              >
+                <View style={styles.markerContainer}>
+                  <View style={[styles.marker, { backgroundColor: colors.white }]}>
+                    <Icon 
+                      name={getCategoryIcon(vendor.category)} 
+                      size={18} 
+                      color={colors.primary} 
+                      type="material"
+                    />
+                  </View>
+                  <Text style={styles.markerLabel} numberOfLines={1}>
+                    {vendor.name}
+                  </Text>
                 </View>
-                <Text style={styles.markerLabel} numberOfLines={1}>
-                  {vendor.name}
-                </Text>
-              </View>
-            </Marker>
-          ))}
+              </Marker>
+            ))}
         </MapView>
 
         {/* My Location Button */}
