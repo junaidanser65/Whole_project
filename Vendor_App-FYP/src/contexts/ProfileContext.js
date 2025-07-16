@@ -26,6 +26,11 @@ export const ProfileProvider = ({ children }) => {
    }
  };
 
+ const refreshProfile = async () => {
+   if (user?._id) {
+     await fetchProfileById(user._id);
+   }
+ };
 
   // ⏳ Auto-fetch profile if user is available
   useEffect(() => {
@@ -36,7 +41,7 @@ export const ProfileProvider = ({ children }) => {
 
   return (
     <ProfileContext.Provider
-      value={{ profile, loadingProfile, errorProfile, fetchProfileById }}
+      value={{ profile, loadingProfile, errorProfile, fetchProfileById, refreshProfile }}
     >
       {children}
     </ProfileContext.Provider>

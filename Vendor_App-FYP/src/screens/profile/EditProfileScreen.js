@@ -17,12 +17,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
+import { useProfile } from '../../contexts/ProfileContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { uploadImageToCloudinary } from '../../services/cloudinaryService';
 import { updateProfile, apiClient } from '../../services/api';
 
 const EditProfileScreen = ({ navigation, route }) => {
   const { user, updateUser } = useAuth();
+  const { refreshProfile } = useProfile();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [imageUploading, setImageUploading] = useState(false);
@@ -189,6 +191,11 @@ const EditProfileScreen = ({ navigation, route }) => {
           };
           console.log('Updating user context with:', updatedUser);
           await updateUser(updatedUser);
+        }
+        
+        // Refresh profile data
+        if (refreshProfile) {
+          await refreshProfile();
         }
         
         if (route.params?.onProfileUpdate) {

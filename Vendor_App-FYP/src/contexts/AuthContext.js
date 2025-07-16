@@ -83,6 +83,20 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Update user function
+  const updateUser = async (updatedUserData) => {
+    try {
+      setUser(prevUser => ({
+        ...prevUser,
+        ...updatedUserData
+      }));
+      return { success: true };
+    } catch (err) {
+      console.error("Error updating user:", err);
+      return { success: false, error: err.message };
+    }
+  };
+
   // Logout function
   const logout = async () => {
     setLoading(true);
@@ -102,7 +116,7 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, error, login, signup, logout }}
+      value={{ user, loading, error, login, signup, logout, updateUser }}
     >
       {children}
     </AuthContext.Provider>

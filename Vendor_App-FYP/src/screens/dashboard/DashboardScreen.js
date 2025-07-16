@@ -18,6 +18,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../../contexts/AuthContext";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useProfile } from "../../contexts/ProfileContext";
+import { useFocusEffect } from '@react-navigation/native';
 import { getTotalBalance, getTodayRevenue, getNewBookings, getTotalCustomers, getAverageRating, getWeeklyRevenue, getMonthlyRevenue, getRecentActivities } from "../../services/api";
 
 const DashboardScreen = ({ navigation }) => {
@@ -44,7 +45,7 @@ const DashboardScreen = ({ navigation }) => {
   // }, []);
 
   const { user, loading } = useAuth();
-  const { profile, loadingProfile } = useProfile(); // ✅ use profile
+  const { profile, loadingProfile, refreshProfile } = useProfile(); // ✅ use profile
 
   const [weeklyData, setWeeklyData] = useState({
     labels: [],
@@ -240,8 +241,17 @@ const DashboardScreen = ({ navigation }) => {
     }
   }, [profile]); // ✅ ensure console logs when profile is fetched
 
+  // Refresh profile when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      if (refreshProfile) {
+        refreshProfile();
+      }
+    }, [refreshProfile])
+  );
+
   // Avatar Function
-  const fullName = user?.name || "User";
+  const fullName = profile?.name || user?.name || "User";
   const initials = fullName
     .split(" ")
     .map((n) => n[0])
@@ -397,7 +407,7 @@ const DashboardScreen = ({ navigation }) => {
           <View style={styles.greetingContainer}>
               <View>
               <Text style={styles.greetingText}>Good morning</Text>
-              <Text style={styles.welcomeText}>{user?.name || "Vendor"}</Text>
+              <Text style={styles.welcomeText}>{profile?.name || user?.name || "Vendor"}</Text>
               </View>
               <TouchableOpacity
                 style={styles.avatarContainer}
