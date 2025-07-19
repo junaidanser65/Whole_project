@@ -718,6 +718,32 @@ const LoginScreen = ({ navigation }) => {
     }).start();
   }, []);
 
+  // const handleLogin = async () => {
+  //   if (!email || !password) {
+  //     alert("Please enter email and password");
+  //     return;
+  //   }
+
+  //   try {
+  //     Keyboard.dismiss();
+
+  //     // Call the API to login
+  //     const result = await login(email, password);
+  //     // console.log("Logged in user:", user);
+
+  //     if (result.success) {
+  //       console.log("Logged in user:", result);
+  //       // Navigate to main app on successful login
+  //       navigation.navigate("MainApp");
+  //     } else {
+  //       console.log("Login failed:", result.error);
+  //     }
+  //   } catch (error) {
+  //     console.error("Login error:", error);
+  //     alert(error.message || "Login failed. Please try again.");
+  //   }
+  // };
+
   const handleLogin = async () => {
     if (!email || !password) {
       alert("Please enter email and password");
@@ -729,12 +755,19 @@ const LoginScreen = ({ navigation }) => {
 
       // Call the API to login
       const result = await login(email, password);
-      // console.log("Logged in user:", user);
 
       if (result.success) {
         console.log("Logged in user:", result);
-        // Navigate to main app on successful login
-        navigation.navigate("MainApp");
+        console.log("User:", result.user);
+        console.log("Verified value:", result.user.is_verified);
+        console.log("Type of is_verified:", typeof result.user.is_verified);
+
+        // Check if vendor is verified
+        if (result.user.is_verified === 1 || result.user.is_verified === true) {
+          navigation.navigate("MainApp");
+        } else {
+          alert("Please wait for the admin to verify your account. Thank you!");
+        }
       } else {
         console.log("Login failed:", result.error);
       }

@@ -2,10 +2,10 @@ const mysql = require('mysql2/promise');
 
 // Create a connection pool
 const pool = mysql.createPool({
-  host: process.env.DB_HOST || "localhost",
-  user: process.env.DB_USER || "root",
-  password: process.env.DB_PASSWORD || "",
-  database: process.env.DB_NAME || "fiesta_vendor_app",
+  host: process.env.DB_HOST || "mysql1003.site4now.net",
+  user: process.env.DB_USER || "abbae8_fypback",
+  password: process.env.DB_PASSWORD || "Unabia.!123",
+  database: process.env.DB_NAME || "db_abbae8_fypback",
   port: process.env.DB_PORT || 3306,
   waitForConnections: true,
   connectionLimit: 10,
@@ -42,6 +42,7 @@ async function initDatabase() {
         address TEXT,
         profile_image VARCHAR(255),
         is_active BOOLEAN DEFAULT TRUE,
+        is_verified BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
@@ -192,8 +193,57 @@ async function initDatabase() {
     `);
 
     console.log("Database tables initialized successfully");
+    
+    // Create admin table
+    await pool.execute(`
+      CREATE TABLE IF NOT EXISTS admins (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(100) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+    
+    // Seed admin user if not exists
+    await seedAdminUser();
+    
   } catch (error) {
     console.error('Error initializing database tables:', error);
+    throw error;
+  }
+}
+
+// Seed admin user
+async function seedAdminUser() {
+  try {
+    const bcrypt = require('bcrypt');
+    const adminEmail = 'admin@fiestacarts.com';
+    const adminPassword = 'admin123';
+    
+    // Check if admin already exists
+    const [existingAdmins] = await pool.execute(
+      'SELECT id FROM admins WHERE email = ?',
+      [adminEmail]
+    );
+    
+    if (existingAdmins.length === 0) {
+      // Hash password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(adminPassword, salt);
+      
+      // Insert admin user
+      await pool.execute(
+        'INSERT INTO admins (email, password) VALUES (?, ?)',
+        [adminEmail, hashedPassword]
+      );
+      
+      console.log('Admin user created successfully');
+    } else {
+      console.log('Admin user already exists');
+    }
+  } catch (error) {
+    console.error('Error seeding admin user:', error);
     throw error;
   }
 }
@@ -201,4 +251,5 @@ async function initDatabase() {
 // Call test connection when the app starts
 testConnection();
 
-module.exports = pool;
+// In database.js
+module.exports = { pool, testConnection, seedAdminUser };

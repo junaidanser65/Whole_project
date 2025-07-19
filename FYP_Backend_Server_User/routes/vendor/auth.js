@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const pool = require('../../config/database');
+const { pool } = require("../../config/database");
 
 // Middleware for input validation
 const validateSignupInput = (req, res, next) => {
@@ -213,7 +213,8 @@ router.post('/login', async (req, res) => {
         id: user.id,
         name: user.name,
         email: user.email,
-        phone_number: user.phone_number || null
+        phone_number: user.phone_number || null,
+        is_verified: user.is_verified || false
       }
     });
     

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const pool = require('../../config/database');
+const { pool } = require("../../config/database");
 const { verifyToken, verifyVendor } = require('../../middleware/auth');
 
 // Get all menu items for a vendor

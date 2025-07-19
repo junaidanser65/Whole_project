@@ -424,20 +424,20 @@ const DashboardScreen = ({ navigation }) => {
             </View>
 
         {/* Balance Card */}
-        <Animated.View 
+        <View 
           style={[
             styles.balanceCard, 
-            { 
-              transform: [{ translateY: translateY }],
-              position: 'relative',
-              zIndex: 1000,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 3,
-              elevation: 5,
-              backgroundColor: '#fff', // Ensure background color is set for smooth shadow
-            }
+            // { 
+            //   transform: [{ translateY: translateY }],
+            //   position: 'relative',
+            //   zIndex: 1000,
+            //   shadowColor: '#000',
+            //   shadowOffset: { width: 0, height: 2 },
+            //   shadowOpacity: 0.1,
+            //   shadowRadius: 3,
+            //   elevation: 5,
+            //   backgroundColor: '#fff', 
+            //            // }
           ]}
         >
           <LinearGradient
@@ -471,7 +471,7 @@ const DashboardScreen = ({ navigation }) => {
               </View>
             </View>
           </LinearGradient>
-        </Animated.View>
+        </View>
 
         {/* Stats Section */}
         <View style={styles.statsSection}>

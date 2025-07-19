@@ -14,6 +14,12 @@ const vendorsRoutes = require('./routes/vendors');
 const bookingRoutes = require('./routes/bookings');
 const availabilityRoutes = require('./routes/availability');
 const reviewRoutes = require('./routes/reviews');
+
+// Admin routes
+const adminAuthRoutes = require('./routes/admin/auth');
+const adminVendorRoutes = require('./routes/admin/vendors');
+const adminUsersRoute = require("./routes/admin/users");
+
 const db = require('./config/database');
 const http = require('http');
 const WebSocket = require('ws');
@@ -49,6 +55,11 @@ app.use('/api/vendors', vendorsRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/availability', availabilityRoutes);
 app.use('/api/reviews', reviewRoutes);
+
+// Admin Routes
+app.use('/api/admin/auth', adminAuthRoutes);
+app.use('/api/admin/vendors', adminVendorRoutes);
+app.use("/api/admin/users", adminUsersRoute);
 
 // Test route
 app.get('/', (req, res) => {

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, ScrollView, Alert, Animated, Switch, TouchableOpacity } from 'react-native';
-import { Text, Avatar, ListItem, Icon, Button } from 'react-native-elements';
+import { Avatar, ListItem, Icon, Button } from 'react-native-elements';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../../contexts/AuthContext';
@@ -9,6 +9,7 @@ import { websocketService } from '../../services/websocketService';
 import { apiClient, getTotalBookings, getVendorReviews } from '../../services/api';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { Text } from "react-native";
 
 const menuItems = [
   {

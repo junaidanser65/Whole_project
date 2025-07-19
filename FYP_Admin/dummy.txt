@@ -1,0 +1,377 @@
+{
+  "name": "my-v0-project",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "dev": "next dev",
+    "lint": "next lint",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^3.9.1",
+    "@radix-ui/react-accordion": "1.2.2",
+    "@radix-ui/react-alert-dialog": "1.1.4",
+    "@radix-ui/react-aspect-ratio": "1.1.1",
+    "@radix-ui/react-avatar": "1.1.2",
+    "@radix-ui/react-checkbox": "1.1.3",
+    "@radix-ui/react-collapsible": "1.1.2",
+    "@radix-ui/react-context-menu": "2.2.4",
+    "@radix-ui/react-dialog": "1.1.4",
+    "@radix-ui/react-dropdown-menu": "2.1.4",
+    "@radix-ui/react-hover-card": "1.1.4",
+    "@radix-ui/react-label": "2.1.1",
+    "@radix-ui/react-menubar": "1.1.4",
+    "@radix-ui/react-navigation-menu": "1.2.3",
+    "@radix-ui/react-popover": "1.1.4",
+    "@radix-ui/react-progress": "1.1.1",
+    "@radix-ui/react-radio-group": "1.2.2",
+    "@radix-ui/react-scroll-area": "1.2.2",
+    "@radix-ui/react-select": "2.1.4",
+    "@radix-ui/react-separator": "1.1.1",
+    "@radix-ui/react-slider": "1.2.2",
+    "@radix-ui/react-slot": "1.1.1",
+    "@radix-ui/react-switch": "1.1.2",
+    "@radix-ui/react-tabs": "1.1.2",
+    "@radix-ui/react-toast": "1.2.4",
+    "@radix-ui/react-toggle": "1.1.1",
+    "@radix-ui/react-toggle-group": "1.1.1",
+    "@radix-ui/react-tooltip": "1.1.6",
+    "autoprefixer": "^10.4.20",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "1.0.4",
+    "date-fns": "4.1.0",
+    "embla-carousel-react": "8.5.1",
+    "input-otp": "1.4.1",
+    "lucide-react": "^0.454.0",
+    "next": "15.2.4",
+    "next-themes": "^0.4.4",
+    "react": "^19",
+    "react-day-picker": "8.10.1",
+    "react-dom": "^19",
+    "react-hook-form": "^7.54.1",
+    "react-resizable-panels": "^2.1.7",
+    "recharts": "2.15.0",
+    "shadcn": "latest",
+    "sonner": "^1.7.1",
+    "tailwind-merge": "^2.5.5",
+    "tailwindcss-animate": "^1.0.7",
+    "vaul": "^0.9.6",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "postcss": "^8.5",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5"
+  }
+}
+
+
+
+
+
+
+
+
+
+import type { Config } from "tailwindcss"
+
+const config: Config = {
+  ...defaultConfig,
+  content: [
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./node_modules/@radix-ui/themes/dist/**/*.{js,jsx,ts,tsx}",
+    "./src/**/*.{js,ts,jsx,tsx,mdx}",
+    "*.{js,ts,jsx,tsx,mdx}",
+  ],
+  theme: {
+    ...defaultConfig.theme,
+    extend: {
+      ...defaultConfig.theme.extend,
+      colors: {
+        ...defaultConfig.theme.extend.colors,
+        primary: {
+          ...defaultConfig.theme.extend.colors.primary,
+          50: "#f0f9ff",
+          100: "#e0f2fe",
+          200: "#bae6fd",
+          300: "#7dd3fc",
+          400: "#38bdf8",
+          500: "#0ea5e9",
+          600: "#0284c7",
+          700: "#0369a1",
+          800: "#075985",
+          900: "#0c4a6e",
+        },
+        gradient: {
+          start: "#6366F1",
+          middle: "#8B5CF6",
+          end: "#A855F7",
+        },
+      },
+      backgroundImage: {
+        "gradient-primary": "linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #A855F7 100%)",
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+    },
+  },
+  plugins: [...defaultConfig.plugins, require("tailwindcss-animate")],
+}
+
+export default config
+
+
+
+
+
+
+
+
+
+"use client"
+import { useEffect } from "react"
+import { useState } from "react"
+import { Search, Filter, MoreHorizontal, Mail, Phone, MapPin, Check, X } from "lucide-react"
+import { GradientCard } from "./ui/gradient-card"
+import { GradientButton } from "./ui/gradient-button"
+import { Badge } from "./ui/badge"
+import { getVendors, updateVendorVerification, Vendor } from "@/services/vendorService";
+
+export function VendorsList() {
+  const [searchTerm, setSearchTerm] = useState("")
+  // const [vendors, setVendors] = useState([
+  //   {
+  //     id: 1,
+  //     name: "Pizza Palace",
+  //     email: "contact@pizzapalace.com",
+  //     phone: "+1 234 567 8900",
+  //     location: "Downtown",
+  //     status: "verified",
+  //     joinDate: "2024-01-15",
+  //     category: "Italian",
+  //     avatar: "/placeholder.svg?height=40&width=40&text=PP",
+  //   },
+  //   {
+  //     id: 2,
+  //     name: "Taco Truck",
+  //     email: "info@tacotruck.com",
+  //     phone: "+1 234 567 8901",
+  //     location: "Food Court",
+  //     status: "pending",
+  //     joinDate: "2024-02-20",
+  //     category: "Mexican",
+  //     avatar: "/placeholder.svg?height=40&width=40&text=TT",
+  //   },
+  //   {
+  //     id: 3,
+  //     name: "Burger Barn",
+  //     email: "hello@burgerbarn.com",
+  //     phone: "+1 234 567 8902",
+  //     location: "Main Street",
+  //     status: "verified",
+  //     joinDate: "2024-01-10",
+  //     category: "American",
+  //     avatar: "/placeholder.svg?height=40&width=40&text=BB",
+  //   },
+  //   {
+  //     id: 4,
+  //     name: "Sushi Station",
+  //     email: "orders@sushistation.com",
+  //     phone: "+1 234 567 8903",
+  //     location: "Mall",
+  //     status: "pending",
+  //     joinDate: "2024-03-05",
+  //     category: "Japanese",
+  //     avatar: "/placeholder.svg?height=40&width=40&text=SS",
+  //   },
+  // ])
+
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getVendors(1, 100);
+        setVendors(data.data);
+      } catch (err) {
+        console.error("Error fetching vendors", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+ 
+
+  // const handleVerifyVendor = (vendorId: number) => {
+  //   setVendors(vendors.map((vendor) => (vendor.id === vendorId ? { ...vendor, status: "verified" } : vendor)))
+  // }
+  const handleVerifyVendor = async (vendorId: number) => {
+    try {
+      const updatedVendor = await updateVendorVerification(vendorId, true);
+      setVendors((prev) =>
+        prev.map((vendor) =>
+          vendor.id === vendorId ? { ...vendor, is_verified: true } : vendor
+        )
+      );
+    } catch (err) {
+      console.error("Error verifying vendor", err);
+    }
+  };
+
+
+  const handleRejectVendor = (vendorId: number) => {
+    setVendors(vendors.map((vendor) => (vendor.id === vendorId ? { ...vendor, status: "rejected" } : vendor)))
+  }
+
+  const filteredVendors = vendors.filter(
+    (vendor) =>
+      vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vendor.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vendor.category.toLowerCase().includes(searchTerm.toLowerCase()),
+  )
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold bg-gradient-to-r from-[#6366F1] via-[#8B5CF6] to-[#A855F7] bg-clip-text text-transparent">
+          Vendors Management
+        </h2>
+        <GradientButton>Export Vendors</GradientButton>
+      </div>
+
+      <GradientCard>
+        <div className="flex items-center gap-4 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <input
+              type="text"
+              placeholder="Search vendors..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#6366F1] focus:border-transparent"
+            />
+          </div>
+          <button className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+            <Filter className="h-4 w-4" />
+            Filter
+          </button>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-3 px-4 font-semibold">Vendor</th>
+                <th className="text-left py-3 px-4 font-semibold">Contact</th>
+                <th className="text-left py-3 px-4 font-semibold">Location</th>
+                <th className="text-left py-3 px-4 font-semibold">Status</th>
+                <th className="text-left py-3 px-4 font-semibold">Join Date</th>
+                <th className="text-left py-3 px-4 font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredVendors.map((vendor) => (
+                <tr
+                  key={vendor.id}
+                  className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                >
+                  <td className="py-4 px-4">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={vendor.avatar || "/placeholder.svg"}
+                        alt={vendor.name}
+                        className="h-10 w-10 rounded-full object-cover"
+                      />
+                      <div>
+                        <div className="font-medium">{vendor.name}</div>
+                        <div className="text-sm text-gray-500">
+                          {vendor.category}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm">
+                        <Mail className="h-3 w-3 text-gray-400" />
+                        {vendor.email}
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Phone className="h-3 w-3 text-gray-400" />
+                        {vendor.phone}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="flex items-center gap-2 text-sm">
+                      <MapPin className="h-3 w-3 text-gray-400" />
+                      {vendor.location}
+                    </div>
+                  </td>
+                  <td className="py-4 px-4">
+                    {/* <Badge
+                      variant={
+                        vendor.status === "verified"
+                          ? "success"
+                          : vendor.status === "pending"
+                            ? "warning"
+                            : "destructive"
+                      }
+                    >
+                      {vendor.status}
+                    </Badge> */}
+                    <Badge variant={vendor.is_verified ? "success" : "warning"}>
+                      {vendor.is_verified ? "verified" : "pending"}
+                    </Badge>
+                  </td>
+                  <td className="py-4 px-4 text-sm text-gray-600">
+                    {vendor.created_at}
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="flex items-center gap-2">
+                      {vendor.status === "pending" && (
+                        <>
+                          <button
+                            onClick={() => handleVerifyVendor(vendor.id)}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            title="Verify Vendor"
+                          >
+                            <Check className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleRejectVendor(vendor.id)}
+                            className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Reject Vendor"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </>
+                      )}
+                      <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                        <MoreHorizontal className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </GradientCard>
+    </div>
+  );
+}
