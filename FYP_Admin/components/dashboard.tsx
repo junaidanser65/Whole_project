@@ -148,8 +148,8 @@ export function Dashboard() {
       title: "Pending Verification",
       value: pendingVendorCount.toLocaleString(),
       icon: Clock,
-      change: "", // optional: could show change if tracking verification delays
-      changeType: "neutral" as const,
+      change: "0%", // optional: could show change if tracking verification delays
+      changeType: "positive" as const,
     },
   ];
 
