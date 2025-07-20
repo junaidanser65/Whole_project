@@ -37,9 +37,18 @@ function LoginPage({ onLoginSuccess }: LoginPageProps) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#6366F1] via-[#8B5CF6] to-[#A855F7] flex items-center justify-center px-6">
-      <div className="flex flex-col lg:flex-row w-full max-w-6xl bg-white/10 rounded-2xl overflow-hidden shadow-xl backdrop-blur-md border border-white/20">
+
+       {/* Background decorative elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-green-100 opacity-30 rounded-full animate-pulse-slow"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-teal-100 opacity-20 rounded-full animate-float"></div>
+        <div className="absolute top-1/2 left-1/4 w-32 h-32 bg-slate-200 opacity-25 rounded-full animate-pulse-slow"></div>
+      </div>
+
+
+      <div className="flex flex-col lg:flex-row w-full max-w-6xl rounded-2xl overflow-hidden shadow-xl backdrop-blur-md border border-white/20">
         {/* Left: Logo */}
-        <div className="flex-1 flex items-center justify-center bg-white/20 p-10">
+        <div className="flex-1 flex items-center justify-center p-10">
           <img
             src="/logo.png"
             alt="Fiesta Carts Logo"
