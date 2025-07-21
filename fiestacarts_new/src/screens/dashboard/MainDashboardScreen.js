@@ -6,9 +6,11 @@ import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import { colors, spacing, typography } from '../../styles/theme';
 import { useAuth } from '../../contexts/AuthContext';
 import VendorCard from '../vendor/components/VendorCard';
-import { getVendors } from '../../api/apiService';
+import { getVendors, getVendorReviewsForSentiment } from '../../api/apiService';
 import * as Location from 'expo-location';
 import { websocketService } from '../../services/websocketService';
+import { analyzeSentiment } from '../../services/sentimentAnalysis';
+import SentimentBadge from '../../components/common/SentimentBadge';
 
 const CATEGORIES = [
   { id: '1', name: 'Catering', icon: 'restaurant-outline', color: '#FF6B6B' },
@@ -54,6 +56,7 @@ export default function MainDashboardScreen({ navigation }) {
   const [mapRegion, setMapRegion] = useState(null);
   const [isMapLoading, setIsMapLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [vendorSentiments, setVendorSentiments] = useState({});
 
   useEffect(() => {
     fetchVendors();
@@ -126,6 +129,10 @@ export default function MainDashboardScreen({ navigation }) {
         setVendors(vendorsWithLatLng);
         setFeaturedVendors(vendorsWithLatLng.slice(0, 5));
         setFilteredVendors(vendorsWithLatLng);
+        
+        // Fetch sentiment analysis for vendors
+        await fetchVendorSentiments(vendorsWithLatLng);
+        
         // Debug: Log the first vendor to see available fields
         if (vendorsWithLatLng.length > 0) {
           console.log('First vendor data:', vendorsWithLatLng[0]);
@@ -141,6 +148,41 @@ export default function MainDashboardScreen({ navigation }) {
     } finally {
       setLoadingVendors(false);
       setIsRefreshing(false);
+    }
+  };
+
+  const fetchVendorSentiments = async (vendorsList) => {
+    try {
+      const sentiments = {};
+      
+      // Fetch reviews for each vendor and analyze sentiment
+      for (const vendor of vendorsList) {
+        try {
+          console.log(`Fetching reviews for vendor ${vendor.id} (${vendor.name})`);
+          const reviews = await getVendorReviewsForSentiment(vendor.id);
+          console.log(`Found ${reviews.length} reviews for vendor ${vendor.id}`);
+          
+          const sentiment = analyzeSentiment(reviews);
+          sentiments[vendor.id] = sentiment;
+          
+          console.log(`Sentiment for vendor ${vendor.id}:`, sentiment);
+        } catch (error) {
+          console.error(`Error fetching sentiment for vendor ${vendor.id}:`, error);
+          // Set default sentiment for vendors with no reviews
+          sentiments[vendor.id] = {
+            sentiment: 'neutral',
+            score: 0,
+            confidence: 0,
+            label: 'No reviews yet',
+            color: '#94A3B8'
+          };
+        }
+      }
+      
+      console.log('Final sentiments object:', sentiments);
+      setVendorSentiments(sentiments);
+    } catch (error) {
+      console.error('Error fetching vendor sentiments:', error);
     }
   };
 
@@ -268,9 +310,25 @@ export default function MainDashboardScreen({ navigation }) {
                 <Ionicons name="star" size={14} color="#FFD700" />
                 <Text style={styles.featuredRating}>{vendor.rating || '0.0'}</Text>
               </View>
+              {vendorSentiments[vendor.id] && (
+                <View style={styles.sentimentBadgeContainer}>
+                  <SentimentBadge
+                    sentiment={vendorSentiments[vendor.id].sentiment}
+                    label={vendorSentiments[vendor.id].label}
+                    color={vendorSentiments[vendor.id].color}
+                    score={vendorSentiments[vendor.id].score}
+                    size="small"
+                  />
+                </View>
+              )}
             </View>
             <View style={styles.featuredInfo}>
               <Text style={styles.featuredName} numberOfLines={1}>{vendor.name}</Text>
+              {vendorSentiments[vendor.id] && vendorSentiments[vendor.id].reviewCount > 0 && (
+                <Text style={styles.sentimentDescription}>
+                  {vendorSentiments[vendor.id].reviewCount} reviews • {vendorSentiments[vendor.id].confidence}% confidence
+                </Text>
+              )}
             </View>
           </TouchableOpacity>
         ))}
@@ -354,6 +412,70 @@ export default function MainDashboardScreen({ navigation }) {
     </View>
   );
 
+  // Sentiment Analysis Overview
+  const renderSentimentOverview = () => {
+    const sentiments = Object.values(vendorSentiments);
+    if (sentiments.length === 0) return null;
+    
+    // Check if there are any vendors with actual reviews
+    const vendorsWithReviews = sentiments.filter(s => s.reviewCount > 0);
+    if (vendorsWithReviews.length === 0) return null;
+
+    const sentimentStats = {
+      very_positive: sentiments.filter(s => s.sentiment === 'very_positive').length,
+      positive: sentiments.filter(s => s.sentiment === 'positive').length,
+      neutral: sentiments.filter(s => s.sentiment === 'neutral').length,
+      negative: sentiments.filter(s => s.sentiment === 'negative').length,
+      very_negative: sentiments.filter(s => s.sentiment === 'very_negative').length,
+    };
+
+    const totalVendors = sentiments.length;
+    const positiveVendors = sentimentStats.very_positive + sentimentStats.positive;
+    const positivePercentage = Math.round((positiveVendors / totalVendors) * 100);
+
+    return (
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Customer Sentiment Overview</Text>
+        </View>
+        <View style={styles.sentimentOverviewCard}>
+          <View style={styles.sentimentStatsRow}>
+            <View style={styles.sentimentStat}>
+              <Text style={styles.sentimentStatNumber}>{positivePercentage}%</Text>
+              <Text style={styles.sentimentStatLabel}>Positive Sentiment</Text>
+            </View>
+            <View style={styles.sentimentStat}>
+              <Text style={styles.sentimentStatNumber}>{totalVendors}</Text>
+              <Text style={styles.sentimentStatLabel}>Total Vendors</Text>
+            </View>
+            <View style={styles.sentimentStat}>
+              <Text style={styles.sentimentStatNumber}>
+                {sentiments.reduce((sum, s) => sum + s.reviewCount, 0)}
+              </Text>
+              <Text style={styles.sentimentStatLabel}>Total Reviews</Text>
+            </View>
+          </View>
+          <View style={styles.sentimentBreakdown}>
+            <Text style={styles.breakdownTitle}>Sentiment Distribution:</Text>
+            <View style={styles.breakdownItems}>
+              {Object.entries(sentimentStats).map(([sentiment, count]) => (
+                <View key={sentiment} style={styles.breakdownItem}>
+                  <SentimentBadge
+                    sentiment={sentiment}
+                    label={sentiment.replace('_', ' ').toUpperCase()}
+                    color={sentiments.find(s => s.sentiment === sentiment)?.color || '#94A3B8'}
+                    size="small"
+                  />
+                  <Text style={styles.breakdownCount}>{count}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
   // All Vendors with improved grid
   const renderAllVendors = () => (
     <View style={styles.section}>
@@ -389,11 +511,27 @@ export default function MainDashboardScreen({ navigation }) {
                 />
                 <View style={styles.vendorRatingBadge}>
                   <Ionicons name="star" size={12} color="#FFD700" />
-                  <Text style={styles.vendorRating}>{vendor.rating || '4.8'}</Text>
+                  <Text style={styles.vendorRating}>{vendor.rating || '0.0'}</Text>
                 </View>
+                {vendorSentiments[vendor.id] && (
+                  <View style={styles.sentimentBadgeContainer}>
+                    <SentimentBadge
+                      sentiment={vendorSentiments[vendor.id].sentiment}
+                      label={vendorSentiments[vendor.id].label}
+                      color={vendorSentiments[vendor.id].color}
+                      score={vendorSentiments[vendor.id].score}
+                      size="small"
+                    />
+                  </View>
+                )}
               </View>
               <View style={styles.vendorInfo}>
                 <Text style={styles.vendorName} numberOfLines={1}>{vendor.name}</Text>
+                {vendorSentiments[vendor.id] && vendorSentiments[vendor.id].reviewCount > 0 && (
+                  <Text style={styles.sentimentDescription}>
+                    {vendorSentiments[vendor.id].reviewCount} reviews
+                  </Text>
+                )}
               </View>
             </TouchableOpacity>
           ))}
@@ -420,6 +558,7 @@ export default function MainDashboardScreen({ navigation }) {
         {renderHeader()}
         {renderFeaturedVendors()}
         {renderSpecialOffers()}
+        {renderSentimentOverview()}
         {renderMapPreview()}
         {renderAllVendors()}
         <View style={styles.bottomPadding} />
@@ -818,6 +957,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 2,
   },
+  sentimentBadgeContainer: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+  },
+  sentimentDescription: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+    fontWeight: '500',
+  },
   vendorInfo: {
     padding: 12,
   },
@@ -844,5 +994,65 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 100,
+  },
+  
+  // Sentiment Overview Styles
+  sentimentOverviewCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 20,
+    padding: 20,
+    marginHorizontal: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  sentimentStatsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  sentimentStat: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  sentimentStatNumber: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  sentimentStatLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  sentimentBreakdown: {
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    paddingTop: 16,
+  },
+  breakdownTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 12,
+  },
+  breakdownItems: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  breakdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  breakdownCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1F2937',
   },
 });

@@ -77,14 +77,18 @@ router.post('/', verifyToken, async (req, res) => {
 router.get('/vendor/:vendorId', async (req, res) => {
   try {
     const { vendorId } = req.params;
+    console.log('Fetching reviews for vendor ID:', vendorId);
 
     const [reviews] = await pool.execute(`
-      SELECT r.*, u.name as user_name
+      SELECT r.*, u.name as user_name, b.booking_date, b.total_amount
       FROM reviews r
       JOIN users u ON r.user_id = u.id
+      JOIN bookings b ON r.booking_id = b.id
       WHERE r.vendor_id = ?
       ORDER BY r.created_at DESC
     `, [vendorId]);
+
+    console.log(`Found ${reviews.length} reviews for vendor ${vendorId}`);
 
     res.json({
       success: true,

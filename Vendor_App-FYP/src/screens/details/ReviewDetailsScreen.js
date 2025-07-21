@@ -35,10 +35,22 @@ const ReviewDetailsScreen = ({ route, navigation }) => {
     try {
       if (!refreshing) setLoading(true);
       const response = await getVendorReviews();
-      setReviews(response.reviews || []);
+      console.log('Reviews response:', response);
+      
+      if (response && response.success) {
+        setReviews(response.reviews || []);
+      } else {
+        console.error('Reviews response indicates failure:', response);
+        setReviews([]);
+      }
     } catch (error) {
       console.error('Error fetching reviews:', error);
-      alert('Failed to fetch reviews. Please try again.');
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      setReviews([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -186,6 +198,11 @@ const ReviewDetailsScreen = ({ route, navigation }) => {
       <RNText style={styles.emptySubtitle}>
         Customer reviews will appear here once you start receiving them
       </RNText>
+      <View style={styles.emptyActionContainer}>
+        <RNText style={styles.emptyActionText}>
+          Reviews are automatically added when customers rate your services after completing their bookings.
+        </RNText>
+      </View>
     </View>
   );
 
@@ -195,6 +212,9 @@ const ReviewDetailsScreen = ({ route, navigation }) => {
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#6366F1" />
           <RNText style={styles.loadingText}>Loading reviews...</RNText>
+          <RNText style={styles.loadingSubtext}>
+            Please wait while we fetch your customer reviews
+          </RNText>
         </View>
       </SafeAreaView>
     );
@@ -534,6 +554,13 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontWeight: '500',
   },
+  loadingSubtext: {
+    fontSize: 14,
+    color: '#94A3B8',
+    marginTop: 8,
+    fontWeight: '400',
+    textAlign: 'center',
+  },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -562,6 +589,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     fontWeight: '500',
+  },
+  emptyActionContainer: {
+    marginTop: 20,
+    paddingHorizontal: 20,
+  },
+  emptyActionText: {
+    fontSize: 13,
+    color: '#94A3B8',
+    textAlign: 'center',
+    lineHeight: 18,
+    fontWeight: '400',
   },
 });
 

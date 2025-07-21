@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   View,
@@ -35,26 +35,40 @@ const DEFAULT_TIMINGS = {
 const TimingsScreen = ({ navigation }) => {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date());
-  // Set startTime to next full hour, endTime to the hour after that
-  const getDefaultTimes = () => {
-    const now = new Date();
-    const start = new Date(now);
-    start.setMinutes(0, 0, 0);
-    if (now.getMinutes() > 0 || now.getSeconds() > 0 || now.getMilliseconds() > 0) {
-      start.setHours(start.getHours() + 1);
-    }
-    const end = new Date(start);
-    end.setHours(end.getHours() + 1);
-    return { start, end };
-  };
-  const { start, end } = getDefaultTimes();
-  const [startTime, setStartTime] = useState(start);
-  const [endTime, setEndTime] = useState(end);
+  const [numberOfSlots, setNumberOfSlots] = useState(1);
+  const [timeSlots, setTimeSlots] = useState([]);
   const [isDateModalVisible, setDateModalVisible] = useState(false);
-  const [isStartTimeModalVisible, setStartTimeModalVisible] = useState(false);
-  const [isEndTimeModalVisible, setEndTimeModalVisible] = useState(false);
+  const [isSlotNumberModalVisible, setSlotNumberModalVisible] = useState(false);
+  const [isTimeSlotModalVisible, setTimeSlotModalVisible] = useState(false);
+  const [editingSlotIndex, setEditingSlotIndex] = useState(null);
   const [isAvailable, setIsAvailable] = useState(true);
   const [loading, setLoading] = useState(false);
+
+  // Auto-generate time slots when numberOfSlots changes
+  useEffect(() => {
+    const generateDefaultSlots = () => {
+      const slots = [];
+      const baseTime = new Date();
+      baseTime.setHours(9, 0, 0, 0); // Start at 9 AM
+      
+      for (let i = 0; i < numberOfSlots; i++) {
+        const slotTime = new Date(baseTime);
+        slotTime.setHours(baseTime.getHours() + (i * 2)); // 2-hour intervals
+        
+        slots.push({
+          id: Date.now() + i,
+          time: slotTime,
+          label: `Slot ${i + 1}`
+        });
+      }
+      
+      setTimeSlots(slots);
+    };
+
+    if (numberOfSlots > 0) {
+      generateDefaultSlots();
+    }
+  }, [numberOfSlots]);
 
   const formatDate = (date) => {
     return date.toLocaleDateString('en-US', {
@@ -85,7 +99,70 @@ const TimingsScreen = ({ navigation }) => {
     return slots;
   };
 
-  const timeSlots = generateTimeSlots();
+  const timeGridSlots = generateTimeSlots();
+
+  const SlotNumberPicker = ({ isVisible, onClose, onSelect, selectedNumber }) => (
+    <Modal
+      visible={isVisible}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modernModalContent}>
+          <View style={styles.modernModalHeader}>
+            <View style={styles.modalTitleContainer}>
+              <View style={styles.modalIconContainer}>
+                <Ionicons name="list" size={24} color="#6366F1" />
+              </View>
+              <View>
+                <RNText style={styles.modernModalTitle}>Number of Time Slots</RNText>
+                <RNText style={styles.modernModalSubtitle}>How many time slots do you want to offer?</RNText>
+              </View>
+            </View>
+            <TouchableOpacity onPress={onClose} style={styles.modernCloseButton}>
+              <Ionicons name="close" size={20} color="#64748B" />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.slotNumberGrid} showsVerticalScrollIndicator={false}>
+            <View style={styles.slotNumberContainer}>
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((number) => {
+                const isSelected = selectedNumber === number;
+                
+                return (
+                  <TouchableOpacity
+                    key={number}
+                    style={[
+                      styles.slotNumberItem,
+                      isSelected && styles.selectedSlotNumberItem
+                    ]}
+                    onPress={() => {
+                      onSelect(number);
+                      onClose();
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <RNText style={[
+                      styles.slotNumberText,
+                      isSelected && styles.selectedSlotNumberText
+                    ]}>
+                      {number}
+                    </RNText>
+                    {isSelected && (
+                      <View style={styles.selectedIndicator}>
+                        <Ionicons name="checkmark" size={12} color="#FFFFFF" />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  );
 
   const CustomTimePicker = ({ isVisible, onClose, onSelect, selectedTime, title }) => (
     <Modal
@@ -143,7 +220,7 @@ const TimingsScreen = ({ navigation }) => {
           <RNText style={styles.sectionTitle}>Select Time</RNText>
           <ScrollView style={styles.timeGrid} showsVerticalScrollIndicator={false}>
             <View style={styles.timeGridContainer}>
-              {timeSlots.map((time, index) => {
+              {timeGridSlots.map((time, index) => {
                 const isSelected = selectedTime.getHours() === time.getHours() && 
                                 selectedTime.getMinutes() === time.getMinutes();
                 const isPastTime = new Date() > time && new Date().toDateString() === time.toDateString();
@@ -323,16 +400,16 @@ const TimingsScreen = ({ navigation }) => {
 
   const handleSave = async () => {
     try {
-      // Validate times
-      if (startTime >= endTime) {
-        Alert.alert('Invalid Time', 'End time must be after start time');
+      // Validate time slots
+      if (timeSlots.length === 0) {
+        Alert.alert('Invalid Time Slots', 'Please add at least one time slot');
         return;
       }
 
       setLoading(true);
 
       // Format the data according to the database structure
-      const timingData = formatTimingData(selectedDate, startTime, endTime);
+      const timingData = formatTimingData(selectedDate, timeSlots);
       
       // Add vendor_id from the authenticated user
       timingData.vendor_id = user.id;
@@ -359,6 +436,36 @@ const TimingsScreen = ({ navigation }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const addTimeSlot = () => {
+    const newSlot = {
+      id: Date.now(),
+      time: new Date(),
+      label: `Slot ${timeSlots.length + 1}`
+    };
+    setTimeSlots([...timeSlots, newSlot]);
+    setNumberOfSlots(numberOfSlots + 1);
+  };
+
+  const updateSlotLabels = (slots) => {
+    return slots.map((slot, index) => ({
+      ...slot,
+      label: `Slot ${index + 1}`
+    }));
+  };
+
+  const removeTimeSlot = (index) => {
+    const updatedSlots = timeSlots.filter((_, i) => i !== index);
+    const renumberedSlots = updateSlotLabels(updatedSlots);
+    setTimeSlots(renumberedSlots);
+    setNumberOfSlots(numberOfSlots - 1);
+  };
+
+  const updateTimeSlot = (index, newTime) => {
+    const updatedSlots = [...timeSlots];
+    updatedSlots[index] = { ...updatedSlots[index], time: newTime };
+    setTimeSlots(updatedSlots);
   };
 
   return (
@@ -449,65 +556,102 @@ const TimingsScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
 
-          {/* Time Range Card */}
+          {/* Number of Time Slots Card */}
           {isAvailable && (
+            <View style={styles.card}>
+              <View style={styles.cardTitleContainer}>
+                <View style={styles.cardIconContainer}>
+                  <Ionicons name="list" size={24} color="#6366F1" />
+                </View>
+                <View style={styles.cardTitleSection}>
+                  <RNText style={styles.cardTitle}>Number of Time Slots</RNText>
+                  <RNText style={styles.cardSubtitle}>
+                    How many time slots do you want to offer?
+                  </RNText>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.pickerButton}
+                onPress={() => setSlotNumberModalVisible(true)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.pickerContent}>
+                  <View style={styles.pickerIconContainer}>
+                    <Ionicons name="list-outline" size={20} color="#6366F1" />
+                  </View>
+                  <RNText style={styles.pickerButtonText}>
+                    {numberOfSlots} {numberOfSlots === 1 ? 'slot' : 'slots'}
+                  </RNText>
+                  <Ionicons name="chevron-forward" size={20} color="#94A3B8" />
+                </View>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Time Slots Card */}
+          {isAvailable && numberOfSlots > 0 && (
             <View style={styles.card}>
               <View style={styles.cardTitleContainer}>
                 <View style={styles.cardIconContainer}>
                   <Ionicons name="time" size={24} color="#6366F1" />
                 </View>
                 <View style={styles.cardTitleSection}>
-                  <RNText style={styles.cardTitle}>Time Range</RNText>
+                  <RNText style={styles.cardTitle}>Time Slots</RNText>
                   <RNText style={styles.cardSubtitle}>
-                    Set your working hours
+                    Set the specific times for each slot
                   </RNText>
                 </View>
+                <TouchableOpacity
+                  style={styles.addSlotButton}
+                  onPress={addTimeSlot}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons name="add" size={20} color="#6366F1" />
+                </TouchableOpacity>
               </View>
 
-              <View style={styles.timeContainer}>
-                <TouchableOpacity
-                  style={styles.timePickerButton}
-                  onPress={() => setStartTimeModalVisible(true)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.timePickerContent}>
-                    <View style={styles.timeIconContainer}>
-                      <Ionicons name="play-outline" size={18} color="#10B981" />
-                    </View>
-                    <View style={styles.timeTextContainer}>
-                      <RNText style={styles.timeLabel}>Start Time</RNText>
-                      <RNText style={styles.timeValue}>
-                        {formatTime(startTime)}
-                      </RNText>
-                    </View>
-                  </View>
-                </TouchableOpacity>
-
-                <View style={styles.timeSeparator}>
-                  <View style={styles.separatorLine} />
-                  <RNText style={styles.toText}>to</RNText>
-                  <View style={styles.separatorLine} />
-                </View>
-
-                <TouchableOpacity
-                  style={styles.timePickerButton}
-                  onPress={() => setEndTimeModalVisible(true)}
-                  activeOpacity={0.7}
-                >
-                  <View style={styles.timePickerContent}>
-                    <View
-                      style={[styles.timeIconContainer, styles.endTimeIcon]}
+              <View style={styles.timeSlotsContainer}>
+                {timeSlots.map((slot, index) => (
+                  <View key={slot.id} style={styles.timeSlotItem}>
+                    <TouchableOpacity
+                      style={styles.timeSlotButton}
+                      onPress={() => {
+                        setEditingSlotIndex(index);
+                        setTimeSlotModalVisible(true);
+                      }}
+                      activeOpacity={0.7}
                     >
-                      <Ionicons name="stop-outline" size={18} color="#EF4444" />
-                    </View>
-                    <View style={styles.timeTextContainer}>
-                      <RNText style={styles.timeLabel}>End Time</RNText>
-                      <RNText style={styles.timeValue}>
-                        {formatTime(endTime)}
-                      </RNText>
-                    </View>
+                      <View style={styles.timeSlotContent}>
+                        <View style={styles.timeSlotIconContainer}>
+                          <Ionicons name="time-outline" size={18} color="#6366F1" />
+                        </View>
+                        <View style={styles.timeSlotTextContainer}>
+                          <RNText style={styles.timeSlotLabel}>{slot.label}</RNText>
+                          <RNText style={styles.timeSlotValue}>
+                            {formatTime(slot.time)}
+                          </RNText>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                    
+                    <TouchableOpacity
+                      style={styles.removeSlotButton}
+                      onPress={() => removeTimeSlot(index)}
+                      activeOpacity={0.7}
+                    >
+                      <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                    </TouchableOpacity>
                   </View>
-                </TouchableOpacity>
+                ))}
+                
+                {timeSlots.length === 0 && (
+                  <View style={styles.emptySlotsContainer}>
+                    <Ionicons name="time-outline" size={32} color="#CBD5E1" />
+                    <RNText style={styles.emptySlotsText}>No time slots added yet</RNText>
+                    <RNText style={styles.emptySlotsSubtext}>Tap the + button to add your first time slot</RNText>
+                  </View>
+                )}
               </View>
             </View>
           )}
@@ -529,11 +673,25 @@ const TimingsScreen = ({ navigation }) => {
                   </RNText>
                 </View>
                 <View style={styles.summaryRow}>
-                  <RNText style={styles.summaryLabel}>Duration:</RNText>
+                  <RNText style={styles.summaryLabel}>Time Slots:</RNText>
                   <RNText style={styles.summaryValue}>
-                    {formatTime(startTime)} - {formatTime(endTime)}
+                    {timeSlots.length} {timeSlots.length === 1 ? 'slot' : 'slots'}
                   </RNText>
                 </View>
+                {timeSlots.length > 0 && (
+                  <View style={styles.summaryRow}>
+                    <RNText style={styles.summaryLabel}>Times:</RNText>
+                    <View style={styles.timeSlotsSummary}>
+                      {timeSlots.map((slot, index) => (
+                        <View key={slot.id} style={styles.timeSlotSummary}>
+                          <RNText style={styles.timeSlotSummaryText}>
+                            {formatTime(slot.time)}
+                          </RNText>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
                 <View style={styles.summaryRow}>
                   <RNText style={styles.summaryLabel}>Status:</RNText>
                   <View style={styles.statusBadge}>
@@ -583,20 +741,26 @@ const TimingsScreen = ({ navigation }) => {
         selectedDate={selectedDate}
       />
 
-      <CustomTimePicker
-        isVisible={isStartTimeModalVisible}
-        onClose={() => setStartTimeModalVisible(false)}
-        onSelect={setStartTime}
-        selectedTime={startTime}
-        title="Select Start Time"
+      <SlotNumberPicker
+        isVisible={isSlotNumberModalVisible}
+        onClose={() => setSlotNumberModalVisible(false)}
+        onSelect={setNumberOfSlots}
+        selectedNumber={numberOfSlots}
       />
 
       <CustomTimePicker
-        isVisible={isEndTimeModalVisible}
-        onClose={() => setEndTimeModalVisible(false)}
-        onSelect={setEndTime}
-        selectedTime={endTime}
-        title="Select End Time"
+        isVisible={isTimeSlotModalVisible}
+        onClose={() => {
+          setTimeSlotModalVisible(false);
+          setEditingSlotIndex(null);
+        }}
+        onSelect={(newTime) => {
+          if (editingSlotIndex !== null) {
+            updateTimeSlot(editingSlotIndex, newTime);
+          }
+        }}
+        selectedTime={editingSlotIndex !== null ? timeSlots[editingSlotIndex]?.time : new Date()}
+        title="Select Time Slot"
       />
     </SafeAreaView>
   );
@@ -739,64 +903,87 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   
-  // Time Container Styles
-  timeContainer: {
-    gap: 16,
+  // Time Slots Styles
+  timeSlotsContainer: {
+    gap: 12,
   },
-  timePickerButton: {
+  timeSlotItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  timeSlotButton: {
+    flex: 1,
     backgroundColor: '#F8FAFC',
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
-  timePickerContent: {
+  timeSlotContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  timeIconContainer: {
+  timeSlotIconContainer: {
     width: 36,
     height: 36,
     borderRadius: 12,
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  endTimeIcon: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-  },
-  timeTextContainer: {
+  timeSlotTextContainer: {
     flex: 1,
   },
-  timeLabel: {
+  timeSlotLabel: {
     fontSize: 12,
     color: '#64748B',
     fontWeight: '600',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  timeValue: {
+  timeSlotValue: {
     fontSize: 18,
     color: '#0F172A',
     fontWeight: '700',
     marginTop: 2,
   },
-  timeSeparator: {
-    flexDirection: 'row',
+  removeSlotButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    justifyContent: 'center',
     alignItems: 'center',
-    marginVertical: 8,
   },
-  separatorLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#E2E8F0',
+  addSlotButton: {
+    width: 40,
+    height: 35,
+    right: 26,
+    bottom: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  toText: {
-    marginHorizontal: 16,
+  emptySlotsContainer: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    paddingHorizontal: 20,
+  },
+  emptySlotsText: {
+    fontSize: 16,
+    color: '#64748B',
+    fontWeight: '600',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  emptySlotsSubtext: {
     fontSize: 14,
     color: '#94A3B8',
-    fontWeight: '600',
+    textAlign: 'center',
+    lineHeight: 20,
   },
   
   // Summary Card Styles
@@ -1163,6 +1350,63 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  
+  // Slot Number Picker Styles
+  slotNumberGrid: {
+    maxHeight: 300,
+  },
+  slotNumberContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  slotNumberItem: {
+    width: '30%',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  selectedSlotNumberItem: {
+    backgroundColor: '#6366F1',
+    borderColor: '#6366F1',
+    shadowColor: "#6366F1",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  slotNumberText: {
+    fontSize: 24,
+    color: '#0F172A',
+    fontWeight: '700',
+  },
+  selectedSlotNumberText: {
+    color: '#FFFFFF',
+  },
+  
+  // Time Slots Summary Styles
+  timeSlotsSummary: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  timeSlotSummary: {
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  timeSlotSummaryText: {
+    fontSize: 14,
+    color: '#6366F1',
+    fontWeight: '600',
   },
 });
 

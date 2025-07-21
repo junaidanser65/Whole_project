@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { pool } = require("../config/database");
-const { verifyToken } = require('../middleware/auth');
+const { verifyToken, verifyVendor } = require('../middleware/auth');
 
 // Create a new booking
 router.post('/', verifyToken, async (req, res) => {
@@ -818,9 +818,10 @@ router.get('/vendor/recent-activities', verifyToken, async (req, res) => {
 });
 
 // Get all reviews for a vendor
-router.get('/vendor/reviews', verifyToken, async (req, res) => {
+router.get('/vendor/reviews', verifyToken, verifyVendor, async (req, res) => {
   try {
     const vendorId = req.user.id;
+    console.log('Fetching reviews for vendor ID:', vendorId);
     
     const [reviews] = await pool.execute(`
       SELECT r.*, u.name as user_name, b.booking_date, b.total_amount
@@ -831,6 +832,8 @@ router.get('/vendor/reviews', verifyToken, async (req, res) => {
       ORDER BY r.created_at DESC
     `, [vendorId]);
 
+    console.log(`Found ${reviews.length} reviews for vendor ${vendorId}`);
+    
     res.json({
       success: true,
       reviews
@@ -839,7 +842,8 @@ router.get('/vendor/reviews', verifyToken, async (req, res) => {
     console.error('Error getting vendor reviews:', error);
     res.status(500).json({
       success: false,
-      message: 'Error getting vendor reviews'
+      message: 'Error getting vendor reviews',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 });

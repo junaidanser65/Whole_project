@@ -3,7 +3,7 @@ import axios from "axios";
 
 // Define the base URL for the API
 // 192.168.18.8
-export const API_URL = "http://192.168.244.240:5000/api";
+export const API_URL = "http://192.168.0.156:5000/api";
 // export const API_URL = "https://fypbackend-production-f754.up.railway.app/api";//ushna /  hamza bhai ke mobile ka
 
 // Helper function to handle API responses
@@ -485,6 +485,8 @@ export const getRecentActivities = async () => {
 export const getVendorReviews = async () => {
   try {
     const token = await AsyncStorage.getItem("auth_token");
+    console.log('Fetching vendor reviews with token:', token ? 'Token exists' : 'No token');
+    
     const response = await axios({
       method: 'GET',
       url: `${API_URL}/bookings/vendor/reviews`,
@@ -494,9 +496,16 @@ export const getVendorReviews = async () => {
       }
     });
 
+    console.log('Vendor reviews API response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error fetching vendor reviews:', error);
+    console.error('Error details:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      url: error.config?.url
+    });
     throw error;
   }
 };

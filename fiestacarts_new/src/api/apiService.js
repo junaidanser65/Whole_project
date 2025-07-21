@@ -414,6 +414,32 @@ export const getVendorReviews = async (vendorId) => {
   }
 };
 
+export const getVendorReviewsForSentiment = async (vendorId) => {
+  try {
+    const response = await api.get(`/reviews/vendor/${vendorId}`);
+    console.log('Sentiment API response:', response);
+    
+    // Check if response exists and has the expected structure
+    if (response && response.data && response.data.reviews) {
+      return response.data.reviews;
+    } else if (response && response.reviews) {
+      // Handle case where response is already the data object
+      return response.reviews;
+    } else {
+      console.log('No reviews found or unexpected response structure:', response);
+      return [];
+    }
+  } catch (error) {
+    console.error('Error fetching vendor reviews for sentiment:', error);
+    console.error('Error details:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status
+    });
+    return [];
+  }
+};
+
 export const checkBookingReview = async (bookingId) => {
   try {
     const response = await api.get(`/reviews/booking/${bookingId}`);

@@ -58,10 +58,10 @@ export const getVendorTimings = async (vendorId) => {
   }
 };
 
-export const formatTimingData = (selectedDate, startTime, endTime) => {
+export const formatTimingData = (selectedDate, timeSlots) => {
   return {
     date: formatDate(selectedDate),
-    available_slots: [`${formatTime(startTime)}`, `${formatTime(endTime)}`],
+    available_slots: timeSlots.map(slot => formatTime(slot.time)),
     is_available: 1
   };
 }; 
