@@ -90,7 +90,7 @@ const ProfileStack = () => (
       name="PaymentMethods"
       component={PaymentMethodsScreen}
       options={{
-        headerShown: true,
+        headerShown: false,
         headerTitle: 'Payment Methods',
         headerBackTitle: 'Back',
       }}

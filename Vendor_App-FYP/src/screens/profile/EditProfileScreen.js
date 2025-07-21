@@ -364,11 +364,11 @@ const EditProfileScreen = ({ navigation, route }) => {
               </View>
               
               {renderInput({
-                label: "Full Name",
+                label: "Business Name",
                 value: formData.name,
                 onChangeText: (text) => setFormData({ ...formData, name: text }),
                 icon: "person-outline",
-                placeholder: "Enter your full name",
+                placeholder: "Enter your Business name",
                 fieldKey: "name"
               })}
 

@@ -16,3 +16,6 @@ export {
   deleteUser,
 } from './userService';
 export type { User, PaginatedResponse as UserPaginatedResponse } from './userService';
+
+export { fetchAdminRecentActivity } from './api';
+export { fetchAdminMonthlyRevenue } from './api';

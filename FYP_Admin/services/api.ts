@@ -36,3 +36,14 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+// Fetch recent activity for admin dashboard
+export const fetchAdminRecentActivity = async () => {
+  const response = await api.get('/admin/recent-activity');
+  return response.data;
+};
+
+export const fetchAdminMonthlyRevenue = async () => {
+  const response = await api.get('/admin/recent-activity');
+  return response.data.monthlyRevenue;
+};

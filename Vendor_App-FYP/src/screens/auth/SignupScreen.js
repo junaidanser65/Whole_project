@@ -390,7 +390,7 @@ const SignupScreen = ({ navigation }) => {
                         style={styles.inputIcon}
                       />
                       <Input
-                        placeholder="First Name"
+                        placeholder="Business Name"
                         value={formData.name}
                         onChangeText={(value) => updateFormData("name", value)}
                         containerStyle={styles.inputContainer}

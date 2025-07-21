@@ -19,6 +19,7 @@ const reviewRoutes = require('./routes/reviews');
 const adminAuthRoutes = require('./routes/admin/auth');
 const adminVendorRoutes = require('./routes/admin/vendors');
 const adminUsersRoute = require("./routes/admin/users");
+const adminRecentActivityRoute = require("./routes/admin/recent-activity");
 
 const db = require('./config/database');
 const http = require('http');
@@ -60,6 +61,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin/vendors', adminVendorRoutes);
 app.use("/api/admin/users", adminUsersRoute);
+app.use("/api/admin/recent-activity", adminRecentActivityRoute);
 
 // Test route
 app.get('/', (req, res) => {
