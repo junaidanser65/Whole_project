@@ -1,9 +1,9 @@
 // API Configuration
-export const API_URL = "http://192.168.18.8:5000/api";
+export const API_URL = "http://192.168.244.240:5000/api";
 // export const API_URL = "https://fypbackend-production-f754.up.railway.app/api";//ushna /  hamza bhai ke mobile ka
 
 // WebSocket Configuration
-export const WS_URL = "ws://192.168.18.8:5000/ws";
+export const WS_URL = "ws://192.168.244.240:5000/ws";
 // export const WS_URL = "wss://fypbackend-production-f754.up.railway.app/ws";
 
 // Map Configuration

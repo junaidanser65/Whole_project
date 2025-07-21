@@ -35,8 +35,21 @@ const DEFAULT_TIMINGS = {
 const TimingsScreen = ({ navigation }) => {
   const { user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [startTime, setStartTime] = useState(new Date());
-  const [endTime, setEndTime] = useState(new Date());
+  // Set startTime to next full hour, endTime to the hour after that
+  const getDefaultTimes = () => {
+    const now = new Date();
+    const start = new Date(now);
+    start.setMinutes(0, 0, 0);
+    if (now.getMinutes() > 0 || now.getSeconds() > 0 || now.getMilliseconds() > 0) {
+      start.setHours(start.getHours() + 1);
+    }
+    const end = new Date(start);
+    end.setHours(end.getHours() + 1);
+    return { start, end };
+  };
+  const { start, end } = getDefaultTimes();
+  const [startTime, setStartTime] = useState(start);
+  const [endTime, setEndTime] = useState(end);
   const [isDateModalVisible, setDateModalVisible] = useState(false);
   const [isStartTimeModalVisible, setStartTimeModalVisible] = useState(false);
   const [isEndTimeModalVisible, setEndTimeModalVisible] = useState(false);

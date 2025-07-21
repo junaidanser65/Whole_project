@@ -26,7 +26,16 @@ export default function LoginScreen({ navigation }) {
     try {
       await login(formData.email, formData.password);
     } catch (err) {
-      setError(err.message || 'Failed to login');
+      // Check for 401 Unauthorized error
+      if (
+        err?.response?.status === 401 ||
+        (typeof err.message === 'string' &&
+          (err.message.includes('401') || err.message.toLowerCase().includes('unauthorized')))
+      ) {
+        setError('Wrong email or password');
+      } else {
+        setError(err.message || 'Failed to login');
+      }
     } finally {
       setLoading(false);
     }
@@ -36,7 +45,7 @@ export default function LoginScreen({ navigation }) {
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.header}>
         <Image
-          source={require('../../assets/logo.png')}
+          source={require('../../../assets/logo.png')}
           style={styles.logo}
           resizeMode="contain"
         />

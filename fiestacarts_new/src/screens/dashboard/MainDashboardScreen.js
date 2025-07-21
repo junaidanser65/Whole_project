@@ -266,7 +266,7 @@ export default function MainDashboardScreen({ navigation }) {
               />
               <View style={styles.featuredBadge}>
                 <Ionicons name="star" size={14} color="#FFD700" />
-                <Text style={styles.featuredRating}>{vendor.rating || '4.8'}</Text>
+                <Text style={styles.featuredRating}>{vendor.rating || '0.0'}</Text>
               </View>
             </View>
             <View style={styles.featuredInfo}>
