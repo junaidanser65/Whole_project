@@ -108,48 +108,59 @@ export default function MainDashboardScreen({ navigation }) {
     };
   }, []);
 
-  const fetchVendors = async () => {
-    setIsRefreshing(true);
-    setLoadingVendors(true);
-    try {
-      const response = await getVendors();
-      if (response && response.success) {
-        // Add latitude/longitude from latest location
-        const vendorsWithLatLng = response.vendors.map(vendor => {
-          const latestLocation = vendor.locations && vendor.locations.length > 0
-            ? vendor.locations[vendor.locations.length - 1]
-            : null;
-          return {
-            ...vendor,
-            latitude: latestLocation ? parseFloat(latestLocation.latitude) : undefined,
-            longitude: latestLocation ? parseFloat(latestLocation.longitude) : undefined,
-            location: latestLocation || null,
-          };
-        });
-        setVendors(vendorsWithLatLng);
-        setFeaturedVendors(vendorsWithLatLng.slice(0, 5));
-        setFilteredVendors(vendorsWithLatLng);
-        
-        // Fetch sentiment analysis for vendors
-        await fetchVendorSentiments(vendorsWithLatLng);
-        
-        // Debug: Log the first vendor to see available fields
-        if (vendorsWithLatLng.length > 0) {
-          console.log('First vendor data:', vendorsWithLatLng[0]);
-          console.log('Available image fields:', {
-            profile_image: vendorsWithLatLng[0].profile_image,
-            image_url: vendorsWithLatLng[0].image_url,
-            image: vendorsWithLatLng[0].image
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching vendors:', error);
-    } finally {
-      setLoadingVendors(false);
-      setIsRefreshing(false);
-    }
-  };
+ const fetchVendors = async () => {
+   setIsRefreshing(true);
+   setLoadingVendors(true);
+   try {
+     const response = await getVendors();
+     if (response && response.success) {
+       const vendorsWithLatLng = response.vendors.map((vendor) => {
+         const latestLocation =
+           vendor.locations && vendor.locations.length > 0
+             ? vendor.locations[vendor.locations.length - 1]
+             : null;
+         return {
+           ...vendor,
+           latitude: latestLocation
+             ? parseFloat(latestLocation.latitude)
+             : undefined,
+           longitude: latestLocation
+             ? parseFloat(latestLocation.longitude)
+             : undefined,
+           location: latestLocation || null,
+         };
+       });
+
+       // Filter only verified vendors
+       const verifiedVendors = vendorsWithLatLng.filter(
+         (vendor) => vendor.is_verified === 1 || vendor.is_verified === true
+       );
+
+       // Set only verified vendors
+       setVendors(verifiedVendors);
+       setFilteredVendors(verifiedVendors);
+       setFeaturedVendors(verifiedVendors.slice(0, 5));
+
+       // Fetch sentiment analysis for verified vendors
+       await fetchVendorSentiments(verifiedVendors);
+
+       // Debugging log
+       if (verifiedVendors.length > 0) {
+         console.log("First verified vendor data:", verifiedVendors[0]);
+         console.log("Available image fields:", {
+           profile_image: verifiedVendors[0].profile_image,
+           image_url: verifiedVendors[0].image_url,
+           image: verifiedVendors[0].image,
+         });
+       }
+     }
+   } catch (error) {
+     console.error("Error fetching vendors:", error);
+   } finally {
+     setLoadingVendors(false);
+     setIsRefreshing(false);
+   }
+ };
 
   const fetchVendorSentiments = async (vendorsList) => {
     try {

@@ -44,6 +44,12 @@ export default function VendorSearchScreen({ navigation, route }) {
       if (response && response.success) {
         let fetchedVendors = response.vendors;
 
+        // Only include verified vendors
+        fetchedVendors = fetchedVendors.filter(
+          (v) => v.is_verified === 1 || v.is_verified === true
+        );
+
+        // If a category is selected, filter by category
         if (category) {
           fetchedVendors = fetchedVendors.filter(
             (v) => v.category?.toLowerCase() === category.toLowerCase()
